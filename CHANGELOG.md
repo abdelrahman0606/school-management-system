@@ -6,6 +6,8 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.3.1] — 2026-07-25
+
 ### Added
 - Submit buttons now show a spinner and disable themselves while a form is submitting, panel-wide. Skips
   forms already cancelled by their own `confirm()` handler and forms opted out via `data-no-loading-state`.
