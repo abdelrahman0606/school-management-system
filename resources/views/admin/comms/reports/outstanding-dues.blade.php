@@ -25,7 +25,7 @@
     <div class="col-md-4"><div class="card"><div class="card-body"><div class="text-muted small">{{ __('Students With Dues') }}</div><div class="h4 mb-0">{{ $data['summary']['student_count'] }}</div></div></div></div>
     <div class="col-md-4"><div class="card"><div class="card-body"><div class="text-muted small">{{ __('Open Invoices') }}</div><div class="h4 mb-0">{{ $data['summary']['invoice_count'] }}</div></div></div></div>
     <div class="col-md-4"><div class="card"><div class="card-body"><div class="text-muted small">{{ __('Total Due') }}</div>
-      @foreach ($data['summary']['totals_by_currency'] as $cur => $amt)<span class="badge text-bg-danger me-1">{{ number_format((float) $amt, 2) }} {{ $cur }}</span>@endforeach
+      @foreach ($data['summary']['totals_by_currency'] as $cur => $amt)<x-badge variant="danger" class="me-1">{{ number_format((float) $amt, 2) }} {{ $cur }}</x-badge>@endforeach
     </div></div></div>
   </div>
 

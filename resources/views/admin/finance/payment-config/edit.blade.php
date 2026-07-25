@@ -45,7 +45,7 @@
             <div class="card-header d-flex justify-content-between align-items-center">
               <span><i class="bi {{ $def['icon'] ?? 'bi-credit-card' }} me-1"></i>{{ __($def['label']) }}
                 <span class="text-muted small">({{ implode(', ', $def['currencies']) }})</span></span>
-              @if($configured)<span class="badge text-bg-success">{{ __('Credentials Set') }}</span>@endif
+              @if($configured)<x-badge variant="success">{{ __('Credentials Set') }}</x-badge>@endif
             </div>
             <div class="card-body">
               <div class="form-check form-switch mb-3">

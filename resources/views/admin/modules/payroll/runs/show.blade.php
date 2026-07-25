@@ -9,7 +9,7 @@
     <div>
       <nav><ol class="breadcrumb small mb-1"><li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}" class="text-decoration-none">{{ __('Home') }}</a></li><li class="breadcrumb-item">{{ __('Payroll') }}</li><li class="breadcrumb-item"><a href="{{ route('admin.payroll.runs.index') }}" class="text-decoration-none">{{ __('Runs') }}</a></li><li class="breadcrumb-item active">{{ $period }}</li></ol></nav>
       <h1 class="h4 mb-0">Payroll — {{ $period }}
-        <span class="badge text-bg-{{ $run->status === 'approved' ? 'success' : ($run->status === 'paid' ? 'primary' : 'secondary') }} align-middle">{{ ucfirst($run->status) }}</span>
+        <x-badge :variant="$run->status === 'approved' ? 'success' : ($run->status === 'paid' ? 'primary' : 'neutral')" class="align-middle">{{ ucfirst($run->status) }}</x-badge>
       </h1>
     </div>
     <div class="d-flex gap-2">

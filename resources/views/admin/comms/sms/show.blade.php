@@ -1,14 +1,15 @@
 @extends('layouts.admin')
 @section('title', 'SMS batch #' . $batch->id)
 @section('content')
-  @php $m = ['queued'=>'secondary','processing'=>'info','completed'=>'success','failed'=>'danger']; @endphp
+  {{-- Keep in sync with sms/index.blade.php's $badgeMap --}}
+  @php $badgeMap = ['queued'=>'neutral','processing'=>'primary','completed'=>'success','failed'=>'danger']; @endphp
   @include('admin.partials.page-header', ['title' => 'SMS batch #' . $batch->id, 'crumbs' => [__('Comms'), __('SMS'), 'Batch #' . $batch->id]])
 
   <div class="mb-3"><a href="{{ route('admin.sms.index') }}" class="text-decoration-none small"><i class="bi bi-arrow-left"></i> {{ __('Back To SMS') }}</a></div>
 
   <div class="card mb-4"><div class="card-body">
     <dl class="row mb-0">
-      <dt class="col-sm-3 text-muted">{{ __('Status') }}</dt><dd class="col-sm-9"><span class="badge text-bg-{{ $m[$batch->status] ?? 'secondary' }}">{{ ucfirst($batch->status) }}</span></dd>
+      <dt class="col-sm-3 text-muted">{{ __('Status') }}</dt><dd class="col-sm-9"><x-badge :variant="$badgeMap[$batch->status] ?? 'neutral'">{{ ucfirst($batch->status) }}</x-badge></dd>
       <dt class="col-sm-3 text-muted">{{ __('Scope') }}</dt><dd class="col-sm-9 text-capitalize">{{ $batch->scope }}</dd>
       <dt class="col-sm-3 text-muted">{{ __('Recipients') }}</dt><dd class="col-sm-9">{{ $batch->total_count }}</dd>
       <dt class="col-sm-3 text-muted">{{ __('Message') }}</dt><dd class="col-sm-9">{{ $batch->message_body }}</dd>
@@ -28,8 +29,8 @@
               <td>{{ $log->recipient_phone }}</td>
               <td>{{ $log->segment_count }}</td>
               <td>
-                @php $lm = ['sent'=>'success','failed'=>'danger','queued'=>'secondary']; @endphp
-                <span class="badge text-bg-{{ $lm[$log->status] ?? 'secondary' }}">{{ ucfirst($log->status) }}</span>
+                @php $lm = ['sent'=>'success','failed'=>'danger','queued'=>'neutral']; @endphp
+                <x-badge :variant="$lm[$log->status] ?? 'neutral'">{{ ucfirst($log->status) }}</x-badge>
               </td>
               <td class="small text-danger">{{ $log->error_message ?? '' }}</td>
             </tr>

@@ -24,10 +24,10 @@
             @foreach ($course->lessons as $l)
               <li class="list-group-item d-flex justify-content-between align-items-center px-0">
                 <span>
-                  <span class="badge text-bg-light border text-muted me-1">{{ $l->sort_order }}</span>
+                  <x-badge variant="neutral" class="me-1">{{ $l->sort_order }}</x-badge>
                   {{ $l->title }}
-                  <span class="badge text-bg-{{ $l->content_type === 'video' ? 'info' : 'secondary' }}">{{ $l->content_type }}</span>
-                  @if ($l->is_published)<span class="badge text-bg-success">{{ __('Published') }}</span>@else<span class="badge text-bg-warning">{{ __('Draft') }}</span>@endif
+                  <x-badge :variant="$l->content_type === 'video' ? 'primary' : 'neutral'">{{ $l->content_type }}</x-badge>
+                  @if ($l->is_published)<x-badge variant="success">{{ __('Published') }}</x-badge>@else<x-badge variant="warning">{{ __('Draft') }}</x-badge>@endif
                 </span>
                 <span class="d-flex gap-1">
                   @unless ($l->is_published)

@@ -47,25 +47,6 @@
       --sb-scrollbar-hover: #9ca3af;
     }
 
-    /* Dark mode support */
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --sb-bg: #1e293b;
-        --sb-border: #334155;
-        --sb-primary: #818cf8;
-        --sb-primary-hover: #a5b4fc;
-        --sb-primary-light: #312e81;
-        --sb-text: #f1f5f9;
-        --sb-text-muted: #94a3b8;
-        --sb-hover: #334155;
-        --sb-active-bg: #312e81;
-        --sb-active-border: #6366f1;
-        --sb-section-text: #64748b;
-        --sb-scrollbar: #475569;
-        --sb-scrollbar-hover: #64748b;
-      }
-    }
-
     body { background: #f8fafc; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
 
     /* ── Sidebar shell ── */
@@ -469,6 +450,40 @@
         $t.DataTable({ pageLength: 25, order: [], columnDefs: [{ orderable: false, targets: noSort }], language: jsDtLanguage });
       });
       document.querySelectorAll('.js-select').forEach(function (el) { new TomSelect(el, { create: false }); });
+    });
+
+    // Disable the submit button (and show a spinner) the moment a form is
+    // actually submitted, everywhere in the admin panel — every write here
+    // is a classic full-page POST-redirect-GET (no fetch/AJAX layer for the
+    // admin UI, per this file's own architecture), so a disabled button just
+    // rides out until the next page loads; there's no "re-enable" case to
+    // handle. Prevents double-submit on slow connections / accidental
+    // double-clicks, which previously had no protection at all.
+    //
+    // e.defaultPrevented is checked first so this never fires for a form
+    // whose OWN submit handler already cancelled it — e.g. an inline
+    // onsubmit="return confirm(...)" that the user declined, or a page like
+    // the Website block editor that intercepts submit for its own fetch()-
+    // based flow. Bubble-phase delegation guarantees those run first: a
+    // handler attached directly to the form (inline onsubmit, or another
+    // script's addEventListener on that exact element) always fires before
+    // a listener delegated on document, since bubbling visits the target
+    // itself before any ancestor.
+    //
+    // Opt out entirely with data-no-loading-state on a <form>.
+    document.addEventListener('submit', function (e) {
+      if (e.defaultPrevented) return;
+      var form = e.target;
+      if (!(form instanceof HTMLFormElement) || form.hasAttribute('data-no-loading-state')) return;
+      // SubmitEvent.submitter is the actual button/input that triggered this
+      // exact submission — important for forms with more than one submit
+      // button (e.g. Bulk Generate + Generate Invoice), so only the one
+      // actually clicked gets disabled, not both.
+      var btn = e.submitter || form.querySelector('button[type="submit"], button:not([type])');
+      if (!btn || btn.disabled) return;
+      btn.disabled = true;
+      btn.dataset.loadingOriginalHtml = btn.innerHTML;
+      btn.insertAdjacentHTML('afterbegin', '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>');
     });
     // Re-open a modal after a validation redirect (?open=modalId in session)
     @if (session('open_modal'))

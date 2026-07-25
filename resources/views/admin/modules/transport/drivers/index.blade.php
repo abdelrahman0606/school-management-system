@@ -8,7 +8,7 @@
   ])
   @include('admin.modules.transport._tabs', ['active' => 'drivers'])
 
-  @php $statuses = ['active' => 'success', 'on_leave' => 'warning', 'inactive' => 'secondary']; @endphp
+  @php $statuses = ['active' => 'success', 'on_leave' => 'warning', 'inactive' => 'neutral']; @endphp
   <div class="card"><div class="card-body">
     <table class="table table-hover align-middle w-100 js-dt">
       <thead><tr><th>{{ __('Name') }}</th><th>{{ __('Phone') }}</th><th>{{ __('License') }}</th><th>{{ __('Status') }}</th><th class="text-end" data-orderable="false">{{ __('Actions') }}</th></tr></thead>
@@ -18,7 +18,7 @@
             <td class="fw-semibold">{{ $d->name }}</td>
             <td>{{ $d->phone ?? '—' }}</td>
             <td>{{ $d->license_no ?? '—' }}</td>
-            <td><span class="badge text-bg-{{ $statuses[$d->status] ?? 'secondary' }}">{{ ucfirst(str_replace('_', ' ', $d->status)) }}</span></td>
+            <td><x-badge :variant="$statuses[$d->status] ?? 'neutral'">{{ ucfirst(str_replace('_', ' ', $d->status)) }}</x-badge></td>
             <td class="text-end"><button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editModal{{ $d->id }}">{{ __('Edit') }}</button></td>
           </tr>
         @endforeach

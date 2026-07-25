@@ -14,7 +14,7 @@
         @foreach ($categories as $c)
           <tr>
             <td class="fw-semibold">{{ $c->name }}</td>
-            <td><span class="badge text-bg-light border text-muted">{{ $c->items_count }}</span></td>
+            <td><x-badge variant="neutral">{{ $c->items_count }}</x-badge></td>
             <td><span class="badge {{ $c->is_active ? 'text-bg-success' : 'text-bg-secondary' }}">{{ $c->is_active ? 'Active' : 'Inactive' }}</span></td>
             <td class="text-end">
               <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editModal{{ $c->id }}">{{ __('Edit') }}</button>

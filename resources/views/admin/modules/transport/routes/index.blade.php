@@ -18,7 +18,7 @@
             <td>{{ number_format((float) $r->fare, 2) }}</td>
             <td>{{ $r->vehicle?->registration_no ?? '—' }}</td>
             <td>{{ $r->driver?->name ?? '—' }}</td>
-            <td><span class="badge text-bg-light border text-muted">{{ $r->riders_count }}</span></td>
+            <td><x-badge variant="neutral">{{ $r->riders_count }}</x-badge></td>
             <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{{ route('admin.transport.routes.show', $r->id) }}">{{ __('Open') }}</a></td>
           </tr>
         @endforeach

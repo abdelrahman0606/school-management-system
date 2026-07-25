@@ -8,7 +8,8 @@
   ])
   @include('admin.certificates._tabs', ['active' => 'id-cards'])
 
-  @php $m = ['queued'=>'secondary','processing'=>'info','completed'=>'success','failed'=>'danger']; @endphp
+  {{-- Keep in sync with id-cards/show.blade.php's $badgeMap --}}
+  @php $badgeMap = ['queued'=>'neutral','processing'=>'primary','completed'=>'success','failed'=>'danger']; @endphp
   <div class="card"><div class="card-body">
     <table class="table table-hover align-middle w-100 js-dt">
       <thead><tr><th>#</th><th>{{ __('Type') }}</th><th>{{ __('Template') }}</th><th>{{ __('Scope') }}</th><th>{{ __('Cards') }}</th><th>{{ __('Files') }}</th><th>{{ __('Status') }}</th><th class="text-end" data-orderable="false"></th></tr></thead>
@@ -21,7 +22,7 @@
             <td class="text-capitalize">{{ $b->scope }}</td>
             <td>{{ $b->total_count }}</td>
             <td>{{ $b->files_count }}</td>
-            <td><span class="badge text-bg-{{ $m[$b->status] ?? 'secondary' }}">{{ ucfirst($b->status) }}</span></td>
+            <td><x-badge :variant="$badgeMap[$b->status] ?? 'neutral'">{{ ucfirst($b->status) }}</x-badge></td>
             <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{{ route('admin.id-cards.show', $b->id) }}">{{ __('Open') }}</a></td>
           </tr>
         @endforeach

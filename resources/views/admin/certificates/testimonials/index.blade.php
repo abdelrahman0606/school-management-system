@@ -17,7 +17,7 @@
             <td><code>{{ $t->testimonial_number }}</code></td>
             <td class="fw-semibold">{{ $t->student?->name ?? '—' }} <span class="text-muted small">({{ $t->student?->student_id }})</span></td>
             <td class="small">{{ optional($t->issued_date)->format('d M Y') }}</td>
-            <td><span class="badge text-bg-{{ $t->status === 'issued' ? 'success' : 'secondary' }}">{{ ucfirst($t->status) }}</span></td>
+            <td><x-badge :variant="$t->status === 'issued' ? 'success' : 'neutral'">{{ ucfirst($t->status) }}</x-badge></td>
             <td class="text-end"><a class="btn btn-sm btn-outline-danger" href="{{ route('admin.testimonials.download', $t->id) }}" target="_blank"><i class="bi bi-file-pdf"></i> {{ __('PDF') }}</a></td>
           </tr>
         @endforeach

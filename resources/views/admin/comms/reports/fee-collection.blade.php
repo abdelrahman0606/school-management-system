@@ -24,7 +24,7 @@
     <div class="row g-3 mb-3">
       <div class="col-md-4"><div class="card"><div class="card-body"><div class="text-muted small">{{ __('Payments') }}</div><div class="h4 mb-0">{{ $data['summary']['count'] }}</div></div></div></div>
       <div class="col-md-8"><div class="card"><div class="card-body"><div class="text-muted small">{{ __('Totals By Currency') }}</div>
-        @foreach ($data['summary']['totals_by_currency'] as $cur => $amt)<span class="badge text-bg-success me-1">{{ number_format((float) $amt, 2) }} {{ $cur }}</span>@endforeach
+        @foreach ($data['summary']['totals_by_currency'] as $cur => $amt)<x-badge variant="success" class="me-1">{{ number_format((float) $amt, 2) }} {{ $cur }}</x-badge>@endforeach
       </div></div></div>
     </div>
     <div class="card"><div class="card-body">
