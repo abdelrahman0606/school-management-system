@@ -37,7 +37,7 @@
             <td>{{ $st->currentAcademic?->section?->name ?? '—' }}</td>
             <td>{{ $st->primaryGuardian?->name ?? '—' }}</td>
             <td>
-              <span class="badge {{ $st->status === 'active' ? 'text-bg-success' : 'text-bg-secondary' }}">{{ ucfirst($st->status) }}</span>
+              <x-badge :variant="$st->status === 'active' ? 'success' : 'neutral'">{{ ucfirst($st->status) }}</x-badge>
             </td>
             <td class="text-end">
               <a class="btn btn-sm btn-outline-primary" href="{{ route('admin.students.show', $st->id) }}">{{ __('View') }}</a>

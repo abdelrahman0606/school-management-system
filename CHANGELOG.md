@@ -6,6 +6,23 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- `public/css/admin-design-tokens.css` had ~250 lines of corrupted CSS (Form Wizard styles and the print
+  stylesheet) — every line had a stray line-number token glued onto it, plus an orphaned extra closing brace.
+  Restored valid CSS; also removed a redundant duplicate `.inline-edit-error` rule found in the same area.
+
+### Changed
+- Consolidated the admin panel's two competing color systems into one: `admin-design-tokens.css`'s
+  `--color-primary-*` scale is now the actual indigo brand color (it was a blue scale that
+  `layouts/admin.blade.php` silently overrode with hardcoded indigo hex values). The layout's Bootstrap
+  variable bridge (`--bs-primary`, `.btn-primary`, `.text-primary`, focus rings, pagination, etc.) now
+  references those tokens instead of repeating the hex literals a second time.
+- `admin.partials.page-header` now accepts an `actions` array (multiple buttons), not just a single `action`
+  — existing single-`action` usages are unaffected. `admin/finance/invoices/index.blade.php` (which needed
+  two buttons and previously hand-rolled its own header instead of using the partial) now uses it.
+- Students and Invoices admin views (index, show) now render status badges through the `<x-badge>` component
+  instead of raw `<span class="badge text-bg-*">` markup, for one shared source of badge styling.
+
 ### Dependencies
 - `laravel/framework` 13.18.0 → 13.21.1, `laravel/horizon` 5.47.2 → 5.48.1, `laravel/sanctum` 4.3.2 → 4.3.3
 - `spatie/laravel-permission` 8.1.0 → 8.3.0

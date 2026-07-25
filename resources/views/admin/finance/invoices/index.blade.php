@@ -1,16 +1,14 @@
 @extends('layouts.admin')
 @section('title', __('Invoices'))
 @section('content')
-  <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
-    <div>
-      <nav><ol class="breadcrumb small mb-1"><li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}" class="text-decoration-none">{{ __('Home') }}</a></li><li class="breadcrumb-item">{{ __('Finance') }}</li><li class="breadcrumb-item active">{{ __('Invoices') }}</li></ol></nav>
-      <h1 class="h4 mb-0">{{ __('Invoices') }}</h1>
-    </div>
-    <div class="d-flex gap-2">
-      <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#bulkModal"><i class="bi bi-collection"></i> {{ __('Bulk Generate') }}</button>
-      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#singleModal"><i class="bi bi-plus-lg"></i> {{ __('Generate Invoice') }}</button>
-    </div>
-  </div>
+  @include('admin.partials.page-header', [
+    'title' => __('Invoices'),
+    'crumbs' => [__('Finance'), __('Invoices')],
+    'actions' => [
+      ['label' => __('Bulk Generate'), 'modal' => 'bulkModal', 'icon' => 'bi-collection', 'variant' => 'outline-primary'],
+      ['label' => __('Generate Invoice'), 'modal' => 'singleModal'],
+    ],
+  ])
 
   <form method="GET" class="card mb-3"><div class="card-body row g-2 align-items-end">
     <div class="col-sm-4"><label class="form-label small text-muted mb-1">{{ __('Status') }}</label>
@@ -35,8 +33,10 @@
             <td>{{ number_format((float) $inv->amount_due, 2) }}</td>
             <td>{{ number_format((float) $inv->amount_paid, 2) }}</td>
             <td>
-              @php $map = ['paid'=>'success','partial'=>'warning','unpaid'=>'secondary','cancelled'=>'dark','waived'=>'info']; @endphp
-              <span class="badge text-bg-{{ $map[$inv->status] ?? 'secondary' }}">{{ ucfirst($inv->status) }}</span>
+              {{-- Kept in sync with the same status->variant mapping on the
+                   student-show Invoices tab (admin.people.students.show). --}}
+              @php $badgeMap = ['paid'=>'success','partial'=>'warning','unpaid'=>'neutral','cancelled'=>'danger','waived'=>'primary']; @endphp
+              <x-badge :variant="$badgeMap[$inv->status] ?? 'neutral'">{{ ucfirst($inv->status) }}</x-badge>
             </td>
             <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{{ route('admin.invoices.show', $inv->id) }}">{{ __('Open') }}</a></td>
           </tr>

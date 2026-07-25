@@ -5,7 +5,7 @@
     <div>
       <nav><ol class="breadcrumb small mb-1"><li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}" class="text-decoration-none">{{ __('Home') }}</a></li><li class="breadcrumb-item">{{ __('People') }}</li><li class="breadcrumb-item"><a href="{{ route('admin.students.index') }}" class="text-decoration-none">{{ __('Students') }}</a></li><li class="breadcrumb-item active">{{ $student->name }}</li></ol></nav>
       <h1 class="h4 mb-0">{{ $student->name }} <span class="text-muted">({{ $student->student_id }})</span>
-        <span class="badge {{ $student->status === 'active' ? 'text-bg-success' : 'text-bg-secondary' }} align-middle text-capitalize">{{ $student->status }}</span>
+        <x-badge :variant="$student->status === 'active' ? 'success' : 'neutral'" class="align-middle text-capitalize">{{ $student->status }}</x-badge>
       </h1>
     </div>
     @if ($student->status === 'active')
@@ -42,7 +42,7 @@
                 <td>{{ $a->schoolClass?->name ?? '—' }}</td>
                 <td>{{ $a->section?->name ?? '—' }}</td>
                 <td>{{ $a->roll_number ?? '—' }}</td>
-                <td>@if ($a->is_current)<span class="badge text-bg-success">{{ __('Current') }}</span>@endif</td>
+                <td>@if ($a->is_current)<x-badge variant="success">{{ __('Current') }}</x-badge>@endif</td>
               </tr>
             @empty
               <tr><td colspan="5" class="text-muted">{{ __('No Enrolment Records.') }}</td></tr>
@@ -88,9 +88,9 @@
                   <td class="fw-semibold">{{ $s->subjectRelation?->subject?->name ?? '—' }}</td>
                   <td>
                     @if ($s->is_optional)
-                      <span class="badge text-bg-info">{{ __('Optional') }}</span>
+                      <x-badge variant="primary">{{ __('Optional') }}</x-badge>
                     @else
-                      <span class="badge text-bg-light border text-muted">{{ __('Compulsory') }}</span>
+                      <x-badge variant="neutral">{{ __('Compulsory') }}</x-badge>
                     @endif
                   </td>
                 </tr>
@@ -106,7 +106,10 @@
         @if ($invoices->isEmpty())
           <p class="text-muted mb-0">{{ __('No Invoices.') }}</p>
         @else
-          @php $m = ['paid'=>'success','partial'=>'warning','unpaid'=>'secondary','cancelled'=>'dark','waived'=>'info']; @endphp
+          {{-- Same status->variant mapping as admin.finance.invoices.index — kept
+               here too since a status vocabulary this small isn't worth a shared
+               PHP helper, but should stay in sync with that file's $badgeMap. --}}
+          @php $badgeMap = ['paid'=>'success','partial'=>'warning','unpaid'=>'neutral','cancelled'=>'danger','waived'=>'primary']; @endphp
           <table class="table table-hover align-middle mb-0">
             <thead><tr><th>Invoice #</th><th class="text-end">{{ __('Due') }}</th><th class="text-end">{{ __('Paid') }}</th><th>{{ __('Status') }}</th><th class="text-end"></th></tr></thead>
             <tbody>
@@ -115,7 +118,7 @@
                   <td><code>{{ $inv->invoice_number }}</code></td>
                   <td class="text-end">{{ number_format((float) $inv->amount_due, 2) }}</td>
                   <td class="text-end">{{ number_format((float) $inv->amount_paid, 2) }}</td>
-                  <td><span class="badge text-bg-{{ $m[$inv->status] ?? 'secondary' }}">{{ ucfirst($inv->status) }}</span></td>
+                  <td><x-badge :variant="$badgeMap[$inv->status] ?? 'neutral'">{{ ucfirst($inv->status) }}</x-badge></td>
                   <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{{ route('admin.invoices.show', $inv->id) }}">{{ __('Open') }}</a></td>
                 </tr>
               @endforeach
