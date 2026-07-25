@@ -9,8 +9,8 @@
     <div>
       <nav><ol class="breadcrumb small mb-1"><li class="breadcrumb-item">{{ __('Comms') }}</li><li class="breadcrumb-item"><a href="{{ route('admin.messages.index') }}" class="text-decoration-none">{{ __('Messages') }}</a></li><li class="breadcrumb-item active">{{ $title }}</li></ol></nav>
       <h1 class="h5 mb-0">{{ $title }}
-        <span class="badge text-bg-light border text-muted align-middle">{{ ucfirst($thread->type) }}</span>
-        @if ($thread->is_locked)<span class="badge text-bg-danger align-middle">{{ __('Locked') }}</span>@endif
+        <x-badge variant="neutral" class="align-middle">{{ ucfirst($thread->type) }}</x-badge>
+        @if ($thread->is_locked)<x-badge variant="danger" class="align-middle">{{ __('Locked') }}</x-badge>@endif
       </h1>
     </div>
     <form method="POST" action="{{ route('admin.messages.lock', $thread->id) }}">
@@ -63,7 +63,7 @@
         @foreach ($thread->participants as $p)
           <div class="list-group-item d-flex justify-content-between align-items-center {{ $p->left_at ? 'text-muted' : '' }}">
             <span>{{ $userMap[$p->user_id] ?? 'User #'.$p->user_id }}</span>
-            @if ($p->left_at)<span class="badge text-bg-light border text-muted">{{ __('Left') }}</span>@endif
+            @if ($p->left_at)<x-badge variant="neutral">{{ __('Left') }}</x-badge>@endif
           </div>
         @endforeach
       </div></div>

@@ -212,6 +212,19 @@ DB::transaction(function () use ($data) {
   per-recipient `SmsLog` insert fail its CHECK constraint. On the sync queue the failing job swallows the
   error, so the symptom is a created batch with *zero logs*, not a 500 — silent. Alter every table carrying
   the enum in the same migration.
+- **A literal line-number prefix pasted into a real file is a silent, spreading bug.** ~250 lines of
+  `admin-design-tokens.css` had a stray number glued onto the front of every line (`1822}`, `1821 /* ... */`),
+  the unmistakable signature of pasting a tool's line-numbered output (`cat -n`, a Read result) back into a
+  file without stripping the prefix. CSS parsers are lenient enough that this didn't hard-fail, so it sat
+  there undetected. Never paste line-numbered output directly into a file — strip the `N\t`/`N  ` prefix
+  first, or write the content fresh.
+- **Don't let a CSS token file and a page's own inline `<style>` both claim to own the brand color.**
+  `admin-design-tokens.css` defined a `--color-primary-*` scale that nothing actually rendered with —
+  `layouts/admin.blade.php`'s inline `<style>` silently redeclared the same variable names with different
+  (the real, live) hex values, plus a second hardcoded set of Bootstrap `--bs-*`/`.btn-primary` overrides for
+  the same color again. Three places to change one color, only one of which was "the" design-tokens file.
+  Pick one file as the actual source of truth for a token and have everything else reference it with `var()`
+  — never redeclare the literal value a second time "to be sure."
 
 ## Git Commit Convention
 ```

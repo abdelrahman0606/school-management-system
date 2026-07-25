@@ -14,7 +14,7 @@
       <a href="{{ route('admin.staff-leave.index') }}" class="btn btn-sm btn-outline-secondary">{{ __('Reset') }}</a></div>
   </div></form>
 
-  @php $m = ['pending'=>'warning','approved'=>'success','rejected'=>'danger','cancelled'=>'secondary']; @endphp
+  @php $badgeMap = ['pending'=>'warning','approved'=>'success','rejected'=>'danger','cancelled'=>'neutral']; @endphp
   <div class="card"><div class="card-body">
     <table class="table table-hover align-middle w-100 js-dt">
       <thead><tr><th>{{ __('Staff') }}</th><th>{{ __('Type') }}</th><th>{{ __('From') }}</th><th>{{ __('To') }}</th><th>{{ __('Days') }}</th><th>{{ __('Status') }}</th><th class="text-end" data-orderable="false">{{ __('Actions') }}</th></tr></thead>
@@ -26,7 +26,7 @@
             <td class="small">{{ optional($r->from_date)->format('d M Y') }}</td>
             <td class="small">{{ optional($r->to_date)->format('d M Y') }}</td>
             <td>{{ $r->working_days }}</td>
-            <td><span class="badge text-bg-{{ $m[$r->status] ?? 'secondary' }}">{{ ucfirst($r->status) }}</span></td>
+            <td><x-badge :variant="$badgeMap[$r->status] ?? 'neutral'">{{ ucfirst($r->status) }}</x-badge></td>
             <td class="text-end">
               @if ($r->status === 'pending')
                 <form method="POST" action="{{ route('admin.staff-leave.approve', $r->id) }}" class="d-inline">@csrf @method('PATCH')<button class="btn btn-sm btn-outline-success">{{ __('Approve') }}</button></form>

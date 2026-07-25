@@ -9,9 +9,9 @@
 
   @php
     $statusOf = function ($a) {
-      if ($a->expire_at && $a->expire_at->isPast()) return ['Expired', 'secondary'];
-      if (! $a->publish_at) return ['Draft', 'light'];
-      if ($a->publish_at->isFuture()) return ['Scheduled', 'info'];
+      if ($a->expire_at && $a->expire_at->isPast()) return ['Expired', 'neutral'];
+      if (! $a->publish_at) return ['Draft', 'neutral'];
+      if ($a->publish_at->isFuture()) return ['Scheduled', 'primary'];
       return ['Published', 'success'];
     };
   @endphp
@@ -26,8 +26,8 @@
             <td class="fw-semibold">@if ($a->is_pinned)<i class="bi bi-pin-angle-fill text-warning" title="{{ __('Pinned') }}"></i> @endif{{ $a->title }}</td>
             <td class="text-capitalize">{{ $a->type }}</td>
             <td class="text-capitalize">{{ $a->audience }}</td>
-            <td><span class="badge text-bg-{{ $a->priority === 'urgent' ? 'danger' : ($a->priority === 'important' ? 'warning' : 'light border text-muted') }}">{{ ucfirst($a->priority) }}</span></td>
-            <td><span class="badge text-bg-{{ $clr }} {{ $clr === 'light' ? 'border text-muted' : '' }}">{{ $label }}</span></td>
+            <td><x-badge :variant="$a->priority === 'urgent' ? 'danger' : ($a->priority === 'important' ? 'warning' : 'neutral')">{{ ucfirst($a->priority) }}</x-badge></td>
+            <td><x-badge :variant="$clr">{{ $label }}</x-badge></td>
             <td class="text-end">
               <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editModal{{ $a->id }}">{{ __('Edit') }}</button>
               @if ($label === 'Draft' || $label === 'Scheduled')

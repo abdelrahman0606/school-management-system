@@ -17,10 +17,11 @@
             <td>{{ $e->examType?->name ?? '—' }}</td>
             <td>{{ $e->schoolClass?->name ?? '—' }}</td>
             <td class="small">{{ optional($e->start_date)->format('d M') }} – {{ optional($e->end_date)->format('d M Y') }}</td>
-            <td><span class="badge text-bg-light border text-muted">{{ $e->subjects_count }}</span></td>
+            <td><x-badge variant="neutral">{{ $e->subjects_count }}</x-badge></td>
             <td>
-              @php $m = ['draft'=>'secondary','published'=>'primary','completed'=>'success']; @endphp
-              <span class="badge text-bg-{{ $m[$e->status] ?? 'secondary' }}">{{ ucfirst($e->status) }}</span>
+              {{-- Keep in sync with exams/show.blade.php's $badgeMap --}}
+              @php $badgeMap = ['draft'=>'neutral','published'=>'primary','completed'=>'success']; @endphp
+              <x-badge :variant="$badgeMap[$e->status] ?? 'neutral'">{{ ucfirst($e->status) }}</x-badge>
             </td>
             <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{{ route('admin.exams.show', $e->id) }}">{{ __('Open') }}</a></td>
           </tr>

@@ -2,7 +2,9 @@
 @section('title', 'Invoice ' . $invoice->invoice_number)
 @section('content')
   @php
-    $map = ['paid'=>'success','partial'=>'warning','unpaid'=>'secondary','cancelled'=>'dark','waived'=>'info'];
+    // Kept in sync with the same status->variant mapping on the invoices
+    // index and the student-show Invoices tab.
+    $badgeMap = ['paid'=>'success','partial'=>'warning','unpaid'=>'neutral','cancelled'=>'danger','waived'=>'primary'];
     $remaining = max((float) $invoice->amount_due - (float) $invoice->amount_paid, 0);
     $open = ! in_array($invoice->status, ['paid', 'cancelled', 'waived']);
   @endphp
@@ -10,7 +12,7 @@
   <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
     <div>
       <nav><ol class="breadcrumb small mb-1"><li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}" class="text-decoration-none">{{ __('Home') }}</a></li><li class="breadcrumb-item">{{ __('Finance') }}</li><li class="breadcrumb-item"><a href="{{ route('admin.invoices.index') }}" class="text-decoration-none">{{ __('Invoices') }}</a></li><li class="breadcrumb-item active">{{ $invoice->invoice_number }}</li></ol></nav>
-      <h1 class="h4 mb-0">Invoice {{ $invoice->invoice_number }} <span class="badge text-bg-{{ $map[$invoice->status] ?? 'secondary' }} align-middle">{{ ucfirst($invoice->status) }}</span></h1>
+      <h1 class="h4 mb-0">Invoice {{ $invoice->invoice_number }} <x-badge :variant="$badgeMap[$invoice->status] ?? 'neutral'" class="align-middle">{{ ucfirst($invoice->status) }}</x-badge></h1>
     </div>
     @if ($open)
       <div class="d-flex gap-2">

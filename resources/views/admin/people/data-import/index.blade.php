@@ -7,7 +7,8 @@
     'action' => ['label' => __('Import file'), 'modal' => 'uploadModal'],
   ])
 
-  @php $m = ['queued'=>'secondary','processing'=>'info','completed'=>'success','failed'=>'danger']; @endphp
+  {{-- Keep in sync with data-import/show.blade.php's $badgeMap --}}
+  @php $badgeMap = ['queued'=>'neutral','processing'=>'primary','completed'=>'success','failed'=>'danger']; @endphp
   <div class="card"><div class="card-body">
     <table class="table table-hover align-middle w-100 js-dt">
       <thead><tr><th>#</th><th>{{ __('Type') }}</th><th>{{ __('File') }}</th><th>{{ __('Rows') }}</th><th>{{ __('Imported') }}</th><th>{{ __('Skipped') }}</th><th>{{ __('Status') }}</th><th class="text-end" data-orderable="false"></th></tr></thead>
@@ -18,9 +19,9 @@
             <td class="text-capitalize">{{ $b->type }}</td>
             <td class="small">{{ $b->original_filename }}</td>
             <td>{{ $b->total_rows }}</td>
-            <td><span class="badge text-bg-success">{{ $b->success_count }}</span></td>
-            <td>@if ($b->skipped_count)<span class="badge text-bg-warning">{{ $b->skipped_count }}</span>@else 0 @endif</td>
-            <td><span class="badge text-bg-{{ $m[$b->status] ?? 'secondary' }}">{{ ucfirst($b->status) }}</span></td>
+            <td><x-badge variant="success">{{ $b->success_count }}</x-badge></td>
+            <td>@if ($b->skipped_count)<x-badge variant="warning">{{ $b->skipped_count }}</x-badge>@else 0 @endif</td>
+            <td><x-badge :variant="$badgeMap[$b->status] ?? 'neutral'">{{ ucfirst($b->status) }}</x-badge></td>
             <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{{ route('admin.data-import.show', $b->id) }}">{{ __('Open') }}</a></td>
           </tr>
         @endforeach

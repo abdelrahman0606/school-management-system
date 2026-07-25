@@ -15,8 +15,8 @@
           <tr>
             <td class="fw-semibold">{{ $u->name }}</td>
             <td>{{ $u->email }}</td>
-            <td>@foreach ($u->roles as $r)<span class="badge text-bg-primary">{{ $r->name }}</span> @endforeach</td>
-            <td><span class="badge {{ $u->is_active ? 'text-bg-success' : 'text-bg-secondary' }}">{{ $u->is_active ? 'Active' : 'Inactive' }}</span></td>
+            <td>@foreach ($u->roles as $r)<x-badge variant="primary">{{ $r->name }}</x-badge> @endforeach</td>
+            <td><x-badge :variant="$u->is_active ? 'success' : 'neutral'">{{ $u->is_active ? 'Active' : 'Inactive' }}</x-badge></td>
             <td class="text-end">
               <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editModal{{ $u->id }}">{{ __('Edit') }}</button>
               <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#roleModal{{ $u->id }}">{{ __('Role') }}</button>

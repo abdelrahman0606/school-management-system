@@ -1,14 +1,15 @@
 @extends('layouts.admin')
 @section('title', 'ID card batch #' . $batch->id)
 @section('content')
-  @php $m = ['queued'=>'secondary','processing'=>'info','completed'=>'success','failed'=>'danger']; @endphp
+  {{-- Keep in sync with id-cards/index.blade.php's $badgeMap --}}
+  @php $badgeMap = ['queued'=>'neutral','processing'=>'primary','completed'=>'success','failed'=>'danger']; @endphp
   @include('admin.partials.page-header', ['title' => 'ID card batch #' . $batch->id, 'crumbs' => [__('Certificates'), __('ID cards'), 'Batch #' . $batch->id]])
 
   <div class="mb-3"><a href="{{ route('admin.id-cards.index') }}" class="text-decoration-none small"><i class="bi bi-arrow-left"></i> {{ __('Back To Batches') }}</a></div>
 
   <div class="card mb-4"><div class="card-body">
     <dl class="row mb-0">
-      <dt class="col-sm-3 text-muted">{{ __('Status') }}</dt><dd class="col-sm-9"><span class="badge text-bg-{{ $m[$batch->status] ?? 'secondary' }}">{{ ucfirst($batch->status) }}</span></dd>
+      <dt class="col-sm-3 text-muted">{{ __('Status') }}</dt><dd class="col-sm-9"><x-badge :variant="$badgeMap[$batch->status] ?? 'neutral'">{{ ucfirst($batch->status) }}</x-badge></dd>
       <dt class="col-sm-3 text-muted">{{ __('Type') }}</dt><dd class="col-sm-9 text-capitalize">{{ $batch->type }}</dd>
       <dt class="col-sm-3 text-muted">{{ __('Template') }}</dt><dd class="col-sm-9">{{ $batch->template?->name ?? '—' }}</dd>
       <dt class="col-sm-3 text-muted">{{ __('Cards') }}</dt><dd class="col-sm-9">{{ $batch->total_count }}</dd>

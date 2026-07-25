@@ -15,7 +15,7 @@
         @foreach ($runs as $r)
           <tr>
             <td class="fw-semibold">{{ \Carbon\Carbon::create()->month($r->month)->format('F') }} {{ $r->year }}</td>
-            <td><span class="badge text-bg-{{ $r->status === 'approved' ? 'success' : ($r->status === 'paid' ? 'primary' : 'secondary') }}">{{ ucfirst($r->status) }}</span></td>
+            <td><x-badge :variant="$r->status === 'approved' ? 'success' : ($r->status === 'paid' ? 'primary' : 'neutral')">{{ ucfirst($r->status) }}</x-badge></td>
             <td>{{ $r->entries_count }}</td>
             <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{{ route('admin.payroll.runs.show', $r->id) }}">{{ __('Open') }}</a></td>
           </tr>

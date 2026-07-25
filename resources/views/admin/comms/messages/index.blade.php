@@ -1,16 +1,14 @@
 @extends('layouts.admin')
 @section('title', __('Messages'))
 @section('content')
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <div>
-      <nav><ol class="breadcrumb small mb-1"><li class="breadcrumb-item">{{ __('Comms') }}</li><li class="breadcrumb-item active">{{ __('Messages') }}</li></ol></nav>
-      <h1 class="h4 mb-0">{{ __('Messages') }}</h1>
-    </div>
-    <div class="d-flex gap-2">
-      <a class="btn btn-outline-secondary" href="{{ route('admin.messages.all') }}"><i class="bi bi-eye"></i> {{ __('All Conversations') }}</a>
-      <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#composeModal"><i class="bi bi-pencil-square"></i> {{ __('Compose') }}</button>
-    </div>
-  </div>
+  @include('admin.partials.page-header', [
+    'title' => __('Messages'),
+    'crumbs' => [__('Comms'), __('Messages')],
+    'actions' => [
+      ['label' => __('All Conversations'), 'url' => route('admin.messages.all'), 'icon' => 'bi-eye', 'variant' => 'outline-secondary'],
+      ['label' => __('Compose'), 'modal' => 'composeModal', 'icon' => 'bi-pencil-square'],
+    ],
+  ])
 
   <div class="card"><div class="card-body">
     @if ($threads->isEmpty())
@@ -30,9 +28,9 @@
                 <a href="{{ route('admin.messages.show', $t->id) }}" class="fw-semibold text-decoration-none">{{ $title }}</a>
                 @if ($t->is_locked)<i class="bi bi-lock-fill text-muted" title="{{ __('Locked') }}"></i>@endif
               </td>
-              <td><span class="badge text-bg-light border text-muted">{{ ucfirst($t->type) }}</span></td>
+              <td><x-badge variant="neutral">{{ ucfirst($t->type) }}</x-badge></td>
               <td data-order="{{ optional($t->last_message_at)->timestamp ?? 0 }}">{{ $t->last_message_at?->diffForHumans() ?? '—' }}</td>
-              <td class="text-end">@if (($t->unread_count ?? 0) > 0)<span class="badge text-bg-primary">{{ $t->unread_count }}</span>@else <span class="text-muted">0</span>@endif</td>
+              <td class="text-end">@if (($t->unread_count ?? 0) > 0)<x-badge variant="primary">{{ $t->unread_count }}</x-badge>@else <span class="text-muted">0</span>@endif</td>
               <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{{ route('admin.messages.show', $t->id) }}">{{ __('Open') }}</a></td>
             </tr>
           @endforeach

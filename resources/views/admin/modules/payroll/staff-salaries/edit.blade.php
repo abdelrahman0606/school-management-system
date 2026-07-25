@@ -19,7 +19,7 @@
             @foreach ($breakdown as $row)
               <tr>
                 <td class="fw-semibold">{{ $row['component']->name }}</td>
-                <td><span class="badge text-bg-{{ $row['component']->component_type === 'earning' ? 'success' : 'danger' }}">{{ ucfirst($row['component']->component_type) }}</span></td>
+                <td><x-badge :variant="$row['component']->component_type === 'earning' ? 'success' : 'danger'">{{ ucfirst($row['component']->component_type) }}</x-badge></td>
                 <td><input type="number" step="0.01" min="0" name="amounts[{{ $row['component']->id }}]" class="form-control form-control-sm text-end" value="{{ $row['amount'] }}"></td>
               </tr>
             @endforeach

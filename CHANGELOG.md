@@ -6,6 +6,39 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.3.1] — 2026-07-25
+
+### Added
+- Submit buttons now show a spinner and disable themselves while a form is submitting, panel-wide. Skips
+  forms already cancelled by their own `confirm()` handler and forms opted out via `data-no-loading-state`.
+
+### Fixed
+- `public/css/admin-design-tokens.css` had ~250 lines of corrupted CSS (Form Wizard styles and the print
+  stylesheet) — every line had a stray line-number token glued onto it, plus an orphaned extra closing brace.
+  Restored valid CSS; also removed a redundant duplicate `.inline-edit-error` rule found in the same area.
+- Removed a dark-mode CSS block in `layouts/admin.blade.php` that only checked the OS `prefers-color-scheme`
+  (no app-level dark mode toggle exists) — it would have silently repainted just the sidebar dark for users
+  with OS dark mode on, while the rest of the page stayed light.
+
+### Changed
+- Consolidated the admin panel's two competing color systems into one: `admin-design-tokens.css`'s
+  `--color-primary-*` scale is now the actual indigo brand color (it was a blue scale that
+  `layouts/admin.blade.php` silently overrode with hardcoded indigo hex values). The layout's Bootstrap
+  variable bridge (`--bs-primary`, `.btn-primary`, `.text-primary`, focus rings, pagination, etc.) now
+  references those tokens instead of repeating the hex literals a second time.
+- `admin.partials.page-header` now accepts an `actions` array (multiple buttons), not just a single `action`
+  — existing single-`action` usages are unaffected.
+- All admin views now render status badges through the `<x-badge>` component instead of raw
+  `<span class="badge text-bg-*">` markup — one shared source of badge styling across all 25 modules
+  (People, Academics, Finance, HR, Comms, Certificates, Transport, Payroll, LMS, Library, Website, Setup).
+
+### Removed
+- Dead `resources/views/admin/students/` directory (a superseded tabbed student-detail page, never routed
+  to — the live route renders `admin/people/students/show.blade.php` instead). Confirmed via `git log
+  --follow` and a full reference search before deleting.
+- Dead `@media (prefers-color-scheme: dark)` block in `admin-design-tokens.css`, gated behind a
+  `data-theme="dark"` attribute that nothing in the codebase ever sets.
+
 ### Dependencies
 - `laravel/framework` 13.18.0 → 13.21.1, `laravel/horizon` 5.47.2 → 5.48.1, `laravel/sanctum` 4.3.2 → 4.3.3
 - `spatie/laravel-permission` 8.1.0 → 8.3.0

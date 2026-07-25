@@ -27,8 +27,8 @@
               <td>{{ $revision->created_at?->format('d M Y, H:i') }}</td>
               <td>{{ $revision->createdBy?->name ?? __('—') }}</td>
               <td>
-                @if ($i === 0)<span class="badge text-bg-primary">{{ __('Latest') }}</span>@endif
-                @if ($revision->is_published)<span class="badge text-bg-success">{{ __('Published') }}</span>@endif
+                @if ($i === 0)<x-badge variant="primary">{{ __('Latest') }}</x-badge>@endif
+                @if ($revision->is_published)<x-badge variant="success">{{ __('Published') }}</x-badge>@endif
               </td>
               <td class="text-muted small">
                 {{ __(':count Main + :sidebar Sidebar', ['count' => count($revision->layout_json['blocks'] ?? []), 'sidebar' => count($revision->layout_json['sidebar'] ?? [])]) }}

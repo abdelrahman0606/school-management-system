@@ -39,7 +39,7 @@
                       <div class="small">
                         <span class="fw-semibold">{{ $cell->subject?->name ?? '—' }}</span><br>
                         <span class="text-muted">{{ $cell->teacher?->name ?? 'No teacher' }}</span><br>
-                        <span class="badge text-bg-light border text-muted">{{ $cell->room?->name }}</span>
+                        <x-badge variant="neutral">{{ $cell->room?->name }}</x-badge>
                         <form method="POST" action="{{ route('admin.routine.destroy', $cell->id) }}" class="d-inline" onsubmit="return confirm('Remove?')">@csrf @method('DELETE')<button class="btn btn-sm btn-link text-danger p-0 ms-1">✕</button></form>
                       </div>
                     @else

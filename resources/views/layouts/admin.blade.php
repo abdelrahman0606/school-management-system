@@ -27,53 +27,24 @@
       --content-max: 1280px;
       --content-padding: 1.5rem;
 
-      /* Accent — indigo, matching the reference design. Overrides the blue scale
-         from admin-design-tokens.css so every component (buttons, links, badges,
-         focus rings) picks up indigo. */
-      --color-primary-50:  #eef2ff;
-      --color-primary-100: #e0e7ff;
-      --color-primary-200: #c7d2fe;
-      --color-primary-300: #a5b4fc;
-      --color-primary-400: #818cf8;
-      --color-primary-500: #6366f1;
-      --color-primary-600: #4f46e5;
-      --color-primary-700: #4338ca;
-      --color-primary-800: #3730a3;
-      --color-primary-900: #312e81;
-
-      /* Modern color palette */
+      /* The brand accent (indigo) is defined once, in admin-design-tokens.css's
+         --color-primary-* scale — this used to re-declare the same indigo hex
+         values here to override a blue scale that lived there instead; now
+         that file's scale IS indigo, so these just reference it instead of
+         duplicating the literals. */
       --sb-bg: #ffffff;
       --sb-border: #e8ecf1;
-      --sb-primary: #4f46e5;
-      --sb-primary-hover: #4338ca;
-      --sb-primary-light: #eef2ff;
+      --sb-primary: var(--color-primary-600);
+      --sb-primary-hover: var(--color-primary-700);
+      --sb-primary-light: var(--color-primary-50);
       --sb-text: #374151;
       --sb-text-muted: #6b7280;
       --sb-hover: #f8fafc;
-      --sb-active-bg: #eef2ff;
-      --sb-active-border: #c7d2fe;
+      --sb-active-bg: var(--color-primary-50);
+      --sb-active-border: var(--color-primary-200);
       --sb-section-text: #9ca3af;
       --sb-scrollbar: #d1d5db;
       --sb-scrollbar-hover: #9ca3af;
-    }
-
-    /* Dark mode support */
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --sb-bg: #1e293b;
-        --sb-border: #334155;
-        --sb-primary: #818cf8;
-        --sb-primary-hover: #a5b4fc;
-        --sb-primary-light: #312e81;
-        --sb-text: #f1f5f9;
-        --sb-text-muted: #94a3b8;
-        --sb-hover: #334155;
-        --sb-active-bg: #312e81;
-        --sb-active-border: #6366f1;
-        --sb-section-text: #64748b;
-        --sb-scrollbar: #475569;
-        --sb-scrollbar-hover: #64748b;
-      }
     }
 
     body { background: #f8fafc; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
@@ -268,38 +239,46 @@
     /* Titles use Title Case (first letter of each word capitalised) */
     .page-title, .card-header, .section-title, .page-head-title { text-transform: capitalize; }
 
-    /* Indigo accent for Bootstrap components (their .btn/.badge use compiled
-       colors, so CSS-var overrides alone don't reach them). */
+    /* Bootstrap's own compiled .btn/.badge/.form-check/etc. read --bs-* variables,
+       not admin-design-tokens.css's --color-primary-* scale, so they need their
+       own bridge to pick up the brand indigo — but every value below now
+       references that scale's tokens instead of repeating the hex literals a
+       second time. --color-primary-500-rgb / --color-primary-600-rgb are the
+       only two colors here needed as raw r,g,b triples (for rgba() shadows and
+       Bootstrap's *-rgb variables), since CSS can't convert a hex custom
+       property into a comma-separated triple on its own. */
     :root {
-      --bs-primary: #4f46e5;
-      --bs-primary-rgb: 79, 70, 229;
-      --bs-link-color: #4f46e5;
-      --bs-link-color-rgb: 79, 70, 229;
-      --bs-link-hover-color: #4338ca;
+      --color-primary-500-rgb: 99, 102, 241;
+      --color-primary-600-rgb: 79, 70, 229;
+      --bs-primary: var(--color-primary-600);
+      --bs-primary-rgb: var(--color-primary-600-rgb);
+      --bs-link-color: var(--color-primary-600);
+      --bs-link-color-rgb: var(--color-primary-600-rgb);
+      --bs-link-hover-color: var(--color-primary-700);
     }
     .btn-primary {
-      --bs-btn-bg: #4f46e5; --bs-btn-border-color: #4f46e5;
-      --bs-btn-hover-bg: #4338ca; --bs-btn-hover-border-color: #4338ca;
-      --bs-btn-active-bg: #3730a3; --bs-btn-active-border-color: #3730a3;
-      --bs-btn-disabled-bg: #4f46e5; --bs-btn-disabled-border-color: #4f46e5;
+      --bs-btn-bg: var(--color-primary-600); --bs-btn-border-color: var(--color-primary-600);
+      --bs-btn-hover-bg: var(--color-primary-700); --bs-btn-hover-border-color: var(--color-primary-700);
+      --bs-btn-active-bg: var(--color-primary-800); --bs-btn-active-border-color: var(--color-primary-800);
+      --bs-btn-disabled-bg: var(--color-primary-600); --bs-btn-disabled-border-color: var(--color-primary-600);
     }
     .btn-outline-primary {
-      --bs-btn-color: #4f46e5; --bs-btn-border-color: #4f46e5;
-      --bs-btn-hover-bg: #4f46e5; --bs-btn-hover-border-color: #4f46e5;
-      --bs-btn-active-bg: #4f46e5; --bs-btn-active-border-color: #4f46e5;
+      --bs-btn-color: var(--color-primary-600); --bs-btn-border-color: var(--color-primary-600);
+      --bs-btn-hover-bg: var(--color-primary-600); --bs-btn-hover-border-color: var(--color-primary-600);
+      --bs-btn-active-bg: var(--color-primary-600); --bs-btn-active-border-color: var(--color-primary-600);
     }
     .btn-secondary {
       --bs-btn-hover-color: #000; --bs-btn-active-color: #000;
     }
-    .text-primary { color: #4f46e5 !important; }
-    .bg-primary { background-color: #4f46e5 !important; }
-    .badge.text-bg-primary, .badge.bg-primary { background-color: #4f46e5 !important; }
-    .form-check-input:checked { background-color: #4f46e5; border-color: #4f46e5; }
-    .form-check-input:focus { border-color: #a5b4fc; box-shadow: 0 0 0 .25rem rgba(79, 70, 229, .25); }
-    .form-control:focus, .form-select:focus { border-color: #a5b4fc; box-shadow: 0 0 0 .25rem rgba(79, 70, 229, .2); }
-    .page-item.active .page-link { background-color: #4f46e5; border-color: #4f46e5; }
-    .page-link { color: #4f46e5; }
-    .nav-pills .nav-link.active { background-color: #4f46e5; }
+    .text-primary { color: var(--color-primary-600) !important; }
+    .bg-primary { background-color: var(--color-primary-600) !important; }
+    .badge.text-bg-primary, .badge.bg-primary { background-color: var(--color-primary-600) !important; }
+    .form-check-input:checked { background-color: var(--color-primary-600); border-color: var(--color-primary-600); }
+    .form-check-input:focus { border-color: var(--color-primary-300); box-shadow: 0 0 0 .25rem rgba(var(--color-primary-600-rgb), .25); }
+    .form-control:focus, .form-select:focus { border-color: var(--color-primary-300); box-shadow: 0 0 0 .25rem rgba(var(--color-primary-600-rgb), .2); }
+    .page-item.active .page-link { background-color: var(--color-primary-600); border-color: var(--color-primary-600); }
+    .page-link { color: var(--color-primary-600); }
+    .nav-pills .nav-link.active { background-color: var(--color-primary-600); }
 
     /* admin-design-tokens.css hijacks Bootstrap's .modal / .modal-backdrop
        (they were written for native <dialog>, shown via [open], with a solid
@@ -471,6 +450,40 @@
         $t.DataTable({ pageLength: 25, order: [], columnDefs: [{ orderable: false, targets: noSort }], language: jsDtLanguage });
       });
       document.querySelectorAll('.js-select').forEach(function (el) { new TomSelect(el, { create: false }); });
+    });
+
+    // Disable the submit button (and show a spinner) the moment a form is
+    // actually submitted, everywhere in the admin panel — every write here
+    // is a classic full-page POST-redirect-GET (no fetch/AJAX layer for the
+    // admin UI, per this file's own architecture), so a disabled button just
+    // rides out until the next page loads; there's no "re-enable" case to
+    // handle. Prevents double-submit on slow connections / accidental
+    // double-clicks, which previously had no protection at all.
+    //
+    // e.defaultPrevented is checked first so this never fires for a form
+    // whose OWN submit handler already cancelled it — e.g. an inline
+    // onsubmit="return confirm(...)" that the user declined, or a page like
+    // the Website block editor that intercepts submit for its own fetch()-
+    // based flow. Bubble-phase delegation guarantees those run first: a
+    // handler attached directly to the form (inline onsubmit, or another
+    // script's addEventListener on that exact element) always fires before
+    // a listener delegated on document, since bubbling visits the target
+    // itself before any ancestor.
+    //
+    // Opt out entirely with data-no-loading-state on a <form>.
+    document.addEventListener('submit', function (e) {
+      if (e.defaultPrevented) return;
+      var form = e.target;
+      if (!(form instanceof HTMLFormElement) || form.hasAttribute('data-no-loading-state')) return;
+      // SubmitEvent.submitter is the actual button/input that triggered this
+      // exact submission — important for forms with more than one submit
+      // button (e.g. Bulk Generate + Generate Invoice), so only the one
+      // actually clicked gets disabled, not both.
+      var btn = e.submitter || form.querySelector('button[type="submit"], button:not([type])');
+      if (!btn || btn.disabled) return;
+      btn.disabled = true;
+      btn.dataset.loadingOriginalHtml = btn.innerHTML;
+      btn.insertAdjacentHTML('afterbegin', '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>');
     });
     // Re-open a modal after a validation redirect (?open=modalId in session)
     @if (session('open_modal'))

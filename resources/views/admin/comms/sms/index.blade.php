@@ -12,13 +12,14 @@
       <thead><tr><th>#</th><th>{{ __('Scope') }}</th><th>{{ __('Message') }}</th><th>{{ __('Recipients') }}</th><th>{{ __('Status') }}</th><th>{{ __('When') }}</th><th class="text-end" data-orderable="false"></th></tr></thead>
       <tbody>
         @foreach ($batches as $b)
-          @php $m = ['queued'=>'secondary','processing'=>'info','completed'=>'success','failed'=>'danger']; @endphp
+          {{-- Keep in sync with sms/show.blade.php's $badgeMap --}}
+          @php $badgeMap = ['queued'=>'neutral','processing'=>'primary','completed'=>'success','failed'=>'danger']; @endphp
           <tr>
             <td>{{ $b->id }}</td>
             <td class="text-capitalize">{{ $b->scope }}</td>
             <td class="text-truncate" style="max-width:280px">{{ $b->message_body }}</td>
             <td>{{ $b->total_count }}</td>
-            <td><span class="badge text-bg-{{ $m[$b->status] ?? 'secondary' }}">{{ ucfirst($b->status) }}</span></td>
+            <td><x-badge :variant="$badgeMap[$b->status] ?? 'neutral'">{{ ucfirst($b->status) }}</x-badge></td>
             <td class="small">{{ $b->created_at?->format('d M Y H:i') }}</td>
             <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{{ route('admin.sms.show', $b->id) }}">{{ __('Open') }}</a></td>
           </tr>

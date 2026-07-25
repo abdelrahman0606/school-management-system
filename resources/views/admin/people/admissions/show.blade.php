@@ -1,11 +1,11 @@
 @extends('layouts.admin')
 @section('title', 'Application ' . $application->reference_number)
 @section('content')
-  @php $m = ['submitted'=>'warning','approved'=>'success','rejected'=>'danger']; @endphp
+  @php $badgeMap = ['submitted'=>'warning','approved'=>'success','rejected'=>'danger']; @endphp
   <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
     <div>
       <nav><ol class="breadcrumb small mb-1"><li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}" class="text-decoration-none">{{ __('Home') }}</a></li><li class="breadcrumb-item">{{ __('People') }}</li><li class="breadcrumb-item"><a href="{{ route('admin.admissions.index') }}" class="text-decoration-none">{{ __('Admissions') }}</a></li><li class="breadcrumb-item active">{{ $application->reference_number }}</li></ol></nav>
-      <h1 class="h4 mb-0">{{ $application->applicant_name }} <span class="badge text-bg-{{ $m[$application->status] ?? 'secondary' }} align-middle">{{ ucfirst($application->status) }}</span></h1>
+      <h1 class="h4 mb-0">{{ $application->applicant_name }} <x-badge :variant="$badgeMap[$application->status] ?? 'neutral'" class="align-middle">{{ ucfirst($application->status) }}</x-badge></h1>
     </div>
     @if ($application->status === 'submitted')
       <div class="d-flex gap-2">

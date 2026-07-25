@@ -16,7 +16,7 @@
             <td class="fw-semibold">{{ $h->name }}</td>
             <td>{{ $h->description ?? '—' }}</td>
             <td>{{ $h->seats_count }}</td>
-            <td><span class="badge text-bg-success">{{ $h->available_count }}</span></td>
+            <td><x-badge variant="success">{{ $h->available_count }}</x-badge></td>
             <td class="text-end">
               <a class="btn btn-sm btn-outline-primary" href="{{ route('admin.exam-halls.show', $h->id) }}">{{ __('Seats') }}</a>
               <form method="POST" action="{{ route('admin.exam-halls.destroy', $h->id) }}" class="d-inline" onsubmit="return confirm('Delete {{ $h->name }}?')">

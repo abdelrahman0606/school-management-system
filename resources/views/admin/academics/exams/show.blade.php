@@ -2,14 +2,14 @@
 @section('title', $exam->title)
 @section('content')
   @php
-    $m = ['draft'=>'secondary','published'=>'primary','completed'=>'success'];
+    $badgeMap = ['draft'=>'neutral','published'=>'primary','completed'=>'success'];
     $editable = $exam->status !== 'completed';
   @endphp
 
   <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
     <div>
       <nav><ol class="breadcrumb small mb-1"><li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}" class="text-decoration-none">{{ __('Home') }}</a></li><li class="breadcrumb-item">{{ __('Academics') }}</li><li class="breadcrumb-item"><a href="{{ route('admin.exams.index') }}" class="text-decoration-none">{{ __('Exams') }}</a></li><li class="breadcrumb-item active">{{ $exam->title }}</li></ol></nav>
-      <h1 class="h4 mb-0">{{ $exam->title }} <span class="badge text-bg-{{ $m[$exam->status] ?? 'secondary' }} align-middle">{{ ucfirst($exam->status) }}</span></h1>
+      <h1 class="h4 mb-0">{{ $exam->title }} <x-badge :variant="$badgeMap[$exam->status] ?? 'neutral'" class="align-middle">{{ ucfirst($exam->status) }}</x-badge></h1>
       <div class="text-muted small mt-1">{{ $exam->examType?->name }} · {{ $exam->schoolClass?->name }} · {{ optional($exam->start_date)->format('d M') }}–{{ optional($exam->end_date)->format('d M Y') }}</div>
     </div>
     <div class="d-flex gap-2">

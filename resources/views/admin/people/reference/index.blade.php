@@ -14,7 +14,7 @@
         @foreach ($items as $item)
           <tr>
             <td class="fw-semibold">{{ $item->name }}</td>
-            <td><span class="badge text-bg-light border text-muted">{{ $item->staff_count }}</span></td>
+            <td><x-badge variant="neutral">{{ $item->staff_count }}</x-badge></td>
             <td class="text-end">
               <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editModal{{ $item->id }}">{{ __('Edit') }}</button>
               <form method="POST" action="{{ route('admin.' . $type . '.destroy', $item->id) }}" class="d-inline" onsubmit="return confirm('Delete {{ $item->name }}?')">
