@@ -16,10 +16,10 @@
             <td class="fw-semibold">{{ $p->title }}</td>
             <td><code>/{{ $p->slug }}</code></td>
             <td>
-              @if ($p->status === 'published')<span class="badge text-bg-success">{{ __('Published') }}</span>
-              @else<span class="badge text-bg-secondary">{{ __('Draft') }}</span>@endif
+              @if ($p->status === 'published')<x-badge variant="success">{{ __('Published') }}</x-badge>
+              @else<x-badge variant="neutral">{{ __('Draft') }}</x-badge>@endif
             </td>
-            <td>@if ($p->is_homepage)<span class="badge text-bg-primary"><i class="bi bi-house"></i> {{ __('Homepage') }}</span>@endif</td>
+            <td>@if ($p->is_homepage)<x-badge variant="primary"><i class="bi bi-house"></i> {{ __('Homepage') }}</x-badge>@endif</td>
             <td class="text-end">
               <a class="btn btn-sm btn-outline-primary" href="{{ route('admin.pages.edit', $p->id) }}">{{ __('Edit') }}</a>
               @if ($p->status === 'published')<a class="btn btn-sm btn-outline-secondary" href="{{ url('/' . $p->slug) }}" target="_blank">{{ __('View') }}</a>@endif

@@ -15,7 +15,7 @@
             <td class="text-capitalize">{{ $s->mode ?? 'mark' }}</td>
             <td>{{ $s->result_strategy ?? 'bd_national' }}</td>
             <td>
-              @if ($bc > 0)<span class="badge text-bg-success">{{ $bc }} set</span>@else<span class="badge text-bg-warning">{{ __('None') }}</span>@endif
+              @if ($bc > 0)<x-badge variant="success">{{ $bc }} set</x-badge>@else<x-badge variant="warning">{{ __('None') }}</x-badge>@endif
             </td>
             <td class="text-end">
               <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editModal{{ $c->id }}">{{ __('Settings') }}</button>

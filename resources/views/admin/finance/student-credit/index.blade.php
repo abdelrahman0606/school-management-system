@@ -44,8 +44,8 @@
               <tr>
                 <td class="small">{{ $t->created_at?->format('d M Y H:i') }}</td>
                 <td>
-                  @php $m = ['credit'=>'success','debit'=>'danger','refund'=>'info']; @endphp
-                  <span class="badge text-bg-{{ $m[$t->type] ?? 'secondary' }}">{{ ucfirst($t->type) }}</span>
+                  @php $badgeMap = ['credit'=>'success','debit'=>'danger','refund'=>'primary']; @endphp
+                  <x-badge :variant="$badgeMap[$t->type] ?? 'neutral'">{{ ucfirst($t->type) }}</x-badge>
                 </td>
                 <td class="text-end">{{ number_format((float) $t->amount, 2) }}</td>
                 <td class="small">{{ $t->reference_type ?? '—' }}{{ $t->reference_id ? ' #' . $t->reference_id : '' }}</td>

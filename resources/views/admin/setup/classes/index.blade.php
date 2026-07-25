@@ -14,7 +14,7 @@
         @foreach ($classes as $class)
           <tr>
             <td class="fw-semibold">{{ $class->name }}</td>
-            <td><span class="badge text-bg-light border text-muted">{{ $class->sections_count }}</span></td>
+            <td><x-badge variant="neutral">{{ $class->sections_count }}</x-badge></td>
             <td class="text-muted small">{{ ($class->min_age || $class->max_age) ? (($class->min_age ?? '?') . '–' . ($class->max_age ?? '?') . ' yrs') : '—' }}</td>
             <td class="text-end">
               <a class="btn btn-sm btn-outline-primary" href="{{ route('admin.classes.sections.index', $class->id) }}">{{ __('Manage Sections') }}</a>

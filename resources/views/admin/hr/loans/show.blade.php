@@ -1,11 +1,11 @@
 @extends('layouts.admin')
 @section('title', __('Loan'))
 @section('content')
-  @php $m = ['pending'=>'warning','approved'=>'success','rejected'=>'danger','cancelled'=>'secondary']; @endphp
+  @php $badgeMap = ['pending'=>'warning','approved'=>'success','rejected'=>'danger','cancelled'=>'neutral']; @endphp
   <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
     <div>
       <nav><ol class="breadcrumb small mb-1"><li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}" class="text-decoration-none">{{ __('Home') }}</a></li><li class="breadcrumb-item">HR</li><li class="breadcrumb-item"><a href="{{ route('admin.staff-loans.index') }}" class="text-decoration-none">{{ __('Staff Loans') }}</a></li><li class="breadcrumb-item active">#{{ $loan->id }}</li></ol></nav>
-      <h1 class="h4 mb-0">{{ $loan->staff?->name }} <span class="badge text-bg-{{ $m[$loan->status] ?? 'secondary' }} align-middle">{{ ucfirst($loan->status) }}</span></h1>
+      <h1 class="h4 mb-0">{{ $loan->staff?->name }} <x-badge :variant="$badgeMap[$loan->status] ?? 'neutral'" class="align-middle">{{ ucfirst($loan->status) }}</x-badge></h1>
     </div>
     @if ($loan->status === 'pending')
       <div class="d-flex gap-2">
@@ -41,7 +41,7 @@
                   <td>{{ $s->installment_number }}</td>
                   <td class="small">{{ optional($s->due_date)->format('d M Y') }}</td>
                   <td class="text-end">{{ number_format((float) $s->amount, 2) }}</td>
-                  <td>@if ($s->is_paid)<span class="badge text-bg-success">{{ __('Paid') }}</span>@else<span class="badge text-bg-light border text-muted">{{ __('Due') }}</span>@endif</td>
+                  <td>@if ($s->is_paid)<x-badge variant="success">{{ __('Paid') }}</x-badge>@else<x-badge variant="neutral">{{ __('Due') }}</x-badge>@endif</td>
                 </tr>
               @endforeach
             </tbody>

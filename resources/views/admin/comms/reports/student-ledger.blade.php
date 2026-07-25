@@ -36,7 +36,7 @@
           @foreach ($data['entries'] as $e)
             <tr>
               <td class="small">{{ \Illuminate\Support\Str::of($e['date'])->substr(0, 10) }}</td>
-              <td><span class="badge text-bg-light border text-muted text-capitalize">{{ str_replace('_', ' ', $e['type']) }}</span></td>
+              <td><x-badge variant="neutral" class="text-capitalize">{{ str_replace('_', ' ', $e['type']) }}</x-badge></td>
               <td>{{ $e['description'] }}</td>
               <td class="text-end">{{ number_format((float) $e['amount'], 2) }} {{ $e['currency'] }}</td>
             </tr>

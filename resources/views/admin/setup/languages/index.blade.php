@@ -25,7 +25,7 @@
                 <tr>
                   <td>{{ $lang->flag }} <span class="fw-medium">{{ $lang->native_name }}</span>
                     <span class="text-muted small">({{ $lang->name }})</span>
-                    @if($lang->is_rtl)<span class="badge text-bg-secondary ms-1">RTL</span>@endif</td>
+                    @if($lang->is_rtl)<x-badge variant="neutral" class="ms-1">RTL</x-badge>@endif</td>
                   <td><code>{{ $lang->code }}</code></td>
                   <td class="text-center">
                     @if($lang->code === 'en')<span class="text-muted small">{{ __('Source') }}</span>

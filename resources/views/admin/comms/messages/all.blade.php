@@ -4,7 +4,7 @@
   <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
       <nav><ol class="breadcrumb small mb-1"><li class="breadcrumb-item">{{ __('Comms') }}</li><li class="breadcrumb-item"><a href="{{ route('admin.messages.index') }}" class="text-decoration-none">{{ __('Messages') }}</a></li><li class="breadcrumb-item active">{{ __('All') }}</li></ol></nav>
-      <h1 class="h4 mb-0">{{ __('All Conversations') }} <span class="badge text-bg-secondary align-middle">{{ __('Oversight') }}</span></h1>
+      <h1 class="h4 mb-0">{{ __('All Conversations') }} <x-badge variant="neutral" class="align-middle">{{ __('Oversight') }}</x-badge></h1>
     </div>
     <a class="btn btn-outline-secondary" href="{{ route('admin.messages.index') }}"><i class="bi bi-inbox"></i> {{ __('My Inbox') }}</a>
   </div>
@@ -21,10 +21,10 @@
           @endphp
           <tr>
             <td class="fw-semibold">{{ $title }}</td>
-            <td><span class="badge text-bg-light border text-muted">{{ ucfirst($t->type) }}</span></td>
+            <td><x-badge variant="neutral">{{ ucfirst($t->type) }}</x-badge></td>
             <td class="small text-muted">{{ $names->count() }}</td>
             <td data-order="{{ optional($t->last_message_at)->timestamp ?? 0 }}">{{ $t->last_message_at?->diffForHumans() ?? '—' }}</td>
-            <td>@if ($t->is_locked)<span class="badge text-bg-danger">{{ __('Locked') }}</span>@else<span class="badge text-bg-success">{{ __('Open') }}</span>@endif</td>
+            <td>@if ($t->is_locked)<x-badge variant="danger">{{ __('Locked') }}</x-badge>@else<x-badge variant="success">{{ __('Open') }}</x-badge>@endif</td>
             <td class="text-end">
               <a class="btn btn-sm btn-outline-primary" href="{{ route('admin.messages.show', $t->id) }}">{{ __('Open') }}</a>
               <form method="POST" action="{{ route('admin.messages.lock', $t->id) }}" class="d-inline">

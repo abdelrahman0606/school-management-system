@@ -25,11 +25,11 @@
             <td class="small">{{ optional($r->due_at)->format('d M Y') }}</td>
             <td>
               @if (! $outstanding)
-                <span class="badge text-bg-secondary">{{ __('Returned') }}</span>
+                <x-badge variant="neutral">{{ __('Returned') }}</x-badge>
               @elseif ($overdue)
-                <span class="badge text-bg-danger">{{ __('Overdue') }}</span>
+                <x-badge variant="danger">{{ __('Overdue') }}</x-badge>
               @else
-                <span class="badge text-bg-success">{{ __('Borrowed') }}</span>
+                <x-badge variant="success">{{ __('Borrowed') }}</x-badge>
               @endif
             </td>
             <td class="text-end">

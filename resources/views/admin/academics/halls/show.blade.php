@@ -14,8 +14,8 @@
 
   <div class="card"><div class="card-body">
     <div class="d-flex gap-3 mb-3 small text-muted">
-      <span><span class="badge text-bg-success">&nbsp;</span> {{ __('Available') }}</span>
-      <span><span class="badge text-bg-secondary">&nbsp;</span> {{ __('Blocked') }}</span>
+      <span><x-badge variant="success">&nbsp;</x-badge> {{ __('Available') }}</span>
+      <span><x-badge variant="neutral">&nbsp;</x-badge> {{ __('Blocked') }}</span>
       <span class="ms-auto">{{ __('Click A Seat To Toggle Its Availability.') }}</span>
     </div>
     @foreach ($rows as $rowNo => $seats)

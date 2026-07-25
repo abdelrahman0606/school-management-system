@@ -15,7 +15,7 @@
         @foreach ($components as $c)
           <tr>
             <td class="fw-semibold">{{ $c->name }}</td>
-            <td><span class="badge text-bg-{{ $c->component_type === 'earning' ? 'success' : 'danger' }}">{{ ucfirst($c->component_type) }}</span></td>
+            <td><x-badge :variant="$c->component_type === 'earning' ? 'success' : 'danger'">{{ ucfirst($c->component_type) }}</x-badge></td>
             <td>{!! $c->is_default ? '<i class="bi bi-check-lg text-success"></i>' : '—' !!}</td>
             <td>{{ $c->sort_order }}</td>
             <td class="text-end">

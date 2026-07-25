@@ -23,10 +23,10 @@
             <tr>
               <td class="fw-semibold">{{ $s->student?->name ?? '—' }}</td>
               <td class="small">{{ optional($s->submitted_at)->format('d M Y H:i') }}</td>
-              <td>@if ($s->late_submission)<span class="badge text-bg-warning">{{ __('Late') }}</span>@else — @endif</td>
+              <td>@if ($s->late_submission)<x-badge variant="warning">{{ __('Late') }}</x-badge>@else — @endif</td>
               <td>
                 @if ($s->aiCheck)
-                  <span class="badge text-bg-{{ $s->aiCheck->likely_ai_generated ? 'danger' : 'success' }}">{{ $s->aiCheck->likely_ai_generated ? 'Likely AI' : 'OK' }}{{ $s->aiCheck->ai_score !== null ? ' (' . $s->aiCheck->ai_score . ')' : '' }}</span>
+                  <x-badge :variant="$s->aiCheck->likely_ai_generated ? 'danger' : 'success'">{{ $s->aiCheck->likely_ai_generated ? 'Likely AI' : 'OK' }}{{ $s->aiCheck->ai_score !== null ? ' (' . $s->aiCheck->ai_score . ')' : '' }}</x-badge>
                 @else — @endif
               </td>
               <td class="text-end">{{ $s->marks_awarded ?? '—' }}{{ $s->graded_at ? '' : '' }}</td>

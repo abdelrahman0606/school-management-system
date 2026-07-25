@@ -15,7 +15,7 @@
           <tr>
             <td class="fw-semibold">{{ $t->name }}</td>
             <td>{{ $t->description ?? '—' }}</td>
-            <td><span class="badge text-bg-light border text-muted">{{ $t->exams_count }}</span></td>
+            <td><x-badge variant="neutral">{{ $t->exams_count }}</x-badge></td>
             <td class="text-end">
               <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editModal{{ $t->id }}">{{ __('Edit') }}</button>
               <form method="POST" action="{{ route('admin.exam-types.destroy', $t->id) }}" class="d-inline" onsubmit="return confirm('Delete {{ $t->name }}?')">

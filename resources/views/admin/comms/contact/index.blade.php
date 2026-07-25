@@ -13,7 +13,7 @@
           <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
             <div>
               <span class="fw-semibold">{{ $m->name }}</span>
-              @unless ($m->is_read)<span class="badge text-bg-primary">{{ __('New') }}</span>@endunless
+              @unless ($m->is_read)<x-badge variant="primary">{{ __('New') }}</x-badge>@endunless
               <div class="small text-muted">
                 @if ($m->email)<a href="mailto:{{ $m->email }}" class="text-decoration-none">{{ $m->email }}</a>@endif
                 @if ($m->phone) · <a href="tel:{{ $m->phone }}" class="text-decoration-none">{{ $m->phone }}</a>@endif

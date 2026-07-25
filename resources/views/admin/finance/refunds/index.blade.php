@@ -19,8 +19,8 @@
             <td class="text-end">{{ number_format((float) $r->processing_fee, 2) }}</td>
             <td class="text-end">{{ number_format((float) $r->net_refund, 2) }}</td>
             <td>
-              @php $m = ['pending'=>'warning','completed'=>'success','failed'=>'danger']; @endphp
-              <span class="badge text-bg-{{ $m[$r->status] ?? 'secondary' }}">{{ ucfirst($r->status) }}</span>
+              @php $badgeMap = ['pending'=>'warning','completed'=>'success','failed'=>'danger']; @endphp
+              <x-badge :variant="$badgeMap[$r->status] ?? 'neutral'">{{ ucfirst($r->status) }}</x-badge>
             </td>
           </tr>
         @endforeach

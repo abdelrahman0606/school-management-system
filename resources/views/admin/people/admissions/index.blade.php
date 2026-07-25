@@ -14,7 +14,8 @@
       <a href="{{ route('admin.admissions.index') }}" class="btn btn-sm btn-outline-secondary">{{ __('Reset') }}</a></div>
   </div></form>
 
-  @php $m = ['submitted'=>'warning','approved'=>'success','rejected'=>'danger']; @endphp
+  {{-- Keep in sync with admissions/show.blade.php's $badgeMap --}}
+  @php $badgeMap = ['submitted'=>'warning','approved'=>'success','rejected'=>'danger']; @endphp
   <div class="card"><div class="card-body">
     <table class="table table-hover align-middle w-100 js-dt">
       <thead><tr><th>{{ __('Reference') }}</th><th>{{ __('Applicant') }}</th><th>{{ __('Guardian') }}</th><th>{{ __('Phone') }}</th><th>{{ __('Status') }}</th><th class="text-end" data-orderable="false">{{ __('Actions') }}</th></tr></thead>
@@ -25,7 +26,7 @@
             <td class="fw-semibold">{{ $a->applicant_name }}</td>
             <td>{{ $a->guardian_name }}</td>
             <td>{{ $a->guardian_phone }}</td>
-            <td><span class="badge text-bg-{{ $m[$a->status] ?? 'secondary' }}">{{ ucfirst($a->status) }}</span></td>
+            <td><x-badge :variant="$badgeMap[$a->status] ?? 'neutral'">{{ ucfirst($a->status) }}</x-badge></td>
             <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{{ route('admin.admissions.show', $a->id) }}">{{ __('Review') }}</a></td>
           </tr>
         @endforeach

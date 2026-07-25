@@ -18,7 +18,8 @@
       <a href="{{ route('admin.staff-loans.index') }}" class="btn btn-sm btn-outline-secondary">{{ __('Reset') }}</a></div>
   </div></form>
 
-  @php $m = ['pending'=>'warning','approved'=>'success','rejected'=>'danger','cancelled'=>'secondary']; @endphp
+  {{-- Keep in sync with loans/show.blade.php's $badgeMap --}}
+  @php $badgeMap = ['pending'=>'warning','approved'=>'success','rejected'=>'danger','cancelled'=>'neutral']; @endphp
   <div class="card"><div class="card-body">
     <table class="table table-hover align-middle w-100 js-dt">
       <thead><tr><th>{{ __('Staff') }}</th><th class="text-end">{{ __('Amount') }}</th><th>{{ __('Installments') }}</th><th>{{ __('Start') }}</th><th>{{ __('Status') }}</th><th class="text-end" data-orderable="false">{{ __('Actions') }}</th></tr></thead>
@@ -29,7 +30,7 @@
             <td class="text-end">{{ number_format((float) $l->requested_amount, 2) }}</td>
             <td>{{ $l->installment_count }}</td>
             <td class="small">{{ optional($l->start_date)->format('d M Y') }}</td>
-            <td><span class="badge text-bg-{{ $m[$l->status] ?? 'secondary' }}">{{ ucfirst($l->status) }}</span></td>
+            <td><x-badge :variant="$badgeMap[$l->status] ?? 'neutral'">{{ ucfirst($l->status) }}</x-badge></td>
             <td class="text-end"><a class="btn btn-sm btn-outline-primary" href="{{ route('admin.staff-loans.show', $l->id) }}">{{ __('Open') }}</a></td>
           </tr>
         @endforeach

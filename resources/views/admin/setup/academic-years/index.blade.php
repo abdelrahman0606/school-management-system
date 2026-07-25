@@ -16,9 +16,9 @@
             <td class="fw-semibold">{{ $y->year }}</td>
             <td>
               @if ($y->is_current)
-                <span class="badge text-bg-success">{{ __('Current') }}</span>
+                <x-badge variant="success">{{ __('Current') }}</x-badge>
               @else
-                <span class="badge text-bg-light border text-muted">—</span>
+                <x-badge variant="neutral">—</x-badge>
               @endif
             </td>
             <td class="text-end">
