@@ -6,6 +6,27 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Dependencies
+- `laravel/framework` 13.18.0 → 13.21.1, `laravel/horizon` 5.47.2 → 5.48.1, `laravel/sanctum` 4.3.2 → 4.3.3
+  (grouped dependabot update).
+- `spatie/laravel-permission` 8.1.0 → 8.3.0 (minor).
+- `league/flysystem-aws-s3-v3` 3.35.1 → 3.35.2 (patch — the MinIO/S3 storage driver).
+- `phpoffice/phpspreadsheet` 1.30.5 → 1.30.6 (patch — used by the DataImport module).
+- `nunomaduro/collision` 8.9.4 → 8.9.5 (dev-dependency group, patch).
+- `concurrently` (npm, dev) ^9.0.1 → ^10.0.3 (major — `npm run dev`'s parallel task runner only, not shipped to
+  users).
+- `actions/checkout` 6 → 7 across all three CI workflows (tests/pint/phpstan).
+- Docker base image `php:8.3-fpm` → `php:8.5-fpm` in `Dockerfile`.
+
+### Notes
+- **The `php:8.5-fpm` base image bump is a real jump worth checking before relying on it** — this project's
+  own CLAUDE.md pins the stack to "Laravel 13 · PHP 8.3" throughout, and PHP 8.5 is new enough that some
+  Composer dependencies, PHP extensions installed in the Dockerfile, or Larastan/PHPStan's PHP-version-aware
+  analysis could behave differently under it. All the dependabot merges above landed straight on `main`
+  (dependabot's GitHub-side target, not this repo's usual `dev`-first workflow) and haven't been run through
+  `composer install` + the full test suite in this environment — do that before treating this as verified,
+  especially the PHP 8.5 switch.
+
 ## [1.3.0] — 2026-07-24
 
 ### Added
