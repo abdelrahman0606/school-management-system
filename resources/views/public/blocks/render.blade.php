@@ -273,27 +273,85 @@
 
   @case('gallery_photo')
     {!! $open !!}
+      @php
+        // A fresh id every render (this partial's output isn't itself what
+        // PageRenderService caches — only the upstream $d data is, see
+        // PageRenderService::renderPage() — so a plain uniqid() here is
+        // safe and just needs to be unique within THIS page load, not
+        // stable across requests). Lets a page carry more than one Gallery
+        // Photo block without their modals colliding.
+        $galleryId = 'gallery-photo-' . uniqid();
+        $imageUrls = collect($d['images'] ?? [])
+          ->map(fn ($img) => is_array($img) ? ($img['url'] ?? '') : $img)
+          ->filter()->values();
+      @endphp
       @if(!empty($d['heading']))<h2 class="section-title h3 mb-4">{{ $d['heading'] }}</h2>@endif
       <div class="row {{ $bp::columnClasses($layout, ['mobile' => 2, 'tablet' => 3, 'laptop' => 4, 'desktop' => 4]) }} g-3">
-        @forelse($d['images'] ?? [] as $img)
-          <div><a href="{{ is_array($img) ? ($img['url'] ?? '#') : $img }}" target="_blank" class="img-zoom d-block"><img src="{{ is_array($img) ? ($img['url'] ?? '') : $img }}" class="img-fluid" style="aspect-ratio:1;object-fit:cover;width:100%;" alt=""></a></div>
+        @forelse($imageUrls as $i => $url)
+          <div>
+            <button type="button" class="img-zoom d-block w-100 border-0 p-0 bg-transparent" data-bs-toggle="modal" data-bs-target="#{{ $galleryId }}" data-gallery-index="{{ $i }}" aria-label="{{ __('View Photo') }} {{ $i + 1 }}">
+              <img src="{{ $url }}" class="img-fluid" style="aspect-ratio:1;object-fit:cover;width:100%;" alt="">
+            </button>
+          </div>
         @empty
           <p class="text-muted mb-0">{{ __('No Photos Yet.') }}</p>
         @endforelse
       </div>
+      @if($imageUrls->isNotEmpty())
+        <div class="modal fade js-photo-gallery-modal" id="{{ $galleryId }}" tabindex="-1" aria-hidden="true" data-images="{{ json_encode($imageUrls) }}">
+          <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content border-0">
+              <button type="button" class="btn-close btn-close-white ms-auto m-2" data-bs-dismiss="modal" aria-label="{{ __('Close') }}"></button>
+              <div class="modal-body p-0 text-center position-relative">
+                <img src="" class="img-fluid rounded-3 js-gallery-img" alt="">
+                @if($imageUrls->count() > 1)
+                  <button type="button" class="btn btn-light btn-sm rounded-circle position-absolute top-50 start-0 translate-middle-y ms-2 js-gallery-prev" aria-label="{{ __('Previous Photo') }}"><i class="bi bi-chevron-left"></i></button>
+                  <button type="button" class="btn btn-light btn-sm rounded-circle position-absolute top-50 end-0 translate-middle-y me-2 js-gallery-next" aria-label="{{ __('Next Photo') }}"><i class="bi bi-chevron-right"></i></button>
+                @endif
+              </div>
+            </div>
+          </div>
+        </div>
+      @endif
     {!! $close !!}
     @break
 
   @case('gallery_video')
     {!! $open !!}
+      @php
+        $galleryId = 'gallery-video-' . uniqid();
+        $videoUrls = collect($d['videos'] ?? [])
+          ->map(fn ($v) => is_array($v) ? ($v['url'] ?? '') : $v)
+          ->filter()->values();
+      @endphp
       @if(!empty($d['heading']))<h2 class="section-title h3 mb-4">{{ $d['heading'] }}</h2>@endif
       <div class="row {{ $bp::columnClasses($layout, ['mobile' => 1, 'tablet' => 2, 'laptop' => 2, 'desktop' => 2]) }} g-3">
-        @forelse($d['videos'] ?? [] as $v)
-          <div><div class="ratio ratio-16x9 rounded-3 overflow-hidden media-shadow"><iframe src="{{ is_array($v) ? ($v['url'] ?? '') : $v }}" allowfullscreen loading="lazy"></iframe></div></div>
+        @forelse($videoUrls as $i => $url)
+          <div>
+            <button type="button" class="video-thumb ratio ratio-16x9 rounded-3 overflow-hidden media-shadow border-0 p-0 w-100" data-bs-toggle="modal" data-bs-target="#{{ $galleryId }}" data-gallery-index="{{ $i }}" aria-label="{{ __('Play Video') }} {{ $i + 1 }}">
+              <i class="bi bi-play-circle-fill" aria-hidden="true"></i>
+            </button>
+          </div>
         @empty
           <p class="text-muted mb-0">{{ __('No Videos Yet.') }}</p>
         @endforelse
       </div>
+      @if($videoUrls->isNotEmpty())
+        <div class="modal fade js-video-gallery-modal" id="{{ $galleryId }}" tabindex="-1" aria-hidden="true" data-videos="{{ json_encode($videoUrls) }}">
+          <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content border-0">
+              <button type="button" class="btn-close btn-close-white ms-auto m-2" data-bs-dismiss="modal" aria-label="{{ __('Close') }}"></button>
+              <div class="modal-body p-0 position-relative">
+                <div class="ratio ratio-16x9"><iframe src="" class="js-gallery-video-frame" allowfullscreen loading="lazy"></iframe></div>
+                @if($videoUrls->count() > 1)
+                  <button type="button" class="btn btn-light btn-sm rounded-circle position-absolute top-50 start-0 translate-middle-y ms-2 js-gallery-prev" aria-label="{{ __('Previous Video') }}"><i class="bi bi-chevron-left"></i></button>
+                  <button type="button" class="btn btn-light btn-sm rounded-circle position-absolute top-50 end-0 translate-middle-y me-2 js-gallery-next" aria-label="{{ __('Next Video') }}"><i class="bi bi-chevron-right"></i></button>
+                @endif
+              </div>
+            </div>
+          </div>
+        </div>
+      @endif
     {!! $close !!}
     @break
 
