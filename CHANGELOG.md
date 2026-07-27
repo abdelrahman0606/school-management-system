@@ -6,6 +6,8 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.3.2] — 2026-07-27
+
 ### Added
 - Gallery Photo and Gallery Video blocks now open a lightbox instead of leaving the page: clicking a photo
   opens it full-size in a modal with prev/next (and arrow-key) navigation through the rest of that gallery;
