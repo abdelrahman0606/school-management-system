@@ -17,10 +17,10 @@
 @switch($type)
   @case('quick_links')
     <div class="card"><div class="card-body">
-      <h3 class="h6 section-title mb-3">{{ $d['heading'] ?? 'Quick links' }}</h3>
+      <h3 class="h6 section-title mb-3">{{ $d['heading'] ?? __('Quick Links') }}</h3>
       <div class="d-flex flex-column gap-2">
         @foreach($d['links'] ?? [] as $l)
-          <a href="{{ $l['url'] ?? '#' }}" class="text-decoration-none"><i class="bi bi-chevron-right small"></i> {{ $l['label'] ?? '' }}</a>
+          <a href="{{ $l['url'] ?? '#' }}" class="link-arrow w-100 justify-content-between text-brand">{{ $l['label'] ?? '' }} <i class="bi bi-chevron-right small"></i></a>
         @endforeach
       </div>
     </div></div>
@@ -28,7 +28,7 @@
 
   @case('office_hours')
     <div class="card"><div class="card-body">
-      <h3 class="h6 section-title mb-3">{{ $d['heading'] ?? 'Office hours' }}</h3>
+      <h3 class="h6 section-title mb-3">{{ $d['heading'] ?? __('Office Hours') }}</h3>
       <ul class="list-unstyled small mb-0">
         @foreach($d['lines'] ?? [] as $line)
           <li class="d-flex justify-content-between border-bottom py-1">
@@ -42,18 +42,18 @@
 
   @case('contact_info')
     <div class="card"><div class="card-body">
-      <h3 class="h6 section-title mb-3">{{ $d['heading'] ?? 'Contact' }}</h3>
+      <h3 class="h6 section-title mb-3">{{ $d['heading'] ?? __('Contact') }}</h3>
       <ul class="list-unstyled small mb-0">
-        @if(($d['address'] ?? null) || ($d['school']->address ?? null))<li class="mb-2"><i class="bi bi-geo-alt text-brand"></i> {{ $d['address'] ?? $d['school']->address }}</li>@endif
-        @if($d['phone'] ?? null)<li class="mb-2"><i class="bi bi-telephone text-brand"></i> {{ $d['phone'] }}</li>@endif
-        @if(($d['email'] ?? null) || ($d['school']->email ?? null))<li><i class="bi bi-envelope text-brand"></i> {{ $d['email'] ?? $d['school']->email }}</li>@endif
+        @if(($d['address'] ?? null) || ($d['school']->address ?? null))<li class="d-flex align-items-center gap-2 mb-2"><span class="icon-badge d-inline-flex align-items-center justify-content-center" style="width:1.75rem;height:1.75rem;font-size:.8rem;"><i class="bi bi-geo-alt"></i></span> {{ $d['address'] ?? $d['school']->address }}</li>@endif
+        @if($d['phone'] ?? null)<li class="d-flex align-items-center gap-2 mb-2"><span class="icon-badge d-inline-flex align-items-center justify-content-center" style="width:1.75rem;height:1.75rem;font-size:.8rem;"><i class="bi bi-telephone"></i></span> {{ $d['phone'] }}</li>@endif
+        @if(($d['email'] ?? null) || ($d['school']->email ?? null))<li class="d-flex align-items-center gap-2"><span class="icon-badge d-inline-flex align-items-center justify-content-center" style="width:1.75rem;height:1.75rem;font-size:.8rem;"><i class="bi bi-envelope"></i></span> {{ $d['email'] ?? $d['school']->email }}</li>@endif
       </ul>
     </div></div>
     @break
 
   @case('recent_notices')
     <div class="card"><div class="card-body">
-      <h3 class="h6 section-title mb-3">{{ $d['heading'] ?? 'Recent notices' }}</h3>
+      <h3 class="h6 section-title mb-3">{{ $d['heading'] ?? __('Recent Notices') }}</h3>
       @forelse(($d['notices'] ?? collect())->take($d['limit'] ?? 5) as $n)
         <div class="small border-bottom py-2">
           <div class="fw-semibold">{{ $n->title }}</div>

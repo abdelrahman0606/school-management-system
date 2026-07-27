@@ -295,6 +295,41 @@
             transition: transform var(--transition) var(--ease);
         }
 
+        /* Baseline typography for arbitrary rich-text HTML (the Richtext and
+           Image+Text blocks' WYSIWYG output) — previously completely
+           unstyled: a pasted <h2>/<p>/<ul> rendered with bare browser
+           defaults, no relationship to the rest of the page's type scale. */
+        .prose :where(h1, h2, h3, h4, h5, h6) {
+            color: var(--brand-heading);
+            font-weight: 700;
+            margin-top: 1.5em;
+            margin-bottom: .5em;
+        }
+
+        .prose :where(h1, h2, h3, h4, h5, h6):first-child {
+            margin-top: 0;
+        }
+
+        .prose p {
+            margin-bottom: 1em;
+        }
+
+        .prose ul,
+        .prose ol {
+            margin-bottom: 1em;
+            padding-left: 1.25em;
+        }
+
+        .prose img {
+            max-width: 100%;
+            border-radius: var(--radius-md);
+        }
+
+        .prose a {
+            text-decoration-color: color-mix(in srgb, var(--brand) 40%, transparent);
+            text-underline-offset: .15em;
+        }
+
         .link-arrow:hover i {
             transform: translateX(3px);
         }
@@ -304,10 +339,102 @@
             border-radius: 1.5rem;
         }
 
+        /* Video/map embeds get the same soft shadow as everything else, but
+           deliberately no hover-zoom like .img-zoom — scaling a video
+           player or map on hover looks broken while its own controls are
+           visible. */
+        .media-shadow {
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* Same visual formula as .notice-icon, kept as a separate class
+           rather than renaming that one — used for the contact block's
+           address/phone/email icons instead of the plain inline icon they
+           had before. */
+        .icon-badge {
+            width: 2.25rem;
+            height: 2.25rem;
+            background: color-mix(in srgb, var(--brand) 10%, transparent);
+            color: var(--brand);
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        /* Uppercase section labels inside the Admission Form block ("Student
+           Information", "Parent Information", …) — a thin rule instead of
+           just floating text gives a long multi-section form some visual
+           rhythm to break it up. */
+        .form-section-label {
+            padding-bottom: .5rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+            letter-spacing: .04em;
+        }
+
+        /* Small stat tiles (the Stats block — distinct from the hero's
+           .stat-glass, which only makes sense on the hero's own gradient
+           background) get a lift on hover like any other small tile. */
+        .stat-tile {
+            border-radius: var(--radius-md);
+            transition: transform var(--transition) var(--ease), box-shadow var(--transition) var(--ease);
+        }
+
+        .stat-tile:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* Gentle zoom-on-hover for content images (Image, Image+Text, and
+           Gallery blocks) — the wrapper clips the zoom, the image itself is
+           what scales. inline-block (not block) deliberately: the Image
+           block centers a naturally-sized image via its <figure>'s
+           text-align:center, and a full-width block wrapper here would put
+           the shadow/radius around that whole invisible full-width box
+           instead of hugging the actual (often narrower) image. */
+        .img-zoom {
+            display: inline-block;
+            overflow: hidden;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+            max-width: 100%;
+        }
+
+        .img-zoom img {
+            display: block;
+            max-width: 100%;
+            transition: transform .4s var(--ease);
+        }
+
+        .img-zoom:hover img {
+            transform: scale(1.04);
+        }
+
+        /* Linked Icon blocks get the same restrained hover feedback as
+           everything else clickable on this page. */
+        .icon-link {
+            display: inline-block;
+            transition: transform var(--transition) var(--ease);
+        }
+
+        .icon-link:hover {
+            transform: scale(1.08);
+        }
+
+        /* Section dividers (the Divider block, and any plain <hr> a
+           richtext block's HTML might contain) read the same neutral
+           border token as everything else instead of Bootstrap's default. */
+        hr {
+            border-color: var(--border);
+            opacity: 1;
+        }
+
         @media (prefers-reduced-motion: reduce) {
 
             .avatar-ring,
-            .link-arrow i {
+            .link-arrow i,
+            .stat-tile,
+            .img-zoom img,
+            .icon-link {
                 transition: none;
             }
         }

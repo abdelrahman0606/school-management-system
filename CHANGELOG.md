@@ -41,8 +41,32 @@ follows [Semantic Versioning](https://semver.org/).
   - Scope: deliberately CSS/markup restyling only, inside `home.blade.php` and the 3 block cases' own
     content — the shared block wrapper (`data-block-path`/drag-and-drop/click-to-select attributes) that
     the admin page-builder's live-preview iframe depends on was not touched, and no other block type was
-    changed. Remaining block types (richtext, image, video, gallery, contact, admission form, etc.) are
-    unchanged pending the same treatment in a follow-up pass.
+    changed in this pass.
+- Rolled the same treatment out to the remaining page-builder block types, same restyle-only scope and same
+  editor-wrapper guarantee as the pilot above:
+  - Richtext and Image+Text blocks: their WYSIWYG HTML now renders through a `.prose` typography scale
+    (heading/paragraph/list spacing, styled links) instead of completely unstyled browser defaults.
+  - Image, Image+Text, and Gallery Photo blocks: images get a soft shadow, rounded corners, and a gentle
+    zoom on hover, clipped tightly to the image's own rendered size (not a full-width invisible box) so it
+    looks right whether the image fills its container or is a smaller centered image.
+  - Video, Gallery Video, and Google Maps blocks: consistent rounded corners + soft shadow around the
+    embed/player.
+  - Icon block: a linked icon now scales slightly on hover.
+  - Stats block: each tile lifts on hover, matching the small-tile treatment used elsewhere (distinct from
+    the hero's frosted glass tiles, which only make sense on the hero's own gradient background).
+  - Contact block (and the sidebar's Contact Info block): address/phone/email rows now use the same
+    circular icon badge as the Notices block, instead of a plain inline icon.
+  - Admission Form block: its five section labels ("Student Information", "Parent Information", …) get a
+    thin rule under them to break up what's otherwise a very long single-column form.
+  - Sidebar Quick Links block: links now use the same arrow-nudge hover as the homepage's "View all" link.
+  - Divider block (and any `<hr>` a Richtext block's HTML happens to contain): resolves through the
+    neutral border token instead of Bootstrap's default.
+  - Container, Grid, Heading, Button, and Spacer blocks: left as-is — purely structural (Container/Grid) or
+    already minimal enough that the token refresh already covers them (Heading via `.section-title`, Button
+    via the shared `.btn` hover, Spacer has no visual surface at all).
+  - Also fixed while touching this code: a hardcoded `'Teachers & staff'` string in the Stats block and
+    several sidebar block headings ("Quick links", "Office hours", "Contact", "Recent notices") that were
+    English literals, not translation keys.
 
 ## [1.3.1] — 2026-07-25
 
