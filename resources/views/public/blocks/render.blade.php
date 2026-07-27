@@ -20,12 +20,18 @@
     ? ' data-block-path="'.e(implode(',', $path)).'" data-block-group="'.e($group ?? 'blocks').'" data-block-type="'.e($type).'" draggable="true"'
     : '';
 
-  // hero/admission_form manage their own spacing+background entirely — every
-  // other block type gets the standard section+container+default-padding
-  // treatment, with the Style tab overrides applied on the same wrapper
-  // element so a custom value cleanly replaces the default instead of adding
-  // to it (inline style always wins over the py-4/py-lg-5 utility classes).
-  $selfContained = in_array($type, ['hero', 'admission_form'], true);
+  // hero manages its own spacing+background entirely (its own inner
+  // <div class="container"> wraps the actual text/button content, while the
+  // outer <header> bleeds full-width for the background image/gradient) —
+  // every other block type gets the standard section+container+default-
+  // padding treatment, with the Style tab overrides applied on the same
+  // wrapper element so a custom value cleanly replaces the default instead
+  // of adding to it (inline style always wins over the py-4/py-lg-5 utility
+  // classes). admission_form does NOT belong in this list — its content
+  // (a <form class="card">) has no full-bleed background of its own and
+  // never had an inner container to compensate, so being self-contained
+  // just made it render edge-to-edge with no width constraint at all.
+  $selfContained = in_array($type, ['hero'], true);
   $wrap = $bp::wrapper($style, $layout);
   $defaultSpacing = $selfContained ? '' : ($contained ? 'mb-3' : 'py-4 py-lg-5');
   $wrapClass = trim($wrap['class'].' '.$defaultSpacing);
