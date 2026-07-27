@@ -6,6 +6,16 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- `/online-admission` (and any other page using the Admission Form block) threw a 500 — "Serialization of
+  'Closure' is not allowed" — on every real (non-preview) page load. `PageRenderService` embedded 3 PHP
+  Closures directly inside the block data it returns, and that data gets cached in Redis; Redis can't
+  serialize a Closure. Invisible to the test suite because `phpunit.xml` runs tests against the `array`
+  cache store, which never actually serializes anything. Fixed by keeping the cached data plain and
+  reconstructing the helper closures locally inside the Blade view at render time instead. Added a
+  regression test that calls `serialize()` directly on the rendered block data, reproducing the real
+  failure without needing a Redis connection.
+
 ### Added
 - Subtle motion on the public school site: buttons lift slightly on hover, cards get a soft shadow bump,
   nav links get an animated underline, and the hero fades in on load. All of it respects

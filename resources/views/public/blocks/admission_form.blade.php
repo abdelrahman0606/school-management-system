@@ -1,11 +1,19 @@
 <?php
 // Admission form block partial - using pure PHP for complex logic
+//
+// $show/$getLabel/$isRequired are built HERE, from the plain 'standard'
+// array PageRenderService::prepareAdmissionFormFields() returns — never
+// pulled pre-built from $d['field_data'] itself. That array is part of a
+// structure PageRenderService::renderPage() caches (Cache::remember(),
+// Redis in every real environment), and Redis cannot serialize a Closure;
+// embedding these closures in the cached data used to throw "Serialization
+// of 'Closure' is not allowed" on every real (non-preview) page load.
 $fieldData = $d['field_data'] ?? [];
 $standard = $fieldData['standard'] ?? [];
 $custom   = $fieldData['custom'] ?? [];
-$show     = $fieldData['show'] ?? fn($k) => false;
-$getLabel = $fieldData['getLabel'] ?? fn($k, $d) => $d;
-$isRequired = $fieldData['isRequired'] ?? fn($k) => false;
+$show       = fn ($k) => ! empty($standard[$k]['enabled']);
+$getLabel   = fn ($k, $default) => $standard[$k]['label'] ?? $default;
+$isRequired = fn ($k) => ! empty($standard[$k]['required']);
 
 $enabledCustom = array_filter($custom, fn($cfg) => !empty($cfg['enabled']));
 ?>
