@@ -15,6 +15,14 @@ follows [Semantic Versioning](https://semver.org/).
   have them interfere with each other.
 
 ### Fixed
+- The Admission Form block rendered edge-to-edge full-width instead of staying inside the page's normal
+  content column, unlike every other block. It was grouped with the Hero block as "self-contained"
+  (meaning: skip the standard `<div class="container">` wrapper because the block manages its own width
+  itself), but unlike Hero — whose markup has its own inner `<div class="container">` around its
+  text/button content, with only the background bleeding full-width — the Admission Form's markup never
+  had an equivalent inner container. It just lost its width constraint outright. Fixed by no longer
+  treating `admission_form` as self-contained, so it gets the same container + default section padding as
+  every other block.
 - `/online-admission` (and any other page using the Admission Form block) threw a 500 — "Serialization of
   'Closure' is not allowed" — on every real (non-preview) page load. `PageRenderService` embedded 3 PHP
   Closures directly inside the block data it returns, and that data gets cached in Redis; Redis can't
