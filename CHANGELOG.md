@@ -6,6 +6,14 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- Gallery Photo and Gallery Video blocks now open a lightbox instead of leaving the page: clicking a photo
+  opens it full-size in a modal with prev/next (and arrow-key) navigation through the rest of that gallery;
+  clicking a video thumbnail opens the same style of modal and only then loads the embed, instead of every
+  video on the page loading an iframe up front. Closing (or navigating away from) a video stops its
+  playback. Each gallery block gets its own lightbox, so a page with more than one Gallery block doesn't
+  have them interfere with each other.
+
 ### Fixed
 - `/online-admission` (and any other page using the Admission Form block) threw a 500 — "Serialization of
   'Closure' is not allowed" — on every real (non-preview) page load. `PageRenderService` embedded 3 PHP

@@ -347,6 +347,59 @@
             box-shadow: var(--shadow-sm);
         }
 
+        /* Gallery Video block's thumbnail — no per-video thumbnail image is
+           stored (the block only ever had a list of embed URLs), so this is
+           a deliberately generic brand-tinted play-button tile rather than
+           an actual video frame. */
+        .video-thumb {
+            background: color-mix(in srgb, var(--brand) 85%, #000);
+            color: #fff;
+            appearance: none;
+            transition: transform var(--transition) var(--ease);
+        }
+
+        /* Bootstrap's .ratio utility forces its one direct child to
+           position:absolute + width/height:100% (`.ratio > *`) so the
+           padding-top aspect-ratio trick has something to fill — centering
+           set on .video-thumb itself wouldn't reach an absolutely
+           positioned child, so it has to live here instead. ::before/
+           ::after become flex items of their own parent, so this also
+           correctly centers the icon's glyph (a Bootstrap Icons ::before). */
+        .video-thumb i {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            opacity: .9;
+        }
+
+        .video-thumb:hover {
+            transform: scale(1.02);
+        }
+
+        /* Gallery Photo/Video lightbox modals — a transparent, borderless
+           modal-content so only the image/player itself and the nav
+           buttons are visible against the darkened backdrop. */
+        .js-photo-gallery-modal .modal-content,
+        .js-video-gallery-modal .modal-content {
+            background: transparent;
+        }
+
+        .js-gallery-img {
+            max-height: 85vh;
+            width: auto;
+            object-fit: contain;
+        }
+
+        /* .modal-backdrop is a sibling Bootstrap appends to <body>, never a
+           descendant of .modal — it can't be scoped to just these lightbox
+           modals via CSS alone. These lightboxes are the only modals
+           anywhere on the public site today, so a darker-than-Bootstrap's-
+           default backdrop is set globally rather than left unreachable. */
+        .modal-backdrop.show {
+            --bs-backdrop-opacity: .85;
+        }
+
         /* Same visual formula as .notice-icon, kept as a separate class
            rather than renaming that one — used for the contact block's
            address/phone/email icons instead of the plain inline icon they
@@ -633,6 +686,61 @@
                 });
             }, { threshold: .15, rootMargin: '0px 0px -10% 0px' });
             els.forEach(function (el) { io.observe(el); });
+        })();
+
+        // Gallery Photo/Video lightboxes — one shared Bootstrap modal per
+        // block instance, reused across every item in that gallery. The
+        // clicked thumbnail's data-gallery-index plus the modal's own
+        // embedded item list (data-images or data-videos, JSON) drive what
+        // shows and what prev/next/arrow-keys cycle through. A page can
+        // have multiple gallery blocks, each with its own modal, so the
+        // "current item" state lives on the modal element itself (its own
+        // data-current-index), never in a shared JS variable.
+        (function () {
+            function itemsFor(modalEl) {
+                var key = modalEl.hasAttribute('data-images') ? 'images' : 'videos';
+                try { return JSON.parse(modalEl.getAttribute('data-' + key) || '[]'); } catch (e) { return []; }
+            }
+            function showAt(modalEl, index) {
+                var items = itemsFor(modalEl);
+                if (!items.length) return;
+                var i = ((index % items.length) + items.length) % items.length;
+                modalEl.dataset.currentIndex = i;
+                var img = modalEl.querySelector('.js-gallery-img');
+                if (img) img.src = items[i];
+                var frame = modalEl.querySelector('.js-gallery-video-frame');
+                if (frame) frame.src = items[i];
+            }
+            function isGalleryModal(el) {
+                return !!el && (el.classList.contains('js-photo-gallery-modal') || el.classList.contains('js-video-gallery-modal'));
+            }
+            document.addEventListener('show.bs.modal', function (e) {
+                if (!isGalleryModal(e.target)) return;
+                var trigger = e.relatedTarget;
+                showAt(e.target, trigger ? parseInt(trigger.dataset.galleryIndex || '0', 10) : 0);
+            });
+            // Stop playback the instant a video-gallery modal closes —
+            // otherwise the iframe keeps playing (and making sound) behind
+            // a hidden modal, since hiding a modal doesn't pause its video.
+            document.addEventListener('hidden.bs.modal', function (e) {
+                if (!isGalleryModal(e.target)) return;
+                var frame = e.target.querySelector('.js-gallery-video-frame');
+                if (frame) frame.src = '';
+            });
+            document.addEventListener('click', function (e) {
+                var prev = e.target.closest('.js-gallery-prev');
+                var next = e.target.closest('.js-gallery-next');
+                if (!prev && !next) return;
+                var modalEl = e.target.closest('.modal');
+                if (!isGalleryModal(modalEl)) return;
+                showAt(modalEl, parseInt(modalEl.dataset.currentIndex || '0', 10) + (next ? 1 : -1));
+            });
+            document.addEventListener('keydown', function (e) {
+                if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+                var openModal = document.querySelector('.js-photo-gallery-modal.show, .js-video-gallery-modal.show');
+                if (!openModal) return;
+                showAt(openModal, parseInt(openModal.dataset.currentIndex || '0', 10) + (e.key === 'ArrowRight' ? 1 : -1));
+            });
         })();
 
         // Editor click-to-select bridge — no-op unless this document is
