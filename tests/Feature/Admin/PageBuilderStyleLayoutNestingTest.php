@@ -186,15 +186,25 @@ class PageBuilderStyleLayoutNestingTest extends TestCase
             ->latest('id')->first()->layout_json['blocks'][0]['style'];
         $this->assertArrayNotHasKey('width_value', $style);
 
-        // Not assertDontSee('width:') — the page's own editor-preview bridge
-        // script unconditionally embeds "min-width:170px" (the right-click
-        // context menu's inline style, see public/blocks/render.blade.php's
-        // gated script), which contains "width:" as a substring and would
-        // make a plain assertDontSee false-positive-fail on every page,
-        // regardless of this block's own CSS. A negative-lookbehind regex
-        // targets only a real width/min-width/max-width CSS declaration.
+        // Scoped to actual inline style="..." attributes only, not the raw
+        // page HTML as a whole. A whole-document check (even with the
+        // min-/max- exclusion this used to have) false-positive-fails on
+        // every page, because the shared layout.blade.php stylesheet
+        // legitimately contains its own plain "width:" declarations that
+        // have nothing to do with this block — .notice-icon/.icon-badge's
+        // "width:2.25rem", .js-gallery-img's "width:auto", etc. — rendered
+        // on every page regardless of which blocks it uses. Block-level
+        // inline width is what BlockPresentation::wrapper() actually emits
+        // (e.g. 'width:75%'), and that only ever appears inside a real
+        // style="..." HTML attribute, so anchoring the regex there is both
+        // narrower and closer to what this test actually means to assert.
+        // The min-/max- exclusion is kept for the one other inline
+        // style="..." on this page: the admin live-preview context menu's
+        // "min-width:170px" is built as a JS string (not an HTML attribute)
+        // so it wouldn't match `style="` anyway, but excluding it here
+        // costs nothing and keeps the intent explicit.
         $html = $this->get('/'.$page->slug)->assertOk()->getContent();
-        $this->assertDoesNotMatchRegularExpression('/(?<!min-)(?<!max-)width:/', $html);
+        $this->assertDoesNotMatchRegularExpression('/style="[^"]*(?<!min-)(?<!max-)width:/', $html);
     }
 
     public function test_border_is_only_rendered_when_a_real_style_is_set(): void
