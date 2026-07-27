@@ -6,6 +6,96 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.3.2] — 2026-07-27
+
+### Added
+- Gallery Photo and Gallery Video blocks now open a lightbox instead of leaving the page: clicking a photo
+  opens it full-size in a modal with prev/next (and arrow-key) navigation through the rest of that gallery;
+  clicking a video thumbnail opens the same style of modal and only then loads the embed, instead of every
+  video on the page loading an iframe up front. Closing (or navigating away from) a video stops its
+  playback. Each gallery block gets its own lightbox, so a page with more than one Gallery block doesn't
+  have them interfere with each other.
+
+### Fixed
+- The Admission Form block rendered edge-to-edge full-width instead of staying inside the page's normal
+  content column, unlike every other block. It was grouped with the Hero block as "self-contained"
+  (meaning: skip the standard `<div class="container">` wrapper because the block manages its own width
+  itself), but unlike Hero — whose markup has its own inner `<div class="container">` around its
+  text/button content, with only the background bleeding full-width — the Admission Form's markup never
+  had an equivalent inner container. It just lost its width constraint outright. Fixed by no longer
+  treating `admission_form` as self-contained, so it gets the same container + default section padding as
+  every other block.
+- `/online-admission` (and any other page using the Admission Form block) threw a 500 — "Serialization of
+  'Closure' is not allowed" — on every real (non-preview) page load. `PageRenderService` embedded 3 PHP
+  Closures directly inside the block data it returns, and that data gets cached in Redis; Redis can't
+  serialize a Closure. Invisible to the test suite because `phpunit.xml` runs tests against the `array`
+  cache store, which never actually serializes anything. Fixed by keeping the cached data plain and
+  reconstructing the helper closures locally inside the Blade view at render time instead. Added a
+  regression test that calls `serialize()` directly on the rendered block data, reproducing the real
+  failure without needing a Redis connection.
+
+### Added
+- Subtle motion on the public school site: buttons lift slightly on hover, cards get a soft shadow bump,
+  nav links get an animated underline, and the hero fades in on load. All of it respects
+  `prefers-reduced-motion` and skips straight to the end state when disabled.
+
+### Changed
+- Refreshed the public site's shared design tokens (`resources/views/public/layout.blade.php`) for a more
+  minimal look: a small neutral/spacing/shadow/radius scale, softer card shadows with rounded corners,
+  tighter heading letter-spacing, and branded form-focus rings (form fields previously fell back to
+  Bootstrap's default blue focus ring regardless of the school's own brand color).
+- The school's configured accent color (Website > Settings) is now actually used somewhere — it was declared
+  as a CSS variable but never rendered anywhere on the live site. It now colors the nav underline.
+
+### Fixed
+- `.text-muted` on the public site now resolves to a token instead of Bootstrap's default gray, so muted
+  text stays consistent with the rest of the refreshed palette.
+- Several public-site strings that were hardcoded English literals ("Welcome to …", "Check results",
+  "Teachers & staff", the results-CTA paragraph, the notices/staff "no data" fallback labels) are now
+  translation keys like everything else on the site.
+
+### Changed
+- Pilot pass on the homepage's visual design (`public/home.blade.php`) and the hero/notices/staff
+  page-builder blocks (`public/blocks/render.blade.php`) — restyled only, every field the block editor
+  exposes (title, subtitle, button, image, heading, members, notices, limit) still works exactly as before:
+  - Hero: eyebrow label, bigger heading, frosted glass ("stat-glass") stat tiles instead of plain white
+    boxes, pill-shaped buttons.
+  - Notices: a circular icon badge per card instead of an inline icon+text row, more generous card padding.
+  - Staff: avatars now have a soft ring instead of a bordered box, un-boxed (no more card wrapper per
+    person), bigger photos, a subtle scale on hover.
+  - Results CTA: a tinted gradient panel instead of a plain white card.
+  - Added a `py-lg-6`/`p-lg-6` utility pair (Bootstrap 5.3's shipped spacer scale stops at `5`) for extra
+    section breathing room on large screens.
+  - Scope: deliberately CSS/markup restyling only, inside `home.blade.php` and the 3 block cases' own
+    content — the shared block wrapper (`data-block-path`/drag-and-drop/click-to-select attributes) that
+    the admin page-builder's live-preview iframe depends on was not touched, and no other block type was
+    changed in this pass.
+- Rolled the same treatment out to the remaining page-builder block types, same restyle-only scope and same
+  editor-wrapper guarantee as the pilot above:
+  - Richtext and Image+Text blocks: their WYSIWYG HTML now renders through a `.prose` typography scale
+    (heading/paragraph/list spacing, styled links) instead of completely unstyled browser defaults.
+  - Image, Image+Text, and Gallery Photo blocks: images get a soft shadow, rounded corners, and a gentle
+    zoom on hover, clipped tightly to the image's own rendered size (not a full-width invisible box) so it
+    looks right whether the image fills its container or is a smaller centered image.
+  - Video, Gallery Video, and Google Maps blocks: consistent rounded corners + soft shadow around the
+    embed/player.
+  - Icon block: a linked icon now scales slightly on hover.
+  - Stats block: each tile lifts on hover, matching the small-tile treatment used elsewhere (distinct from
+    the hero's frosted glass tiles, which only make sense on the hero's own gradient background).
+  - Contact block (and the sidebar's Contact Info block): address/phone/email rows now use the same
+    circular icon badge as the Notices block, instead of a plain inline icon.
+  - Admission Form block: its five section labels ("Student Information", "Parent Information", …) get a
+    thin rule under them to break up what's otherwise a very long single-column form.
+  - Sidebar Quick Links block: links now use the same arrow-nudge hover as the homepage's "View all" link.
+  - Divider block (and any `<hr>` a Richtext block's HTML happens to contain): resolves through the
+    neutral border token instead of Bootstrap's default.
+  - Container, Grid, Heading, Button, and Spacer blocks: left as-is — purely structural (Container/Grid) or
+    already minimal enough that the token refresh already covers them (Heading via `.section-title`, Button
+    via the shared `.btn` hover, Spacer has no visual surface at all).
+  - Also fixed while touching this code: a hardcoded `'Teachers & staff'` string in the Stats block and
+    several sidebar block headings ("Quick links", "Office hours", "Contact", "Recent notices") that were
+    English literals, not translation keys.
+
 ## [1.3.1] — 2026-07-25
 
 ### Added

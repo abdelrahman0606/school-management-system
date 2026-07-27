@@ -81,11 +81,17 @@ class PageBuilderTest extends TestCase
         $this->assertCount(3, $json['blocks']); // evil dropped
         $this->assertSame(['https://x/a.jpg', 'https://x/b.jpg'], $json['blocks'][2]['data']['images']); // multiline → array
 
-        // Public render
+        // Public render — Gallery Photo's lightbox: a thumbnail button per
+        // image plus one shared modal (data-images carries the full URL
+        // list, used to populate the modal image and drive prev/next).
         $this->get('/history')->assertOk()
             ->assertSee('A proud history')
             ->assertSee('Founded long ago.')
-            ->assertSee('https://x/a.jpg', false);
+            ->assertSee('https://x/a.jpg', false)
+            ->assertSee('data-bs-toggle="modal"', false)
+            ->assertSee('js-photo-gallery-modal', false)
+            ->assertSee('js-gallery-prev', false)
+            ->assertSee('js-gallery-next', false);
     }
 
     /**

@@ -20,12 +20,18 @@
     ? ' data-block-path="'.e(implode(',', $path)).'" data-block-group="'.e($group ?? 'blocks').'" data-block-type="'.e($type).'" draggable="true"'
     : '';
 
-  // hero/admission_form manage their own spacing+background entirely — every
-  // other block type gets the standard section+container+default-padding
-  // treatment, with the Style tab overrides applied on the same wrapper
-  // element so a custom value cleanly replaces the default instead of adding
-  // to it (inline style always wins over the py-4/py-lg-5 utility classes).
-  $selfContained = in_array($type, ['hero', 'admission_form'], true);
+  // hero manages its own spacing+background entirely (its own inner
+  // <div class="container"> wraps the actual text/button content, while the
+  // outer <header> bleeds full-width for the background image/gradient) —
+  // every other block type gets the standard section+container+default-
+  // padding treatment, with the Style tab overrides applied on the same
+  // wrapper element so a custom value cleanly replaces the default instead
+  // of adding to it (inline style always wins over the py-4/py-lg-5 utility
+  // classes). admission_form does NOT belong in this list — its content
+  // (a <form class="card">) has no full-bleed background of its own and
+  // never had an inner container to compensate, so being self-contained
+  // just made it render edge-to-edge with no width constraint at all.
+  $selfContained = in_array($type, ['hero'], true);
   $wrap = $bp::wrapper($style, $layout);
   $defaultSpacing = $selfContained ? '' : ($contained ? 'mb-3' : 'py-4 py-lg-5');
   $wrapClass = trim($wrap['class'].' '.$defaultSpacing);
@@ -41,9 +47,9 @@
 @endif
 @switch($type)
   @case('hero')
-    <header class="hero py-5" @if(!empty($d['image'])) style="background-image:linear-gradient(rgba(0,0,0,.45),rgba(0,0,0,.45)),url('{{ $d['image'] }}');background-size:cover;background-position:center;" @endif>
+    <header class="hero py-5 py-lg-6" @if(!empty($d['image'])) style="background-image:linear-gradient(rgba(0,0,0,.45),rgba(0,0,0,.45)),url('{{ $d['image'] }}');background-size:cover;background-position:center;" @endif>
       <div class="container py-4 py-lg-5 text-center">
-        <h1 class="display-5 mb-3">{{ $d['title'] ?? '' }}</h1>
+        <h1 class="display-4 mb-3">{{ $d['title'] ?? '' }}</h1>
         @if(!empty($d['subtitle']))<p class="lead text-white-50 mx-auto" style="max-width:42rem;">{{ $d['subtitle'] }}</p>@endif
         @if(!empty($d['button_text']))<a href="{{ $d['button_url'] ?? '#' }}" class="btn btn-light btn-lg mt-2 px-4">{{ $d['button_text'] }}</a>@endif
       </div>
@@ -59,7 +65,7 @@
   @case('richtext')
     {!! $open !!}
       @if(!empty($d['heading']))<h2 class="section-title h3 mb-3">{{ $d['heading'] }}</h2>@endif
-      <div class="lh-lg">{!! $d['html'] ?? '' !!}</div>
+      <div class="lh-lg prose">{!! $d['html'] ?? '' !!}</div>
     {!! $close !!}
     @break
 
@@ -67,7 +73,7 @@
     {!! $open !!}
       <figure class="text-center mb-0">
         @if(!empty($d['url']))
-          <img src="{{ $d['url'] }}" class="img-fluid rounded-3" alt="{{ $d['caption'] ?? '' }}">
+          <span class="img-zoom"><img src="{{ $d['url'] }}" class="img-fluid" alt="{{ $d['caption'] ?? '' }}"></span>
         @else
           {{-- A bare <img src=""> would render as a broken-image icon —
                real bug, not just cosmetic: before this fix a freshly-added
@@ -104,7 +110,7 @@
       @if ($vSource === 'self_hosted')
         @if(!empty($d['file_url']))
           <video
-            class="w-100 rounded-3"
+            class="w-100 rounded-3 media-shadow"
             @if($vPreload !== 'none') preload="{{ $vPreload }}" @endif
             @if(!empty($d['poster'])) poster="{{ $d['poster'] }}" @endif
             @if($vControls) controls @endif
@@ -145,7 +151,7 @@
           }
         @endphp
         @if($embedUrl !== '')
-          <div class="ratio ratio-16x9"><iframe src="{{ $embedUrl }}" allowfullscreen loading="lazy"@if($vAutoplay) allow="autoplay"@endif></iframe></div>
+          <div class="ratio ratio-16x9 rounded-3 overflow-hidden media-shadow"><iframe src="{{ $embedUrl }}" allowfullscreen loading="lazy"@if($vAutoplay) allow="autoplay"@endif></iframe></div>
           @if(!empty($d['caption']))<p class="text-muted small mt-2 mb-0">{{ $d['caption'] }}</p>@endif
         @else
           <div class="d-flex flex-column align-items-center justify-content-center text-muted bg-body-secondary rounded-3 py-5" aria-hidden="true">
@@ -183,7 +189,7 @@
         $iconMarkup = '<i class="bi '.e($d['icon'] ?? 'bi-star').'" style="font-size:'.max(12, min(200, (int) ($d['size'] ?? 32))).'px;color:'.(!empty($d['color']) ? e($d['color']) : 'var(--brand)').';"></i>';
       @endphp
       <div class="text-{{ $d['align'] ?? 'center' }}">
-        @if(!empty($d['url']))<a href="{{ $d['url'] }}">{!! $iconMarkup !!}</a>@else{!! $iconMarkup !!}@endif
+        @if(!empty($d['url']))<a href="{{ $d['url'] }}" class="icon-link">{!! $iconMarkup !!}</a>@else{!! $iconMarkup !!}@endif
       </div>
     {!! $close !!}
     @break
@@ -191,7 +197,7 @@
   @case('google_maps')
     {!! $open !!}
       @if(!empty($d['embed_url']))
-        <div class="rounded-3 overflow-hidden" style="height:{{ max(120, min(1000, (int) ($d['height'] ?? 320))) }}px;">
+        <div class="rounded-3 overflow-hidden media-shadow" style="height:{{ max(120, min(1000, (int) ($d['height'] ?? 320))) }}px;">
           <iframe src="{{ $d['embed_url'] }}" style="width:100%;height:100%;border:0;" loading="lazy" allowfullscreen></iframe>
         </div>
       @else
@@ -205,7 +211,7 @@
       <div class="row g-4 align-items-center {{ ($d['image_side'] ?? 'left') === 'right' ? 'flex-row-reverse' : '' }}">
         <div class="col-md-5">
           @if(!empty($d['image']))
-            <img src="{{ $d['image'] }}" class="img-fluid rounded-3" alt="">
+            <span class="img-zoom d-block"><img src="{{ $d['image'] }}" class="img-fluid" alt=""></span>
           @else
             <div class="d-flex flex-column align-items-center justify-content-center text-muted bg-body-secondary rounded-3 py-5" aria-hidden="true">
               <i class="bi bi-image fs-1 mb-2"></i>
@@ -215,7 +221,7 @@
         </div>
         <div class="col-md-7">
           @if(!empty($d['heading']))<h2 class="section-title h4 mb-3">{{ $d['heading'] }}</h2>@endif
-          <div class="lh-lg">{!! $d['html'] ?? '' !!}</div>
+          <div class="lh-lg prose">{!! $d['html'] ?? '' !!}</div>
         </div>
       </div>
     {!! $close !!}
@@ -223,18 +229,16 @@
 
   @case('staff')
     {!! $open !!}
-      @if(!empty($d['heading']))<h2 class="section-title h3 mb-4">{{ $d['heading'] }}</h2>@endif
-      <div class="row {{ $bp::columnClasses($layout, ['mobile' => 2, 'tablet' => 3, 'laptop' => 4, 'desktop' => 4]) }} g-3">
+      @if(!empty($d['heading']))<h2 class="section-title h3 mb-4 text-center">{{ $d['heading'] }}</h2>@endif
+      <div class="row {{ $bp::columnClasses($layout, ['mobile' => 2, 'tablet' => 3, 'laptop' => 4, 'desktop' => 4]) }} g-4 text-center">
         @forelse($d['members'] ?? [] as $m)
           <div>
-            <div class="card h-100 text-center"><div class="card-body">
-              <div class="rounded-circle bg-light border d-inline-flex align-items-center justify-content-center mb-2" style="width:64px;height:64px;">
-                @if($m->photo)<img src="{{ $m->photo }}" class="rounded-circle" style="width:64px;height:64px;object-fit:cover;" alt="">
-                @else<span class="text-brand fw-bold fs-4">{{ strtoupper(mb_substr($m->name, 0, 1)) }}</span>@endif
-              </div>
-              <div class="fw-semibold small">{{ $m->name }}</div>
-              <div class="text-muted small">{{ $m->designation?->name ?? 'Staff' }}</div>
-            </div></div>
+            <div class="rounded-circle bg-white avatar-ring d-inline-flex align-items-center justify-content-center mb-3" style="width:88px;height:88px;">
+              @if($m->photo)<img src="{{ $m->photo }}" class="rounded-circle" style="width:88px;height:88px;object-fit:cover;" alt="">
+              @else<span class="text-brand fw-bold fs-3">{{ strtoupper(mb_substr($m->name, 0, 1)) }}</span>@endif
+            </div>
+            <div class="fw-semibold small">{{ $m->name }}</div>
+            <div class="text-muted small">{{ $m->designation?->name ?? __('Staff') }}</div>
           </div>
         @empty
           <p class="text-muted mb-0">{{ __('No Staff To Show.') }}</p>
@@ -245,11 +249,12 @@
 
   @case('notices')
     {!! $open !!}
-      <h2 class="section-title h3 mb-4">{{ $d['heading'] ?? 'Notices' }}</h2>
-      <div class="row {{ $bp::columnClasses($layout, ['mobile' => 1, 'tablet' => 2, 'laptop' => 3, 'desktop' => 3]) }} g-3">
+      <h2 class="section-title h3 mb-4">{{ $d['heading'] ?? __('Notices') }}</h2>
+      <div class="row {{ $bp::columnClasses($layout, ['mobile' => 1, 'tablet' => 2, 'laptop' => 3, 'desktop' => 3]) }} g-4">
         @forelse(($d['notices'] ?? collect())->take($d['limit'] ?? 6) as $n)
-          <div><div class="card h-100"><div class="card-body">
-            <div class="small text-muted mb-1"><i class="bi bi-megaphone-fill text-brand"></i> {{ optional($n->publish_at ?? $n->created_at)->format('d M Y') }}</div>
+          <div><div class="card h-100"><div class="card-body p-4">
+            <div class="d-flex align-items-center justify-content-center notice-icon mb-3"><i class="bi bi-megaphone-fill"></i></div>
+            <div class="small text-muted mb-1">{{ optional($n->publish_at ?? $n->created_at)->format('d M Y') }}</div>
             <h3 class="h6 fw-semibold">{{ $n->title }}</h3>
             <p class="text-muted small mb-0">{{ \Illuminate\Support\Str::limit(strip_tags($n->body), 110) }}</p>
           </div></div></div>
@@ -263,10 +268,10 @@
   @case('stats')
     {!! $open !!}
       <div class="row {{ $bp::columnClasses($layout, ['mobile' => 2, 'tablet' => 4, 'laptop' => 4, 'desktop' => 4]) }} g-3 text-center">
-        <div><div class="p-3 bg-light rounded-3"><div class="stat-num">{{ number_format($d['stats']['active_students'] ?? 0) }}</div><div class="text-muted small mt-1">{{ __('Students') }}</div></div></div>
-        <div><div class="p-3 bg-light rounded-3"><div class="stat-num">{{ number_format($d['stats']['active_staff'] ?? 0) }}</div><div class="text-muted small mt-1">Teachers &amp; staff</div></div></div>
+        <div><div class="p-3 bg-light stat-tile"><div class="stat-num">{{ number_format($d['stats']['active_students'] ?? 0) }}</div><div class="text-muted small mt-1">{{ __('Students') }}</div></div></div>
+        <div><div class="p-3 bg-light stat-tile"><div class="stat-num">{{ number_format($d['stats']['active_staff'] ?? 0) }}</div><div class="text-muted small mt-1">{{ __('Teachers & Staff') }}</div></div></div>
         @foreach($d['items'] ?? [] as $it)
-          <div><div class="p-3 bg-light rounded-3"><div class="stat-num">{{ $it['value'] ?? '' }}</div><div class="text-muted small mt-1">{{ $it['label'] ?? '' }}</div></div></div>
+          <div><div class="p-3 bg-light stat-tile"><div class="stat-num">{{ $it['value'] ?? '' }}</div><div class="text-muted small mt-1">{{ $it['label'] ?? '' }}</div></div></div>
         @endforeach
       </div>
     {!! $close !!}
@@ -274,27 +279,85 @@
 
   @case('gallery_photo')
     {!! $open !!}
+      @php
+        // A fresh id every render (this partial's output isn't itself what
+        // PageRenderService caches — only the upstream $d data is, see
+        // PageRenderService::renderPage() — so a plain uniqid() here is
+        // safe and just needs to be unique within THIS page load, not
+        // stable across requests). Lets a page carry more than one Gallery
+        // Photo block without their modals colliding.
+        $galleryId = 'gallery-photo-' . uniqid();
+        $imageUrls = collect($d['images'] ?? [])
+          ->map(fn ($img) => is_array($img) ? ($img['url'] ?? '') : $img)
+          ->filter()->values();
+      @endphp
       @if(!empty($d['heading']))<h2 class="section-title h3 mb-4">{{ $d['heading'] }}</h2>@endif
       <div class="row {{ $bp::columnClasses($layout, ['mobile' => 2, 'tablet' => 3, 'laptop' => 4, 'desktop' => 4]) }} g-3">
-        @forelse($d['images'] ?? [] as $img)
-          <div><a href="{{ is_array($img) ? ($img['url'] ?? '#') : $img }}" target="_blank"><img src="{{ is_array($img) ? ($img['url'] ?? '') : $img }}" class="img-fluid rounded-3" style="aspect-ratio:1;object-fit:cover;width:100%;" alt=""></a></div>
+        @forelse($imageUrls as $i => $url)
+          <div>
+            <button type="button" class="img-zoom d-block w-100 border-0 p-0 bg-transparent" data-bs-toggle="modal" data-bs-target="#{{ $galleryId }}" data-gallery-index="{{ $i }}" aria-label="{{ __('View Photo') }} {{ $i + 1 }}">
+              <img src="{{ $url }}" class="img-fluid" style="aspect-ratio:1;object-fit:cover;width:100%;" alt="">
+            </button>
+          </div>
         @empty
           <p class="text-muted mb-0">{{ __('No Photos Yet.') }}</p>
         @endforelse
       </div>
+      @if($imageUrls->isNotEmpty())
+        <div class="modal fade js-photo-gallery-modal" id="{{ $galleryId }}" tabindex="-1" aria-hidden="true" data-images="{{ json_encode($imageUrls) }}">
+          <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content border-0">
+              <button type="button" class="btn-close btn-close-white ms-auto m-2" data-bs-dismiss="modal" aria-label="{{ __('Close') }}"></button>
+              <div class="modal-body p-0 text-center position-relative">
+                <img src="" class="img-fluid rounded-3 js-gallery-img" alt="">
+                @if($imageUrls->count() > 1)
+                  <button type="button" class="btn btn-light btn-sm rounded-circle position-absolute top-50 start-0 translate-middle-y ms-2 js-gallery-prev" aria-label="{{ __('Previous Photo') }}"><i class="bi bi-chevron-left"></i></button>
+                  <button type="button" class="btn btn-light btn-sm rounded-circle position-absolute top-50 end-0 translate-middle-y me-2 js-gallery-next" aria-label="{{ __('Next Photo') }}"><i class="bi bi-chevron-right"></i></button>
+                @endif
+              </div>
+            </div>
+          </div>
+        </div>
+      @endif
     {!! $close !!}
     @break
 
   @case('gallery_video')
     {!! $open !!}
+      @php
+        $galleryId = 'gallery-video-' . uniqid();
+        $videoUrls = collect($d['videos'] ?? [])
+          ->map(fn ($v) => is_array($v) ? ($v['url'] ?? '') : $v)
+          ->filter()->values();
+      @endphp
       @if(!empty($d['heading']))<h2 class="section-title h3 mb-4">{{ $d['heading'] }}</h2>@endif
       <div class="row {{ $bp::columnClasses($layout, ['mobile' => 1, 'tablet' => 2, 'laptop' => 2, 'desktop' => 2]) }} g-3">
-        @forelse($d['videos'] ?? [] as $v)
-          <div><div class="ratio ratio-16x9"><iframe src="{{ is_array($v) ? ($v['url'] ?? '') : $v }}" allowfullscreen loading="lazy"></iframe></div></div>
+        @forelse($videoUrls as $i => $url)
+          <div>
+            <button type="button" class="video-thumb ratio ratio-16x9 rounded-3 overflow-hidden media-shadow border-0 p-0 w-100" data-bs-toggle="modal" data-bs-target="#{{ $galleryId }}" data-gallery-index="{{ $i }}" aria-label="{{ __('Play Video') }} {{ $i + 1 }}">
+              <i class="bi bi-play-circle-fill" aria-hidden="true"></i>
+            </button>
+          </div>
         @empty
           <p class="text-muted mb-0">{{ __('No Videos Yet.') }}</p>
         @endforelse
       </div>
+      @if($videoUrls->isNotEmpty())
+        <div class="modal fade js-video-gallery-modal" id="{{ $galleryId }}" tabindex="-1" aria-hidden="true" data-videos="{{ json_encode($videoUrls) }}">
+          <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content border-0">
+              <button type="button" class="btn-close btn-close-white ms-auto m-2" data-bs-dismiss="modal" aria-label="{{ __('Close') }}"></button>
+              <div class="modal-body p-0 position-relative">
+                <div class="ratio ratio-16x9"><iframe src="" class="js-gallery-video-frame" allowfullscreen loading="lazy"></iframe></div>
+                @if($videoUrls->count() > 1)
+                  <button type="button" class="btn btn-light btn-sm rounded-circle position-absolute top-50 start-0 translate-middle-y ms-2 js-gallery-prev" aria-label="{{ __('Previous Video') }}"><i class="bi bi-chevron-left"></i></button>
+                  <button type="button" class="btn btn-light btn-sm rounded-circle position-absolute top-50 end-0 translate-middle-y me-2 js-gallery-next" aria-label="{{ __('Next Video') }}"><i class="bi bi-chevron-right"></i></button>
+                @endif
+              </div>
+            </div>
+          </div>
+        </div>
+      @endif
     {!! $close !!}
     @break
 
@@ -306,13 +369,13 @@
     {!! $open !!}
       <div class="row g-4">
         <div class="col-md-6">
-          <h2 class="section-title h4 mb-3">{{ $d['heading'] ?? 'Get in touch' }}</h2>
+          <h2 class="section-title h4 mb-3">{{ $d['heading'] ?? __('Get In Touch') }}</h2>
           <ul class="list-unstyled">
-            @if(($d['address'] ?? null) || ($d['school']->address ?? null))<li class="mb-2"><i class="bi bi-geo-alt text-brand"></i> {{ $d['address'] ?? $d['school']->address }}</li>@endif
-            @if($d['phone'] ?? null)<li class="mb-2"><i class="bi bi-telephone text-brand"></i> {{ $d['phone'] }}</li>@endif
-            @if(($d['email'] ?? null) || ($d['school']->email ?? null))<li class="mb-2"><i class="bi bi-envelope text-brand"></i> {{ $d['email'] ?? $d['school']->email }}</li>@endif
+            @if(($d['address'] ?? null) || ($d['school']->address ?? null))<li class="d-flex align-items-center gap-3 mb-3"><span class="icon-badge d-inline-flex align-items-center justify-content-center"><i class="bi bi-geo-alt"></i></span> {{ $d['address'] ?? $d['school']->address }}</li>@endif
+            @if($d['phone'] ?? null)<li class="d-flex align-items-center gap-3 mb-3"><span class="icon-badge d-inline-flex align-items-center justify-content-center"><i class="bi bi-telephone"></i></span> {{ $d['phone'] }}</li>@endif
+            @if(($d['email'] ?? null) || ($d['school']->email ?? null))<li class="d-flex align-items-center gap-3 mb-3"><span class="icon-badge d-inline-flex align-items-center justify-content-center"><i class="bi bi-envelope"></i></span> {{ $d['email'] ?? $d['school']->email }}</li>@endif
           </ul>
-          @if(!empty($d['map_embed']))<div class="ratio ratio-4x3 mt-3 rounded-3 overflow-hidden"><iframe src="{{ $d['map_embed'] }}" loading="lazy" style="border:0;"></iframe></div>@endif
+          @if(!empty($d['map_embed']))<div class="ratio ratio-4x3 mt-3 rounded-3 overflow-hidden media-shadow"><iframe src="{{ $d['map_embed'] }}" loading="lazy" style="border:0;"></iframe></div>@endif
         </div>
         <div class="col-md-6"><div class="card"><div class="card-body">
           @if(session('contact_sent'))

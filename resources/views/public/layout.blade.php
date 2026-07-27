@@ -55,19 +55,79 @@
             --brand-heading:
                 {{ $heading }}
             ;
+            /* Neutral + motion tokens — a small, deliberately minimal scale
+               shared by every element below instead of one-off values, so a
+               future tweak (e.g. a rounder or flatter look) is a handful of
+               edits here rather than a hunt through every rule. */
+            --ink: #1f2937;
+            --ink-muted: #64748b;
+            --border: #e5e7eb;
+            --radius-sm: .5rem;
+            --radius-md: .75rem;
+            --shadow-sm: 0 1px 2px rgba(16, 24, 40, .06), 0 1px 3px rgba(16, 24, 40, .05);
+            --shadow-md: 0 8px 24px rgba(16, 24, 40, .09), 0 2px 6px rgba(16, 24, 40, .05);
+            --ease: cubic-bezier(.4, 0, .2, 1);
+            --transition-fast: .15s;
+            --transition: .25s;
+        }
+
+        /* Bootstrap 5.3's shipped spacer scale stops at 5 (3rem) — these
+           templates want one more, roomier step at the lg breakpoint for
+           section padding, without pulling in a custom Sass build just for
+           one extra utility class. 992px matches Bootstrap's own lg
+           breakpoint exactly. */
+        @media (min-width: 992px) {
+
+            .py-lg-6 {
+                padding-top: 5rem !important;
+                padding-bottom: 5rem !important;
+            }
+
+            .p-lg-6 {
+                padding: 5rem !important;
+            }
         }
 
         body {
-            color: #1f2937;
+            color: var(--ink);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .text-muted {
+            color: var(--ink-muted) !important;
         }
 
         a {
             color: var(--brand);
+            transition: color var(--transition-fast) var(--ease);
+        }
+
+        a:hover {
+            color: color-mix(in srgb, var(--brand) 80%, black);
         }
 
         .navbar-brand {
             font-weight: 700;
             color: var(--brand) !important;
+        }
+
+        /* Every Bootstrap button gets the same restrained hover treatment —
+           a 1px lift + soft shadow, not a color/scale change, so it reads as
+           "responsive to touch" without calling attention to itself. */
+        .btn {
+            transition: filter var(--transition-fast) var(--ease),
+                        transform var(--transition-fast) var(--ease),
+                        box-shadow var(--transition-fast) var(--ease),
+                        background-color var(--transition-fast) var(--ease),
+                        border-color var(--transition-fast) var(--ease);
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
         }
 
         .btn-brand {
@@ -79,25 +139,363 @@
         .btn-brand:hover {
             filter: brightness(.92);
             color: #fff;
+            box-shadow: var(--shadow-sm);
         }
 
         .text-brand {
             color: var(--brand);
         }
 
+        /* Sticky nav: a permanent, soft separation from the content below —
+           avoids a scroll listener just to add a shadow once the page moves. */
+        .navbar.sticky-top {
+            box-shadow: 0 1px 3px rgba(0, 0, 0, .08);
+        }
+
+        .navbar .nav-link {
+            position: relative;
+            transition: opacity var(--transition-fast) var(--ease);
+        }
+
+        /* Uses the school's configured accent color (Website > Settings) —
+           previously declared as --brand-accent but never actually rendered
+           anywhere on the public site. */
+        .navbar .nav-link::after {
+            content: '';
+            position: absolute;
+            left: .5rem;
+            right: .5rem;
+            bottom: 2px;
+            height: 2px;
+            background: var(--brand-accent);
+            transform: scaleX(0);
+            transform-origin: left;
+            transition: transform var(--transition) var(--ease);
+        }
+
+        .navbar .nav-link:hover::after {
+            transform: scaleX(1);
+        }
+
+        .dropdown-menu {
+            border-radius: var(--radius-sm);
+            border-color: var(--border);
+            box-shadow: var(--shadow-md);
+        }
+
+        /* Branded focus states — form controls otherwise fall back to
+           Bootstrap's default blue ring, which clashes on any school whose
+           brand color isn't blue. */
+        .form-control:focus,
+        .form-select:focus {
+            border-color: var(--brand);
+            box-shadow: 0 0 0 .2rem color-mix(in srgb, var(--brand) 20%, transparent);
+        }
+
+        .form-check-input:checked {
+            background-color: var(--brand);
+            border-color: var(--brand);
+        }
+
         .hero {
-            background: linear-gradient(135deg, var(--brand), color-mix(in srgb, var(--brand) 65%, #000));
+            background: linear-gradient(135deg, var(--brand), color-mix(in srgb, var(--brand) 70%, #000));
             color: #fff;
+            animation: pub-hero-in .5s var(--ease) both;
         }
 
         .hero h1 {
             color: #fff;
             font-weight: 700;
+            letter-spacing: -.01em;
+        }
+
+        @keyframes pub-hero-in {
+            from {
+                opacity: 0;
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        /* Pill-shaped CTAs read as more contemporary than Bootstrap's default
+           squared-off large buttons — scoped to the hero only, everywhere
+           else keeps the standard button radius. */
+        .hero .btn-lg {
+            border-radius: 50rem;
+            padding-inline: 1.75rem;
+        }
+
+        /* Small uppercase label above a heading — "Welcome", "What's New",
+           etc. Purely decorative, no new editable field: the text is a
+           literal in the template, not admin-configurable. */
+        .eyebrow {
+            display: inline-block;
+            font-size: .75rem;
+            font-weight: 700;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: var(--brand);
+        }
+
+        .hero .eyebrow {
+            color: rgba(255, 255, 255, .85);
+            background: rgba(255, 255, 255, .14);
+            border-radius: 50rem;
+            padding: .3rem .9rem;
+        }
+
+        /* Frosted stat tiles inside the hero — replaces the plain white
+           boxes that fought visually with the gradient background. */
+        .stat-glass {
+            background: rgba(255, 255, 255, .12);
+            backdrop-filter: blur(6px);
+            border: 1px solid rgba(255, 255, 255, .18);
+            border-radius: var(--radius-md);
+            color: #fff;
+        }
+
+        .stat-glass .stat-num {
+            color: #fff;
+        }
+
+        /* Staff avatars: a soft ring instead of a plain border, with a
+           gentle scale on hover — respects prefers-reduced-motion via the
+           existing .btn/.card/.hero rule below (grouped in with the rest
+           of this file's transform-based hovers). */
+        .avatar-ring {
+            box-shadow: 0 0 0 3px #fff, 0 0 0 5px color-mix(in srgb, var(--brand) 25%, transparent);
+            transition: transform var(--transition) var(--ease);
+        }
+
+        .avatar-ring:hover {
+            transform: scale(1.06);
+        }
+
+        .notice-icon {
+            width: 2.25rem;
+            height: 2.25rem;
+            background: color-mix(in srgb, var(--brand) 10%, transparent);
+            color: var(--brand);
+            border-radius: 50%;
+        }
+
+        /* "View all" style links with an arrow that nudges forward on
+           hover — used wherever a section links out to its full listing. */
+        .link-arrow {
+            display: inline-flex;
+            align-items: center;
+            gap: .35rem;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .link-arrow i {
+            transition: transform var(--transition) var(--ease);
+        }
+
+        /* Baseline typography for arbitrary rich-text HTML (the Richtext and
+           Image+Text blocks' WYSIWYG output) — previously completely
+           unstyled: a pasted <h2>/<p>/<ul> rendered with bare browser
+           defaults, no relationship to the rest of the page's type scale. */
+        .prose :where(h1, h2, h3, h4, h5, h6) {
+            color: var(--brand-heading);
+            font-weight: 700;
+            margin-top: 1.5em;
+            margin-bottom: .5em;
+        }
+
+        .prose :where(h1, h2, h3, h4, h5, h6):first-child {
+            margin-top: 0;
+        }
+
+        .prose p {
+            margin-bottom: 1em;
+        }
+
+        .prose ul,
+        .prose ol {
+            margin-bottom: 1em;
+            padding-left: 1.25em;
+        }
+
+        .prose img {
+            max-width: 100%;
+            border-radius: var(--radius-md);
+        }
+
+        .prose a {
+            text-decoration-color: color-mix(in srgb, var(--brand) 40%, transparent);
+            text-underline-offset: .15em;
+        }
+
+        .link-arrow:hover i {
+            transform: translateX(3px);
+        }
+
+        .cta-panel {
+            background: linear-gradient(135deg, color-mix(in srgb, var(--brand) 8%, #fff), color-mix(in srgb, var(--brand-accent) 10%, #fff));
+            border-radius: 1.5rem;
+        }
+
+        /* Video/map embeds get the same soft shadow as everything else, but
+           deliberately no hover-zoom like .img-zoom — scaling a video
+           player or map on hover looks broken while its own controls are
+           visible. */
+        .media-shadow {
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* Gallery Video block's thumbnail — no per-video thumbnail image is
+           stored (the block only ever had a list of embed URLs), so this is
+           a deliberately generic brand-tinted play-button tile rather than
+           an actual video frame. */
+        .video-thumb {
+            background: color-mix(in srgb, var(--brand) 85%, #000);
+            color: #fff;
+            appearance: none;
+            transition: transform var(--transition) var(--ease);
+        }
+
+        /* Bootstrap's .ratio utility forces its one direct child to
+           position:absolute + width/height:100% (`.ratio > *`) so the
+           padding-top aspect-ratio trick has something to fill — centering
+           set on .video-thumb itself wouldn't reach an absolutely
+           positioned child, so it has to live here instead. ::before/
+           ::after become flex items of their own parent, so this also
+           correctly centers the icon's glyph (a Bootstrap Icons ::before). */
+        .video-thumb i {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            opacity: .9;
+        }
+
+        .video-thumb:hover {
+            transform: scale(1.02);
+        }
+
+        /* Gallery Photo/Video lightbox modals — a transparent, borderless
+           modal-content so only the image/player itself and the nav
+           buttons are visible against the darkened backdrop. */
+        .js-photo-gallery-modal .modal-content,
+        .js-video-gallery-modal .modal-content {
+            background: transparent;
+        }
+
+        .js-gallery-img {
+            max-height: 85vh;
+            width: auto;
+            object-fit: contain;
+        }
+
+        /* .modal-backdrop is a sibling Bootstrap appends to <body>, never a
+           descendant of .modal — it can't be scoped to just these lightbox
+           modals via CSS alone. These lightboxes are the only modals
+           anywhere on the public site today, so a darker-than-Bootstrap's-
+           default backdrop is set globally rather than left unreachable. */
+        .modal-backdrop.show {
+            --bs-backdrop-opacity: .85;
+        }
+
+        /* Same visual formula as .notice-icon, kept as a separate class
+           rather than renaming that one — used for the contact block's
+           address/phone/email icons instead of the plain inline icon they
+           had before. */
+        .icon-badge {
+            width: 2.25rem;
+            height: 2.25rem;
+            background: color-mix(in srgb, var(--brand) 10%, transparent);
+            color: var(--brand);
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        /* Uppercase section labels inside the Admission Form block ("Student
+           Information", "Parent Information", …) — a thin rule instead of
+           just floating text gives a long multi-section form some visual
+           rhythm to break it up. */
+        .form-section-label {
+            padding-bottom: .5rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+            letter-spacing: .04em;
+        }
+
+        /* Small stat tiles (the Stats block — distinct from the hero's
+           .stat-glass, which only makes sense on the hero's own gradient
+           background) get a lift on hover like any other small tile. */
+        .stat-tile {
+            border-radius: var(--radius-md);
+            transition: transform var(--transition) var(--ease), box-shadow var(--transition) var(--ease);
+        }
+
+        .stat-tile:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* Gentle zoom-on-hover for content images (Image, Image+Text, and
+           Gallery blocks) — the wrapper clips the zoom, the image itself is
+           what scales. inline-block (not block) deliberately: the Image
+           block centers a naturally-sized image via its <figure>'s
+           text-align:center, and a full-width block wrapper here would put
+           the shadow/radius around that whole invisible full-width box
+           instead of hugging the actual (often narrower) image. */
+        .img-zoom {
+            display: inline-block;
+            overflow: hidden;
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+            max-width: 100%;
+        }
+
+        .img-zoom img {
+            display: block;
+            max-width: 100%;
+            transition: transform .4s var(--ease);
+        }
+
+        .img-zoom:hover img {
+            transform: scale(1.04);
+        }
+
+        /* Linked Icon blocks get the same restrained hover feedback as
+           everything else clickable on this page. */
+        .icon-link {
+            display: inline-block;
+            transition: transform var(--transition) var(--ease);
+        }
+
+        .icon-link:hover {
+            transform: scale(1.08);
+        }
+
+        /* Section dividers (the Divider block, and any plain <hr> a
+           richtext block's HTML might contain) read the same neutral
+           border token as everything else instead of Bootstrap's default. */
+        hr {
+            border-color: var(--border);
+            opacity: 1;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+
+            .avatar-ring,
+            .link-arrow i,
+            .stat-tile,
+            .img-zoom img,
+            .icon-link {
+                transition: none;
+            }
         }
 
         .section-title {
             color: var(--brand-heading);
             font-weight: 700;
+            letter-spacing: -.01em;
         }
 
         .stat-num {
@@ -105,11 +503,22 @@
             font-weight: 700;
             font-size: 2.25rem;
             line-height: 1;
+            font-variant-numeric: tabular-nums;
         }
 
         .card {
             border: 0;
-            box-shadow: 0 1px 2px rgba(16, 24, 40, .06), 0 1px 3px rgba(16, 24, 40, .05);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+            transition: box-shadow var(--transition) var(--ease);
+        }
+
+        /* Shadow-only elevation, not a translateY lift — the same .card class
+           wraps small tiles (notice/staff cards) and the large admission-form
+           card, and a lift reads as a "clickable tile" cue that only makes
+           sense for the former. */
+        .card:hover {
+            box-shadow: var(--shadow-md);
         }
 
         footer {
@@ -120,6 +529,12 @@
         footer a {
             color: #e2e8f0;
             text-decoration: none;
+            transition: color var(--transition-fast) var(--ease);
+        }
+
+        footer a:hover {
+            color: #fff;
+            text-decoration: underline;
         }
 
         .pub-ticker {
@@ -152,7 +567,7 @@
            into view. Respects prefers-reduced-motion for accessibility. */
         .reveal {
             opacity: 0;
-            transition: opacity .5s ease, transform .5s ease;
+            transition: opacity .5s var(--ease), transform .5s var(--ease);
         }
 
         .reveal-up {
@@ -165,10 +580,25 @@
         }
 
         @media (prefers-reduced-motion: reduce) {
+
+            .hero,
+            .btn,
+            .card,
+            .navbar .nav-link::after {
+                transition: none;
+                animation: none;
+            }
+
+            /* .reveal needs its own rule, not just transition:none — without
+               forcing opacity/transform back to their visible end-state, an
+               element that hasn't been caught by the JS observer yet (or
+               whose IntersectionObserver never fires, e.g. JS disabled)
+               would stay permanently invisible at opacity:0. */
             .reveal {
                 opacity: 1;
                 transform: none;
                 transition: none;
+                animation: none;
             }
         }
 
@@ -256,6 +686,61 @@
                 });
             }, { threshold: .15, rootMargin: '0px 0px -10% 0px' });
             els.forEach(function (el) { io.observe(el); });
+        })();
+
+        // Gallery Photo/Video lightboxes — one shared Bootstrap modal per
+        // block instance, reused across every item in that gallery. The
+        // clicked thumbnail's data-gallery-index plus the modal's own
+        // embedded item list (data-images or data-videos, JSON) drive what
+        // shows and what prev/next/arrow-keys cycle through. A page can
+        // have multiple gallery blocks, each with its own modal, so the
+        // "current item" state lives on the modal element itself (its own
+        // data-current-index), never in a shared JS variable.
+        (function () {
+            function itemsFor(modalEl) {
+                var key = modalEl.hasAttribute('data-images') ? 'images' : 'videos';
+                try { return JSON.parse(modalEl.getAttribute('data-' + key) || '[]'); } catch (e) { return []; }
+            }
+            function showAt(modalEl, index) {
+                var items = itemsFor(modalEl);
+                if (!items.length) return;
+                var i = ((index % items.length) + items.length) % items.length;
+                modalEl.dataset.currentIndex = i;
+                var img = modalEl.querySelector('.js-gallery-img');
+                if (img) img.src = items[i];
+                var frame = modalEl.querySelector('.js-gallery-video-frame');
+                if (frame) frame.src = items[i];
+            }
+            function isGalleryModal(el) {
+                return !!el && (el.classList.contains('js-photo-gallery-modal') || el.classList.contains('js-video-gallery-modal'));
+            }
+            document.addEventListener('show.bs.modal', function (e) {
+                if (!isGalleryModal(e.target)) return;
+                var trigger = e.relatedTarget;
+                showAt(e.target, trigger ? parseInt(trigger.dataset.galleryIndex || '0', 10) : 0);
+            });
+            // Stop playback the instant a video-gallery modal closes —
+            // otherwise the iframe keeps playing (and making sound) behind
+            // a hidden modal, since hiding a modal doesn't pause its video.
+            document.addEventListener('hidden.bs.modal', function (e) {
+                if (!isGalleryModal(e.target)) return;
+                var frame = e.target.querySelector('.js-gallery-video-frame');
+                if (frame) frame.src = '';
+            });
+            document.addEventListener('click', function (e) {
+                var prev = e.target.closest('.js-gallery-prev');
+                var next = e.target.closest('.js-gallery-next');
+                if (!prev && !next) return;
+                var modalEl = e.target.closest('.modal');
+                if (!isGalleryModal(modalEl)) return;
+                showAt(modalEl, parseInt(modalEl.dataset.currentIndex || '0', 10) + (next ? 1 : -1));
+            });
+            document.addEventListener('keydown', function (e) {
+                if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+                var openModal = document.querySelector('.js-photo-gallery-modal.show, .js-video-gallery-modal.show');
+                if (!openModal) return;
+                showAt(openModal, parseInt(openModal.dataset.currentIndex || '0', 10) + (e.key === 'ArrowRight' ? 1 : -1));
+            });
         })();
 
         // Editor click-to-select bridge — no-op unless this document is

@@ -1,11 +1,19 @@
 <?php
 // Admission form block partial - using pure PHP for complex logic
+//
+// $show/$getLabel/$isRequired are built HERE, from the plain 'standard'
+// array PageRenderService::prepareAdmissionFormFields() returns — never
+// pulled pre-built from $d['field_data'] itself. That array is part of a
+// structure PageRenderService::renderPage() caches (Cache::remember(),
+// Redis in every real environment), and Redis cannot serialize a Closure;
+// embedding these closures in the cached data used to throw "Serialization
+// of 'Closure' is not allowed" on every real (non-preview) page load.
 $fieldData = $d['field_data'] ?? [];
 $standard = $fieldData['standard'] ?? [];
 $custom   = $fieldData['custom'] ?? [];
-$show     = $fieldData['show'] ?? fn($k) => false;
-$getLabel = $fieldData['getLabel'] ?? fn($k, $d) => $d;
-$isRequired = $fieldData['isRequired'] ?? fn($k) => false;
+$show       = fn ($k) => ! empty($standard[$k]['enabled']);
+$getLabel   = fn ($k, $default) => $standard[$k]['label'] ?? $default;
+$isRequired = fn ($k) => ! empty($standard[$k]['required']);
 
 $enabledCustom = array_filter($custom, fn($cfg) => !empty($cfg['enabled']));
 ?>
@@ -24,7 +32,7 @@ $enabledCustom = array_filter($custom, fn($cfg) => !empty($cfg['enabled']));
   <form method="POST" action="<?= route('admission.submit') ?>" enctype="multipart/form-data" class="card"><div class="card-body">
     <?= csrf_field() ?>
     {{-- Student --}}
-    <h3 class="text-uppercase text-muted small fw-semibold">{{ __('Student Information') }}</h3>
+    <h3 class="text-uppercase text-muted small fw-semibold form-section-label">{{ __('Student Information') }}</h3>
     <div class="row g-3 mb-3">
       <div class="col-md-4"><label class="form-label">{{ __('First Name') }} <span class="text-danger">*</span></label>
         <input name="first_name" class="form-control" value="<?= e(old('first_name')) ?>" required></div>
@@ -93,7 +101,7 @@ $enabledCustom = array_filter($custom, fn($cfg) => !empty($cfg['enabled']));
     </div>
 
     {{-- Parents --}}
-    <h3 class="text-uppercase text-muted small fw-semibold">{{ __('Parent Information') }}</h3>
+    <h3 class="text-uppercase text-muted small fw-semibold form-section-label">{{ __('Parent Information') }}</h3>
     <div class="row g-3 mb-3">
       <div class="col-md-4"><label class="form-label">Father's name <span class="text-danger">*</span></label>
         <input name="father_name" class="form-control" value="<?= e(old('father_name')) ?>" required></div>
@@ -109,7 +117,7 @@ $enabledCustom = array_filter($custom, fn($cfg) => !empty($cfg['enabled']));
 
     {{-- Guardian --}}
     <?php if ($show('guardian')): ?>
-    <h3 class="text-uppercase text-muted small fw-semibold">{{ __('Guardian Information') }}</h3>
+    <h3 class="text-uppercase text-muted small fw-semibold form-section-label">{{ __('Guardian Information') }}</h3>
     <div class="row g-3 mb-3">
       <div class="col-md-3"><label class="form-label">{{ __('Guardian Type') }} <span class="text-danger">*</span></label>
         <select name="guardian_type" class="form-select" required>
@@ -129,7 +137,7 @@ $enabledCustom = array_filter($custom, fn($cfg) => !empty($cfg['enabled']));
     <?php endif; ?>
 
     {{-- Address --}}
-    <h3 class="text-uppercase text-muted small fw-semibold">{{ __('Address') }}</h3>
+    <h3 class="text-uppercase text-muted small fw-semibold form-section-label">{{ __('Address') }}</h3>
     <div class="row g-3 mb-3">
       <div class="col-12"><label class="form-label">{{ __('Present Address') }} <span class="text-danger">*</span></label>
         <textarea name="present_address" rows="2" class="form-control" required><?= e(old('present_address')) ?></textarea></div>
@@ -148,7 +156,7 @@ $enabledCustom = array_filter($custom, fn($cfg) => !empty($cfg['enabled']));
 
     {{-- Custom fields --}}
     <?php if (!empty($enabledCustom)): ?>
-    <h3 class="text-uppercase text-muted small fw-semibold">{{ __('Additional Information') }}</h3>
+    <h3 class="text-uppercase text-muted small fw-semibold form-section-label">{{ __('Additional Information') }}</h3>
     <div class="row g-3 mb-3">
         <?php foreach($enabledCustom as $key => $cfg): ?>
             <?php
