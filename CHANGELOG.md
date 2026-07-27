@@ -6,6 +6,23 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- Subtle motion on the public school site: buttons lift slightly on hover, cards get a soft shadow bump,
+  nav links get an animated underline, and the hero fades in on load. All of it respects
+  `prefers-reduced-motion` and skips straight to the end state when disabled.
+
+### Changed
+- Refreshed the public site's shared design tokens (`resources/views/public/layout.blade.php`) for a more
+  minimal look: a small neutral/spacing/shadow/radius scale, softer card shadows with rounded corners,
+  tighter heading letter-spacing, and branded form-focus rings (form fields previously fell back to
+  Bootstrap's default blue focus ring regardless of the school's own brand color).
+- The school's configured accent color (Website > Settings) is now actually used somewhere — it was declared
+  as a CSS variable but never rendered anywhere on the live site. It now colors the nav underline.
+
+### Fixed
+- `.text-muted` on the public site now resolves to a token instead of Bootstrap's default gray, so muted
+  text stays consistent with the rest of the refreshed palette.
+
 ## [1.3.1] — 2026-07-25
 
 ### Added
