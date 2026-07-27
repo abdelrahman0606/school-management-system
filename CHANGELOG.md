@@ -22,6 +22,27 @@ follows [Semantic Versioning](https://semver.org/).
 ### Fixed
 - `.text-muted` on the public site now resolves to a token instead of Bootstrap's default gray, so muted
   text stays consistent with the rest of the refreshed palette.
+- Several public-site strings that were hardcoded English literals ("Welcome to …", "Check results",
+  "Teachers & staff", the results-CTA paragraph, the notices/staff "no data" fallback labels) are now
+  translation keys like everything else on the site.
+
+### Changed
+- Pilot pass on the homepage's visual design (`public/home.blade.php`) and the hero/notices/staff
+  page-builder blocks (`public/blocks/render.blade.php`) — restyled only, every field the block editor
+  exposes (title, subtitle, button, image, heading, members, notices, limit) still works exactly as before:
+  - Hero: eyebrow label, bigger heading, frosted glass ("stat-glass") stat tiles instead of plain white
+    boxes, pill-shaped buttons.
+  - Notices: a circular icon badge per card instead of an inline icon+text row, more generous card padding.
+  - Staff: avatars now have a soft ring instead of a bordered box, un-boxed (no more card wrapper per
+    person), bigger photos, a subtle scale on hover.
+  - Results CTA: a tinted gradient panel instead of a plain white card.
+  - Added a `py-lg-6`/`p-lg-6` utility pair (Bootstrap 5.3's shipped spacer scale stops at `5`) for extra
+    section breathing room on large screens.
+  - Scope: deliberately CSS/markup restyling only, inside `home.blade.php` and the 3 block cases' own
+    content — the shared block wrapper (`data-block-path`/drag-and-drop/click-to-select attributes) that
+    the admin page-builder's live-preview iframe depends on was not touched, and no other block type was
+    changed. Remaining block types (richtext, image, video, gallery, contact, admission form, etc.) are
+    unchanged pending the same treatment in a follow-up pass.
 
 ## [1.3.1] — 2026-07-25
 

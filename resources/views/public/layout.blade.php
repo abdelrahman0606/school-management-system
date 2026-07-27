@@ -71,6 +71,23 @@
             --transition: .25s;
         }
 
+        /* Bootstrap 5.3's shipped spacer scale stops at 5 (3rem) — these
+           templates want one more, roomier step at the lg breakpoint for
+           section padding, without pulling in a custom Sass build just for
+           one extra utility class. 992px matches Bootstrap's own lg
+           breakpoint exactly. */
+        @media (min-width: 992px) {
+
+            .py-lg-6 {
+                padding-top: 5rem !important;
+                padding-bottom: 5rem !important;
+            }
+
+            .p-lg-6 {
+                padding: 5rem !important;
+            }
+        }
+
         body {
             color: var(--ink);
             -webkit-font-smoothing: antialiased;
@@ -199,6 +216,99 @@
 
             to {
                 opacity: 1;
+            }
+        }
+
+        /* Pill-shaped CTAs read as more contemporary than Bootstrap's default
+           squared-off large buttons — scoped to the hero only, everywhere
+           else keeps the standard button radius. */
+        .hero .btn-lg {
+            border-radius: 50rem;
+            padding-inline: 1.75rem;
+        }
+
+        /* Small uppercase label above a heading — "Welcome", "What's New",
+           etc. Purely decorative, no new editable field: the text is a
+           literal in the template, not admin-configurable. */
+        .eyebrow {
+            display: inline-block;
+            font-size: .75rem;
+            font-weight: 700;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: var(--brand);
+        }
+
+        .hero .eyebrow {
+            color: rgba(255, 255, 255, .85);
+            background: rgba(255, 255, 255, .14);
+            border-radius: 50rem;
+            padding: .3rem .9rem;
+        }
+
+        /* Frosted stat tiles inside the hero — replaces the plain white
+           boxes that fought visually with the gradient background. */
+        .stat-glass {
+            background: rgba(255, 255, 255, .12);
+            backdrop-filter: blur(6px);
+            border: 1px solid rgba(255, 255, 255, .18);
+            border-radius: var(--radius-md);
+            color: #fff;
+        }
+
+        .stat-glass .stat-num {
+            color: #fff;
+        }
+
+        /* Staff avatars: a soft ring instead of a plain border, with a
+           gentle scale on hover — respects prefers-reduced-motion via the
+           existing .btn/.card/.hero rule below (grouped in with the rest
+           of this file's transform-based hovers). */
+        .avatar-ring {
+            box-shadow: 0 0 0 3px #fff, 0 0 0 5px color-mix(in srgb, var(--brand) 25%, transparent);
+            transition: transform var(--transition) var(--ease);
+        }
+
+        .avatar-ring:hover {
+            transform: scale(1.06);
+        }
+
+        .notice-icon {
+            width: 2.25rem;
+            height: 2.25rem;
+            background: color-mix(in srgb, var(--brand) 10%, transparent);
+            color: var(--brand);
+            border-radius: 50%;
+        }
+
+        /* "View all" style links with an arrow that nudges forward on
+           hover — used wherever a section links out to its full listing. */
+        .link-arrow {
+            display: inline-flex;
+            align-items: center;
+            gap: .35rem;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .link-arrow i {
+            transition: transform var(--transition) var(--ease);
+        }
+
+        .link-arrow:hover i {
+            transform: translateX(3px);
+        }
+
+        .cta-panel {
+            background: linear-gradient(135deg, color-mix(in srgb, var(--brand) 8%, #fff), color-mix(in srgb, var(--brand-accent) 10%, #fff));
+            border-radius: 1.5rem;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+
+            .avatar-ring,
+            .link-arrow i {
+                transition: none;
             }
         }
 

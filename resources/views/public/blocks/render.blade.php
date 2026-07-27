@@ -41,9 +41,9 @@
 @endif
 @switch($type)
   @case('hero')
-    <header class="hero py-5" @if(!empty($d['image'])) style="background-image:linear-gradient(rgba(0,0,0,.45),rgba(0,0,0,.45)),url('{{ $d['image'] }}');background-size:cover;background-position:center;" @endif>
+    <header class="hero py-5 py-lg-6" @if(!empty($d['image'])) style="background-image:linear-gradient(rgba(0,0,0,.45),rgba(0,0,0,.45)),url('{{ $d['image'] }}');background-size:cover;background-position:center;" @endif>
       <div class="container py-4 py-lg-5 text-center">
-        <h1 class="display-5 mb-3">{{ $d['title'] ?? '' }}</h1>
+        <h1 class="display-4 mb-3">{{ $d['title'] ?? '' }}</h1>
         @if(!empty($d['subtitle']))<p class="lead text-white-50 mx-auto" style="max-width:42rem;">{{ $d['subtitle'] }}</p>@endif
         @if(!empty($d['button_text']))<a href="{{ $d['button_url'] ?? '#' }}" class="btn btn-light btn-lg mt-2 px-4">{{ $d['button_text'] }}</a>@endif
       </div>
@@ -223,18 +223,16 @@
 
   @case('staff')
     {!! $open !!}
-      @if(!empty($d['heading']))<h2 class="section-title h3 mb-4">{{ $d['heading'] }}</h2>@endif
-      <div class="row {{ $bp::columnClasses($layout, ['mobile' => 2, 'tablet' => 3, 'laptop' => 4, 'desktop' => 4]) }} g-3">
+      @if(!empty($d['heading']))<h2 class="section-title h3 mb-4 text-center">{{ $d['heading'] }}</h2>@endif
+      <div class="row {{ $bp::columnClasses($layout, ['mobile' => 2, 'tablet' => 3, 'laptop' => 4, 'desktop' => 4]) }} g-4 text-center">
         @forelse($d['members'] ?? [] as $m)
           <div>
-            <div class="card h-100 text-center"><div class="card-body">
-              <div class="rounded-circle bg-light border d-inline-flex align-items-center justify-content-center mb-2" style="width:64px;height:64px;">
-                @if($m->photo)<img src="{{ $m->photo }}" class="rounded-circle" style="width:64px;height:64px;object-fit:cover;" alt="">
-                @else<span class="text-brand fw-bold fs-4">{{ strtoupper(mb_substr($m->name, 0, 1)) }}</span>@endif
-              </div>
-              <div class="fw-semibold small">{{ $m->name }}</div>
-              <div class="text-muted small">{{ $m->designation?->name ?? 'Staff' }}</div>
-            </div></div>
+            <div class="rounded-circle bg-white avatar-ring d-inline-flex align-items-center justify-content-center mb-3" style="width:88px;height:88px;">
+              @if($m->photo)<img src="{{ $m->photo }}" class="rounded-circle" style="width:88px;height:88px;object-fit:cover;" alt="">
+              @else<span class="text-brand fw-bold fs-3">{{ strtoupper(mb_substr($m->name, 0, 1)) }}</span>@endif
+            </div>
+            <div class="fw-semibold small">{{ $m->name }}</div>
+            <div class="text-muted small">{{ $m->designation?->name ?? __('Staff') }}</div>
           </div>
         @empty
           <p class="text-muted mb-0">{{ __('No Staff To Show.') }}</p>
@@ -245,11 +243,12 @@
 
   @case('notices')
     {!! $open !!}
-      <h2 class="section-title h3 mb-4">{{ $d['heading'] ?? 'Notices' }}</h2>
-      <div class="row {{ $bp::columnClasses($layout, ['mobile' => 1, 'tablet' => 2, 'laptop' => 3, 'desktop' => 3]) }} g-3">
+      <h2 class="section-title h3 mb-4">{{ $d['heading'] ?? __('Notices') }}</h2>
+      <div class="row {{ $bp::columnClasses($layout, ['mobile' => 1, 'tablet' => 2, 'laptop' => 3, 'desktop' => 3]) }} g-4">
         @forelse(($d['notices'] ?? collect())->take($d['limit'] ?? 6) as $n)
-          <div><div class="card h-100"><div class="card-body">
-            <div class="small text-muted mb-1"><i class="bi bi-megaphone-fill text-brand"></i> {{ optional($n->publish_at ?? $n->created_at)->format('d M Y') }}</div>
+          <div><div class="card h-100"><div class="card-body p-4">
+            <div class="d-flex align-items-center justify-content-center notice-icon mb-3"><i class="bi bi-megaphone-fill"></i></div>
+            <div class="small text-muted mb-1">{{ optional($n->publish_at ?? $n->created_at)->format('d M Y') }}</div>
             <h3 class="h6 fw-semibold">{{ $n->title }}</h3>
             <p class="text-muted small mb-0">{{ \Illuminate\Support\Str::limit(strip_tags($n->body), 110) }}</p>
           </div></div></div>
