@@ -418,6 +418,18 @@ class PageRenderService
      * Prepare admission form field data for Blade template.
      * Returns a flat array with all field info needed for rendering.
      *
+     * Deliberately plain arrays only, no Closures — this return value ends
+     * up nested inside a block's 'd' data, which buildView() bundles into
+     * the structure renderPage() caches via Cache::remember(). Redis (the
+     * cache store used outside tests — phpunit.xml pins CACHE_STORE=array,
+     * which never actually serializes anything, so this class of bug is
+     * invisible to the test suite) cannot serialize a Closure and throws
+     * "Serialization of 'Closure' is not allowed" the moment a real request
+     * tries to cache it. admission_form.blade.php reconstructs its own
+     * show()/getLabel()/isRequired() helper closures locally, at render
+     * time, from the plain 'standard' array below — never from a cached
+     * value.
+     *
      * @param  array|string|null  $fields
      * @return array<string, mixed>
      */
@@ -443,9 +455,6 @@ class PageRenderService
         return [
             'standard' => array_intersect_key($normalized, array_flip($standardKeys)),
             'custom' => $customFields,
-            'show' => fn ($key) => ! empty($normalized[$key]['enabled']),
-            'getLabel' => fn ($key, $default) => $normalized[$key]['label'] ?? $default,
-            'isRequired' => fn ($key) => ! empty($normalized[$key]['required']),
         ];
     }
 
