@@ -6,6 +6,8 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.3.3] — 2026-07-28
+
 ### Added
 - Shared cPanel hosting support, without any code changes to how the app is normally run elsewhere.
   `config/filesystems.php`'s `minio` disk (every module calls `Storage::disk('minio')` by name) now falls
