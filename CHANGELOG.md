@@ -6,6 +6,24 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- Shared cPanel hosting support, without any code changes to how the app is normally run elsewhere.
+  `config/filesystems.php`'s `minio` disk (every module calls `Storage::disk('minio')` by name) now falls
+  back to a plain local disk automatically whenever `AWS_ENDPOINT` isn't set, instead of requiring a real
+  MinIO/S3 endpoint. Added `.env.cpanel.example` (database-backed cache/queue/sessions, SMTP mail, no Redis)
+  and `docs/cpanel-deployment.md` — a full walkthrough covering the document-root gotcha on shared hosting,
+  Composer with/without SSH, cron-based scheduler + queue worker (no Horizon/Supervisor available), storage
+  symlink, file permissions, PHP limits worth raising, HTTPS, and troubleshooting.
+
+### Fixed
+- The one remaining raw `Cache::tags(['pageview'])` call (in `PageRenderService::renderPage()`, the public
+  page-render cache) didn't go through `App\Support\CacheTags` like every other tagged cache read/write in
+  the app. Native Laravel cache tagging only exists on the Redis/Memcached/array drivers — not database or
+  file, which is what `CACHE_STORE` needs to be on shared hosting without Redis — so this one call would
+  have thrown "This cache store does not support tagging" the moment `CACHE_STORE=database`/`file` was set.
+  Switched it to `CacheTags::remember()`. Behavior is unchanged: nothing ever flushes the `pageview` tag by
+  name, since a fresh `PageLayout` id (and therefore a fresh cache key) is minted on every publish anyway.
+
 ## [1.3.2] — 2026-07-27
 
 ### Added

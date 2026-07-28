@@ -158,6 +158,16 @@ docker compose exec app php artisan storage:link
 
 ---
 
+## 📦 Deploying to Shared cPanel Hosting
+
+No Docker, no Redis, no MinIO required — the app already falls back to
+database-backed cache/queue/sessions and local file storage when those
+services aren't available. Full walkthrough (document root, cron-based
+scheduler/queue, `.env` template, PHP limits, troubleshooting):
+[`docs/cpanel-deployment.md`](docs/cpanel-deployment.md).
+
+---
+
 ## 🔌 API Documentation
 
 Generate interactive docs with [Scribe](https://scribe.knuckles.wtf/):
