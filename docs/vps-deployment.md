@@ -129,6 +129,18 @@ live app risks several real failure modes:
   respawns) to pick up new code. Shared hosting's cron-driven queue doesn't
   have this problem — every cron tick is a brand-new PHP process, so it
   always loads whatever is currently on disk.
+- **A hand-edited `VERSION` file.** Nothing stops someone from directly
+  editing `/VERSION` to claim a release that was never actually deployed —
+  by accident (a bad merge, a stray manual edit while debugging) or
+  otherwise. `GET /api/v2/health` and `php artisan version:verify` both
+  report a `version_verified` field/line for this: `true` means the
+  `VERSION` value is tagged (`v{version}`) and that tag's commit is at or
+  before `HEAD`; `false` means it isn't — either no such tag exists at all,
+  or `HEAD` is actually *behind* the release `VERSION` claims; `null` means
+  it can't be checked at all (no `.git` on disk — a zip-uploaded install,
+  see `docs/cpanel-deployment.md`). `false` is the one to actually act on;
+  `null` is expected and fine wherever there's no git history to check
+  against. See `app/Support/VersionIntegrity.php` for the exact logic.
 
 ### The safe order of operations
 
@@ -141,7 +153,9 @@ live app risks several real failure modes:
 7. `php artisan config:clear && config:cache && route:cache && view:cache`.
 8. Restart Horizon if you're running it (`artisan horizon:terminate`) — skip
    if you're on the cron-driven queue, there's nothing to restart.
-9. Smoke-test — hit `/api/v2/health` and confirm it reports `"status":"ok"`.
+9. Smoke-test — hit `/api/v2/health` and confirm it reports `"status":"ok"`
+   and `"version_verified":true` (or `null` if there's genuinely no `.git`
+   on disk to check against — see above).
 10. `php artisan up` — maintenance mode off.
 
 ### `scripts/deploy.sh` automates exactly this sequence
@@ -158,7 +172,10 @@ state automatically — the script prints the previous commit and the backup
 file path it took, and the exact manual rollback commands are in the
 comment block at the top of the script itself. Read that comment block
 before your first real run. Requires `git`, `composer`, and (for the
-automatic DB backup step) `mysqldump` on `PATH`.
+automatic DB backup step) `mysqldump` on `PATH`. Its health-check step
+treats `"version_verified":false` specifically as a hard failure (not just
+logged) — that's the script's own deploy having landed on a commit that
+doesn't match a real tagged release, worth stopping for.
 
 ### On shared cPanel hosting without git
 

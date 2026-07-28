@@ -1,5 +1,6 @@
 <?php
 
+use App\Console\Commands\VersionVerifyCommand;
 use App\Http\Controllers\Admin\Auth\LoginController;
 use App\Http\Middleware\CheckModuleEnabled;
 use App\Http\Middleware\ResolveSchool;
@@ -23,6 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withCommands([
         AutoCloseStaffAttendance::class,
+        VersionVerifyCommand::class,
     ])
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->appendToGroup('api', ResolveSchool::class);

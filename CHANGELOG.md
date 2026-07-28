@@ -7,6 +7,17 @@ follows [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Version integrity checking, so a hand-edited `VERSION` file (accidental or not) is both caught as
+  malformed and, where `.git` is present, checkable against whether that version number actually
+  corresponds to real deployed code. `config('app.version')` now validates the `VERSION` file's format
+  (`App\Support\VersionIntegrity::isValidFormat()`) and falls back to `'unknown'` instead of displaying
+  garbage. New `App\Support\VersionIntegrity::verifyAgainstGit()` — on demand only, never on the request-boot
+  path — checks whether that version has a matching git tag reachable from `HEAD`: `true` (tagged and at or
+  before `HEAD`), `false` (no such tag exists, or `HEAD` is behind it — the version claims a release that
+  isn't actually on disk), or `null` (unverifiable — no `.git` directory, e.g. a zip-uploaded shared-hosting
+  install; treated as "can't check", never as a tamper signal). Surfaced via two new `version`/
+  `version_verified` fields on `GET /api/v2/health` and a new `php artisan version:verify` command.
+  `scripts/deploy.sh`'s health-check step now hard-fails the deploy on an explicit `version_verified:false`.
 - `scripts/deploy.sh` and `docs/vps-deployment.md` — a safe update sequence for an already-installed
   instance (VPS/SSH, or shared cPanel hosting with a Terminal that has git): maintenance mode, database
   backup, fast-forward-only code update, `composer install`, migrate, cache rebuild, Horizon restart (only
