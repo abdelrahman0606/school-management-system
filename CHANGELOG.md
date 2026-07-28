@@ -6,7 +6,26 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- `scripts/deploy.sh` and `docs/vps-deployment.md` — a safe update sequence for an already-installed
+  instance (VPS/SSH, or shared cPanel hosting with a Terminal that has git): maintenance mode, database
+  backup, fast-forward-only code update, `composer install`, migrate, cache rebuild, Horizon restart (only
+  if actually running it), and an `/api/v2/health` smoke test before taking the site back out of maintenance
+  mode. Stops on the first failure and leaves the site in maintenance mode rather than guessing its way back
+  to a working state — prints the previous commit and backup file path instead. `docs/cpanel-deployment.md`
+  gained an "Updating an existing installation" section covering the no-git/no-SSH shared-hosting case
+  (temporary-folder + directory-swap approach instead of overwriting the live app in place), and explains
+  what actually goes wrong from a naive "paste the new version over the old one" update: lost uploads
+  (`storage/app/*` was never in git), an overwritten `.env`, a torn old/new file mix served mid-update, and
+  stale config/route/view caches.
+
 ### Fixed
+- `/api/v2/health` hardcoded `Cache::store('redis')`, forcing a Redis connection attempt on every health
+  check regardless of the app's actual `CACHE_STORE` — meaning this exact endpoint threw a 500 on any
+  deployment (shared cPanel hosting, see above) that doesn't configure Redis at all, which is precisely the
+  moment you'd most want a working smoke-test endpoint (right after a fresh deploy). Now resolves whatever
+  cache store is actually configured; the response key changed from `redis` to `cache` to match. Added a
+  regression test.
 - The app's version number (shown in the admin panel footer) was read from `APP_VERSION` in `.env`, but
   `.env` is per-deployment and not git-tracked — an already-deployed server's `.env` only ever has whatever
   `APP_VERSION` it was first set up with, so bumping `.env.example` on every release never actually updated

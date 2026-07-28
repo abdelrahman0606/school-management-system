@@ -220,6 +220,57 @@ directly (public-site SEO tags, storage disk URLs, admission form links in
 SMS/email), so a mismatched scheme here shows up as mixed-content warnings
 or broken links rather than a hard error.
 
+## Updating an existing installation
+
+"Paste the new version over the old one" is exactly the wrong mental model
+for a live install — a wholesale file replace risks deleting uploaded files
+that were never in git (`storage/app/public`/`storage/app/private` — photos,
+ID card batches, website media, generated PDFs), overwriting your real
+`.env` with a template, and serving a torn mix of old/new files to whoever
+happens to load the site mid-update. See `docs/vps-deployment.md`'s
+"Updating an existing installation" section for the full explanation of
+each failure mode and the safe order of operations (maintenance mode → back
+up the DB → update code → `composer install` → migrate → rebuild caches →
+smoke-test → maintenance mode off) — it applies here too, only the *how you
+get new code onto the server* step differs without git/SSH:
+
+1. On your own machine, run `composer install --no-dev --optimize-autoloader`
+   against the new version and zip the result (or just the files that
+   changed, if you're confident tracking that by hand — zipping everything
+   is safer).
+2. Upload the zip to a **new, separate folder** next to the live app (never
+   extract directly over it) and extract it there.
+3. Copy the live `.env` into the new folder — do not use the template.
+4. Copy (not move, until you've confirmed the new version works)
+   `storage/app/public` and `storage/app/private` from the live install into
+   the new folder, so uploaded files carry over.
+5. Put the live site in maintenance mode: if you have Terminal access,
+   `php artisan down --secret=updating`; if not, temporarily point the
+   domain's document root at a static "back in a few minutes" HTML page via
+   cPanel's Domains screen, or accept a short window of errors for a small
+   site — there's no File-Manager-only equivalent of `artisan down`.
+6. Back up the database — phpMyAdmin's Export, or `mysqldump` if Terminal
+   is available.
+7. Swap the folders: rename the live app folder aside (e.g. add `-old`),
+   rename the new folder into its place. A rename is much closer to atomic
+   than copying files in one by one, which minimizes the torn-update window
+   from step 3 above.
+8. If Terminal is available: `php artisan migrate --force`, then
+   `php artisan config:clear && php artisan config:cache && php artisan route:cache && php artisan view:cache`.
+   Without Terminal, you cannot run migrations at all on most shared
+   hosts — this is the single biggest reason to prefer a host with a
+   Terminal app over one without, once you're maintaining a live site
+   rather than just standing one up once.
+9. Load `/api/v2/health` yourself and confirm `"status":"ok"` before
+   pointing anyone else at the site again (`php artisan up` if you used
+   maintenance mode).
+10. Once you're confident the update is good, delete the `-old` folder.
+
+If your host's Terminal does have `git` available, `scripts/deploy.sh` (see
+`docs/vps-deployment.md`) automates the whole maintenance-mode/backup/
+migrate/cache/health-check sequence in one command — worth checking for
+before doing this by hand every time.
+
 ## What deliberately still needs Redis (optional, VPS-cPanel only)
 
 If your host is a VPS running WHM/cPanel with full SSH access rather than
