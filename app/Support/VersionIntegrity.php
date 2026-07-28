@@ -41,11 +41,11 @@ class VersionIntegrity
 
     /**
      * @return bool|null true = HEAD is at or after the tagged release this
-     *   VERSION claims; false = that tag doesn't exist (this also covers the
-     *   git binary being missing/unusable despite .git being present — a
-     *   rare, self-inflicted setup this doesn't try to distinguish further),
-     *   or HEAD is BEHIND it (VERSION claims a release that isn't actually
-     *   on disk); null = not verifiable at all, no .git directory on disk.
+     *                   VERSION claims; false = that tag doesn't exist (this also covers the
+     *                   git binary being missing/unusable despite .git being present — a
+     *                   rare, self-inflicted setup this doesn't try to distinguish further),
+     *                   or HEAD is BEHIND it (VERSION claims a release that isn't actually
+     *                   on disk); null = not verifiable at all, no .git directory on disk.
      */
     public static function verifyAgainstGit(string $version, ?string $basePath = null): ?bool
     {
