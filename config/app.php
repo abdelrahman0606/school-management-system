@@ -20,13 +20,19 @@ return [
     | Application Version
     |--------------------------------------------------------------------------
     |
-    | Release version shown in the admin panel footer. Bump this (and tag the
-    | matching commit, per CLAUDE.md's Git Commit Convention) on each release
-    | — it's read from the environment so it can be set without a code change.
+    | Release version shown in the admin panel footer. Read from the /VERSION
+    | file at the repo root, NOT the environment — .env is per-deployment and
+    | not git-tracked, so an already-deployed server's .env only ever has
+    | whatever APP_VERSION it was first set up with; bumping .env.example on
+    | every release never actually updated a running instance's footer. The
+    | VERSION file is git-tracked, so a plain `git pull` (or a fresh deploy)
+    | always picks up the current release. Bump it (`echo '1.3.4' > VERSION`)
+    | and tag the matching commit, per CLAUDE.md's Git Commit Convention, on
+    | each release.
     |
     */
 
-    'version' => env('APP_VERSION', '1.3.3'),
+    'version' => file_exists($v = base_path('VERSION')) ? trim(file_get_contents($v)) : '0.0.0',
 
     /*
     |--------------------------------------------------------------------------
