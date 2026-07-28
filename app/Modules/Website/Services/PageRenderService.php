@@ -7,8 +7,8 @@ use App\Modules\Academic\Models\SchoolClass;
 use App\Modules\School\Models\School;
 use App\Modules\Staff\Models\Staff;
 use App\Modules\Website\Models\Page;
+use App\Support\CacheTags;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Cache;
 
 /**
  * Turns a page's stored layout_json (an ordered list of typed blocks + a
@@ -420,10 +420,11 @@ class PageRenderService
      *
      * Deliberately plain arrays only, no Closures — this return value ends
      * up nested inside a block's 'd' data, which buildView() bundles into
-     * the structure renderPage() caches via Cache::remember(). Redis (the
-     * cache store used outside tests — phpunit.xml pins CACHE_STORE=array,
-     * which never actually serializes anything, so this class of bug is
-     * invisible to the test suite) cannot serialize a Closure and throws
+     * the structure renderPage() caches via CacheTags::remember(). Every
+     * real cache store this app ships with — Redis, or database/file on
+     * shared cPanel hosting — actually serializes its values (phpunit.xml
+     * pins CACHE_STORE=array, which never serializes anything, so this
+     * class of bug is invisible to the test suite) and throws
      * "Serialization of 'Closure' is not allowed" the moment a real request
      * tries to cache it. admission_form.blade.php reconstructs its own
      * show()/getLabel()/isRequired() helper closures locally, at render
@@ -498,7 +499,19 @@ class PageRenderService
             return null;
         }
 
-        return Cache::tags(['pageview'])->remember(
+        // App\Support\CacheTags, not the raw Cache::tags() facade — native
+        // Laravel tagging only exists on redis/memcached/array, not the
+        // database/file drivers shared cPanel hosting runs on. This is the
+        // same store-agnostic tag emulation every Repository/Observer in
+        // the app already goes through via BaseRepository::remember()/
+        // flush(); this was the one remaining call still on the raw facade.
+        // Nothing ever flushes the 'pageview' tag by name (grepped) — each
+        // publish() mints a brand-new PageLayout id, so the cache key
+        // itself changes on every publish and a stale render is never
+        // served; the tag exists only as a namespace, not an invalidation
+        // hook, so this swap changes nothing about invalidation behavior.
+        return CacheTags::remember(
+            ['pageview'],
             "pageview:layout:{$layout->id}",
             self::CACHE_TTL,
             fn () => $this->buildView($page->school_id, $layout->layout_json),

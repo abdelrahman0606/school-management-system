@@ -58,7 +58,18 @@ return [
         // against a real MinIO server, and only ever "worked" under tests
         // because Storage::fake('minio') creates a fake disk under that name
         // regardless of whether config/filesystems.php defines one.
-        'minio' => [
+        //
+        // On shared cPanel hosting there's no MinIO/S3 endpoint to point at,
+        // and every module still only ever calls Storage::disk('minio') —
+        // so rather than touch 26+ call sites, the 'minio' key itself falls
+        // back to a plain local disk (same shape as the 'public' disk above,
+        // symlinked via the same storage:link 'links' config below) whenever
+        // AWS_ENDPOINT isn't configured. Set AWS_ENDPOINT/AWS_BUCKET/etc. to
+        // point at a real MinIO server or any S3-compatible provider (AWS
+        // S3, DigitalOcean Spaces, Backblaze B2, Cloudflare R2, …) to use
+        // object storage instead — nothing else in the app needs to change
+        // either way.
+        'minio' => env('AWS_ENDPOINT') ? [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),
             'secret' => env('AWS_SECRET_ACCESS_KEY'),
@@ -67,6 +78,13 @@ return [
             'url' => env('AWS_URL'),
             'endpoint' => env('AWS_ENDPOINT'),
             'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', true),
+            'throw' => false,
+            'report' => false,
+        ] : [
+            'driver' => 'local',
+            'root' => storage_path('app/public'),
+            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
+            'visibility' => 'public',
             'throw' => false,
             'report' => false,
         ],

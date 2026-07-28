@@ -83,14 +83,14 @@ class AdmissionFormTest extends TestCase
      * embed Closures (show/getLabel/isRequired field-visibility helpers)
      * directly inside the admission_form block's rendered data.
      * PageRenderService::renderPage() caches that entire structure via
-     * Cache::remember() — Redis (the store every real environment uses;
-     * phpunit.xml pins CACHE_STORE=array for the test suite, which holds
-     * plain PHP values in memory and never actually serializes anything, so
-     * this class of bug was completely invisible to every other test here)
-     * cannot serialize a Closure and throws "Serialization of 'Closure' is
-     * not allowed" on every real, non-preview page load. Calling serialize()
-     * directly reproduces that exact failure without needing a real Redis
-     * connection.
+     * CacheTags::remember() — any real store this app ships with (Redis, or
+     * database/file on shared cPanel hosting; phpunit.xml pins
+     * CACHE_STORE=array for the test suite, which holds plain PHP values in
+     * memory and never actually serializes anything, so this class of bug
+     * was completely invisible to every other test here) cannot serialize a
+     * Closure and throws "Serialization of 'Closure' is not allowed" on
+     * every real, non-preview page load. Calling serialize() directly
+     * reproduces that exact failure without needing a real cache backend.
      */
     public function test_rendered_block_data_is_serializable_for_the_cache(): void
     {
