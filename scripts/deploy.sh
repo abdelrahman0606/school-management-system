@@ -150,6 +150,16 @@ echo "   $HEALTH"
 echo "$HEALTH" | grep -q '"status":"ok"' || die "Health check did not report status ok."
 echo "$HEALTH" | grep -q '"db":"connected"' || die "Health check reports DB not connected."
 echo "$HEALTH" | grep -q '"cache":"connected"' || die "Health check reports cache not connected."
+# version_verified:false means the VERSION file doesn't actually match a
+# real tagged commit at or before HEAD — a strong signal something is
+# wrong with what just got deployed (a stray hand-edit, a checkout that
+# landed on the wrong ref, ...). version_verified:null just means git
+# isn't checkable here and is not itself a failure — written as an `if`,
+# not a `grep ... && die`, so a non-matching (good) grep result can never
+# trip `set -e` on this line.
+if echo "$HEALTH" | grep -q '"version_verified":false'; then
+  die "Health check reports version_verified:false — the deployed VERSION does not match any tagged commit at or before HEAD. Investigate before trusting this deploy: php artisan version:verify"
+fi
 
 log "Disabling maintenance mode"
 $PHP_BIN artisan up

@@ -30,9 +30,29 @@ return [
     | and tag the matching commit, per CLAUDE.md's Git Commit Convention, on
     | each release.
     |
+    | Validated against App\Support\VersionIntegrity::isValidFormat() — a
+    | VERSION file that's missing, empty, or hand-edited into something that
+    | isn't a real semver string (garbage, a sentence, a stray blank line)
+    | falls back to 'unknown' instead of displaying it as-is. This is a pure
+    | format check only, safe to run at boot time; it does NOT confirm the
+    | version number actually matches the deployed code — that heavier,
+    | git-backed check is App\Support\VersionIntegrity::verifyAgainstGit(),
+    | deliberately kept out of the request-boot path and only run on demand
+    | (GET /api/v2/health, `php artisan version:verify`, deploy.sh).
+    |
     */
 
-    'version' => file_exists($v = base_path('VERSION')) ? trim(file_get_contents($v)) : '0.0.0',
+    'version' => (static function (): string {
+        $file = base_path('VERSION');
+
+        if (! file_exists($file)) {
+            return 'unknown';
+        }
+
+        $value = trim(file_get_contents($file));
+
+        return \App\Support\VersionIntegrity::isValidFormat($value) ? $value : 'unknown';
+    })(),
 
     /*
     |--------------------------------------------------------------------------
