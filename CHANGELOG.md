@@ -6,6 +6,14 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- The app's version number (shown in the admin panel footer) was read from `APP_VERSION` in `.env`, but
+  `.env` is per-deployment and not git-tracked — an already-deployed server's `.env` only ever has whatever
+  `APP_VERSION` it was first set up with, so bumping `.env.example` on every release never actually updated
+  a running instance's footer, only fresh installs. Moved the version to a git-tracked `VERSION` file at the
+  repo root instead (`config('app.version')` now reads it directly), so a plain `git pull` always picks up
+  the current release. Removed `APP_VERSION` from `.env.example` and `.env.cpanel.example`.
+
 ## [1.3.3] — 2026-07-28
 
 ### Added
