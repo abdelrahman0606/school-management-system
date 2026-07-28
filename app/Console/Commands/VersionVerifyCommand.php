@@ -62,7 +62,7 @@ class VersionVerifyCommand extends Command
     private function reportUnverifiable(string $version): int
     {
         $this->warn("Can't verify — no .git directory on disk (a zip-uploaded install has no git history to check against).");
-        $this->line("This is normal for shared-hosting deploys made without git; see docs/cpanel-deployment.md.");
+        $this->line('This is normal for shared-hosting deploys made without git; see docs/cpanel-deployment.md.');
 
         return self::SUCCESS;
     }

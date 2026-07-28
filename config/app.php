@@ -1,5 +1,7 @@
 <?php
 
+use App\Support\VersionIntegrity;
+
 return [
 
     /*
@@ -51,7 +53,7 @@ return [
 
         $value = trim(file_get_contents($file));
 
-        return \App\Support\VersionIntegrity::isValidFormat($value) ? $value : 'unknown';
+        return VersionIntegrity::isValidFormat($value) ? $value : 'unknown';
     })(),
 
     /*
