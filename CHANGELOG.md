@@ -6,6 +6,40 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.3.3] — 2026-07-28
+
+### Added
+- Shared cPanel hosting support, without any code changes to how the app is normally run elsewhere.
+  `config/filesystems.php`'s `minio` disk (every module calls `Storage::disk('minio')` by name) now falls
+  back to a plain local disk automatically whenever `AWS_ENDPOINT` isn't set, instead of requiring a real
+  MinIO/S3 endpoint. Added `.env.cpanel.example` (database-backed cache/queue/sessions, SMTP mail, no Redis)
+  and `docs/cpanel-deployment.md` — a full walkthrough covering the document-root gotcha on shared hosting,
+  Composer with/without SSH, cron-based scheduler + queue worker (no Horizon/Supervisor available), storage
+  symlink, file permissions, PHP limits worth raising, HTTPS, and troubleshooting.
+
+### Fixed
+- The one remaining raw `Cache::tags(['pageview'])` call (in `PageRenderService::renderPage()`, the public
+  page-render cache) didn't go through `App\Support\CacheTags` like every other tagged cache read/write in
+  the app. Native Laravel cache tagging only exists on the Redis/Memcached/array drivers — not database or
+  file, which is what `CACHE_STORE` needs to be on shared hosting without Redis — so this one call would
+  have thrown "This cache store does not support tagging" the moment `CACHE_STORE=database`/`file` was set.
+  Switched it to `CacheTags::remember()`. Behavior is unchanged: nothing ever flushes the `pageview` tag by
+  name, since a fresh `PageLayout` id (and therefore a fresh cache key) is minted on every publish anyway.
+
+### Fixed
+- `/api/v2/health` hardcoded `Cache::store('redis')`, forcing a Redis connection attempt on every health
+  check regardless of the app's actual `CACHE_STORE` — meaning this exact endpoint threw a 500 on any
+  deployment (shared cPanel hosting, see above) that doesn't configure Redis at all, which is precisely the
+  moment you'd most want a working smoke-test endpoint (right after a fresh deploy). Now resolves whatever
+  cache store is actually configured; the response key changed from `redis` to `cache` to match. Added a
+  regression test.
+- The app's version number (shown in the admin panel footer) was read from `APP_VERSION` in `.env`, but
+  `.env` is per-deployment and not git-tracked — an already-deployed server's `.env` only ever has whatever
+  `APP_VERSION` it was first set up with, so bumping `.env.example` on every release never actually updated
+  a running instance's footer, only fresh installs. Moved the version to a git-tracked `VERSION` file at the
+  repo root instead (`config('app.version')` now reads it directly), so a plain `git pull` always picks up
+  the current release. Removed `APP_VERSION` from `.env.example` and `.env.cpanel.example`.
+
 ### Added
 - Version integrity checking, so a hand-edited `VERSION` file (accidental or not) is both caught as
   malformed and, where `.git` is present, checkable against whether that version number actually
@@ -29,40 +63,6 @@ follows [Semantic Versioning](https://semver.org/).
   what actually goes wrong from a naive "paste the new version over the old one" update: lost uploads
   (`storage/app/*` was never in git), an overwritten `.env`, a torn old/new file mix served mid-update, and
   stale config/route/view caches.
-
-### Fixed
-- `/api/v2/health` hardcoded `Cache::store('redis')`, forcing a Redis connection attempt on every health
-  check regardless of the app's actual `CACHE_STORE` — meaning this exact endpoint threw a 500 on any
-  deployment (shared cPanel hosting, see above) that doesn't configure Redis at all, which is precisely the
-  moment you'd most want a working smoke-test endpoint (right after a fresh deploy). Now resolves whatever
-  cache store is actually configured; the response key changed from `redis` to `cache` to match. Added a
-  regression test.
-- The app's version number (shown in the admin panel footer) was read from `APP_VERSION` in `.env`, but
-  `.env` is per-deployment and not git-tracked — an already-deployed server's `.env` only ever has whatever
-  `APP_VERSION` it was first set up with, so bumping `.env.example` on every release never actually updated
-  a running instance's footer, only fresh installs. Moved the version to a git-tracked `VERSION` file at the
-  repo root instead (`config('app.version')` now reads it directly), so a plain `git pull` always picks up
-  the current release. Removed `APP_VERSION` from `.env.example` and `.env.cpanel.example`.
-
-## [1.3.3] — 2026-07-28
-
-### Added
-- Shared cPanel hosting support, without any code changes to how the app is normally run elsewhere.
-  `config/filesystems.php`'s `minio` disk (every module calls `Storage::disk('minio')` by name) now falls
-  back to a plain local disk automatically whenever `AWS_ENDPOINT` isn't set, instead of requiring a real
-  MinIO/S3 endpoint. Added `.env.cpanel.example` (database-backed cache/queue/sessions, SMTP mail, no Redis)
-  and `docs/cpanel-deployment.md` — a full walkthrough covering the document-root gotcha on shared hosting,
-  Composer with/without SSH, cron-based scheduler + queue worker (no Horizon/Supervisor available), storage
-  symlink, file permissions, PHP limits worth raising, HTTPS, and troubleshooting.
-
-### Fixed
-- The one remaining raw `Cache::tags(['pageview'])` call (in `PageRenderService::renderPage()`, the public
-  page-render cache) didn't go through `App\Support\CacheTags` like every other tagged cache read/write in
-  the app. Native Laravel cache tagging only exists on the Redis/Memcached/array drivers — not database or
-  file, which is what `CACHE_STORE` needs to be on shared hosting without Redis — so this one call would
-  have thrown "This cache store does not support tagging" the moment `CACHE_STORE=database`/`file` was set.
-  Switched it to `CacheTags::remember()`. Behavior is unchanged: nothing ever flushes the `pageview` tag by
-  name, since a fresh `PageLayout` id (and therefore a fresh cache key) is minted on every publish anyway.
 
 ## [1.3.2] — 2026-07-27
 
