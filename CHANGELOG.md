@@ -8,6 +8,17 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [1.3.3] — 2026-07-28
 
+### Security
+- Bumped the transitive `shell-quote` dependency (pulled in only by `concurrently`, a devDependency used by
+  `composer run dev` to run `php artisan serve`/queue listener/`pail`/`npm run dev` together) from `1.8.4` to
+  `1.10.0`, fixing [GHSA-395f-4hp3-45gv](https://github.com/advisories/GHSA-395f-4hp3-45gv) (CVE-2026-13311):
+  a quadratic-complexity DoS in `shell-quote`'s `parse()` that could hang the event loop for seconds on a
+  small, plain-text (no shell metacharacters needed) input. `concurrently@10.0.3` pins `shell-quote` to the
+  exact vulnerable version, which is what blocked Dependabot's automatic update — added an `overrides` entry
+  in `package.json` to force the patched version tree-wide instead, per Dependabot's own suggested fix.
+  Real-world exposure here was low regardless (dev-only tooling, never shipped to production, not on any
+  network-facing path), but `npm audit` now reports 0 vulnerabilities.
+
 ### Added
 - Shared cPanel hosting support, without any code changes to how the app is normally run elsewhere.
   `config/filesystems.php`'s `minio` disk (every module calls `Storage::disk('minio')` by name) now falls
