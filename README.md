@@ -158,6 +158,26 @@ docker compose exec app php artisan storage:link
 
 ---
 
+## 📦 Deploying to Shared cPanel Hosting or a VPS
+
+No Docker, no Redis, no MinIO required — the app already falls back to
+database-backed cache/queue/sessions and local file storage when those
+services aren't available. Full walkthrough (document root, cron-based
+scheduler/queue, `.env` template, PHP limits, troubleshooting):
+[`docs/cpanel-deployment.md`](docs/cpanel-deployment.md). Full root/SSH
+access instead (VPS, or cPanel/WHM on a VPS)? See
+[`docs/vps-deployment.md`](docs/vps-deployment.md) — optional Redis +
+Horizon under Supervisor, and `scripts/deploy.sh` for safe one-command
+updates.
+
+**Already have it installed and need to update it?** Read the "Updating an
+existing installation" section in either doc first — naively overwriting a
+live install's files risks deleting uploaded files that were never in git
+and serving a half-updated app mid-deploy. Both docs cover the safe order of
+operations; `scripts/deploy.sh` automates it wherever git/SSH is available.
+
+---
+
 ## 🔌 API Documentation
 
 Generate interactive docs with [Scribe](https://scribe.knuckles.wtf/):

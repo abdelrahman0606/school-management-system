@@ -1,5 +1,7 @@
 <?php
 
+use App\Support\VersionIntegrity;
+
 return [
 
     /*
@@ -20,13 +22,39 @@ return [
     | Application Version
     |--------------------------------------------------------------------------
     |
-    | Release version shown in the admin panel footer. Bump this (and tag the
-    | matching commit, per CLAUDE.md's Git Commit Convention) on each release
-    | — it's read from the environment so it can be set without a code change.
+    | Release version shown in the admin panel footer. Read from the /VERSION
+    | file at the repo root, NOT the environment — .env is per-deployment and
+    | not git-tracked, so an already-deployed server's .env only ever has
+    | whatever APP_VERSION it was first set up with; bumping .env.example on
+    | every release never actually updated a running instance's footer. The
+    | VERSION file is git-tracked, so a plain `git pull` (or a fresh deploy)
+    | always picks up the current release. Bump it (`echo '1.3.4' > VERSION`)
+    | and tag the matching commit, per CLAUDE.md's Git Commit Convention, on
+    | each release.
+    |
+    | Validated against App\Support\VersionIntegrity::isValidFormat() — a
+    | VERSION file that's missing, empty, or hand-edited into something that
+    | isn't a real semver string (garbage, a sentence, a stray blank line)
+    | falls back to 'unknown' instead of displaying it as-is. This is a pure
+    | format check only, safe to run at boot time; it does NOT confirm the
+    | version number actually matches the deployed code — that heavier,
+    | git-backed check is App\Support\VersionIntegrity::verifyAgainstGit(),
+    | deliberately kept out of the request-boot path and only run on demand
+    | (GET /api/v2/health, `php artisan version:verify`, deploy.sh).
     |
     */
 
-    'version' => env('APP_VERSION', '1.3.2'),
+    'version' => (static function (): string {
+        $file = base_path('VERSION');
+
+        if (! file_exists($file)) {
+            return 'unknown';
+        }
+
+        $value = trim(file_get_contents($file));
+
+        return VersionIntegrity::isValidFormat($value) ? $value : 'unknown';
+    })(),
 
     /*
     |--------------------------------------------------------------------------
