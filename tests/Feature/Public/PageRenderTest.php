@@ -180,7 +180,7 @@ class PageRenderTest extends TestCase
             ->assertSee('Admissions open for 2026-27')
             ->assertSee('Apply now')
             ->assertSee('href="/online-admission"', false)
-            ->assertSee('data-announcement-bar', false)
+            ->assertSee('data-announcement-bar="', false)
             ->assertSee('js-announcement-dismiss', false);
     }
 
@@ -193,10 +193,14 @@ class PageRenderTest extends TestCase
             ],
         ]);
 
+        // Checks for the real HTML attribute ('data-announcement-bar="...'),
+        // not the bare word — the page-wide dismiss script (public/layout.blade.php)
+        // always contains the literal selector '[data-announcement-bar]',
+        // regardless of whether any block on this particular page uses it.
         $this->get('/no-dismiss')
             ->assertOk()
             ->assertSee('Just a message')
-            ->assertDontSee('data-announcement-bar', false)
+            ->assertDontSee('data-announcement-bar="', false)
             ->assertDontSee('js-announcement-dismiss', false);
     }
 
