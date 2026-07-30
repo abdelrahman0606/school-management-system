@@ -154,10 +154,8 @@
     var customFieldCounter = 1000;
 
     function addCustomField(prefix) {
-        console.log('addCustomField called with prefix:', prefix);
         var tplId = prefix.replace(/[\[\]]/g, '_') + '_custom_field_tpl';
         var containerId = prefix.replace(/[\[\]]/g, '_') + '_custom_fields';
-        console.log('Looking for template:', tplId, 'container:', containerId);
 
         var tpl = document.getElementById(tplId);
         var container = document.getElementById(containerId);
@@ -173,7 +171,6 @@
 
         var html = tpl.innerHTML.replace(/__KEY__/g, 'custom_' + customFieldCounter++);
         container.insertAdjacentHTML('beforeend', html);
-        console.log('Custom field added successfully');
     }
 
     function removeCustomField(btn) {
