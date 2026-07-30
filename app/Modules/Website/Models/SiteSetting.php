@@ -8,6 +8,25 @@ class SiteSetting extends Model
 {
     public const GLOBAL_BG_TYPES = ['color', 'image'];
 
+    /**
+     * Curated Google Fonts allow-list for font_heading/font_body — deliberately
+     * a fixed set (not free text) validated server-side (SchoolController)
+     * AND re-checked at render time (public/layout.blade.php) before ever
+     * being interpolated into a <style> block or a Google Fonts URL. A free-
+     * text font name would be a CSS/HTML injection vector the moment it's
+     * wired into a real render path (these columns previously went nowhere,
+     * so this risk never mattered before). 'System default' isn't listed
+     * here — it's simply what a null value means, same convention as every
+     * other optional SiteSetting color/appearance field.
+     */
+    public const FONTS = [
+        'Inter', 'Poppins', 'Nunito', 'Roboto', 'Open Sans',
+        'Merriweather', 'Lora', 'Playfair Display',
+    ];
+
+    /** btn_font_weight allow-list — matches Google Fonts' standard weight axis stops. */
+    public const BTN_FONT_WEIGHTS = ['400', '500', '600', '700'];
+
     protected $fillable = [
         'school_id',
         'primary_color', 'secondary_color', 'accent_color',

@@ -83,10 +83,40 @@ class SchoolController extends Controller
             'ticker_position' => ['nullable', 'in:above_nav,below_nav,hidden'],
             'meta_title' => ['nullable', 'string', 'max:255'],
             'meta_description' => ['nullable', 'string', 'max:500'],
+            // Advanced theme — colors (hex, same shape as the fields above)
+            'secondary_color' => ['nullable', 'string', 'max:20'],
+            'background_color' => ['nullable', 'string', 'max:20'],
+            'surface_color' => ['nullable', 'string', 'max:20'],
+            'text_color' => ['nullable', 'string', 'max:20'],
+            'link_color' => ['nullable', 'string', 'max:20'],
+            'link_hover_color' => ['nullable', 'string', 'max:20'],
+            'border_color' => ['nullable', 'string', 'max:20'],
+            // Advanced theme — typography. Fonts are a fixed allow-list, not
+            // free text — see SiteSetting::FONTS's docblock for why.
+            'font_heading' => ['nullable', 'string', 'in:'.implode(',', SiteSetting::FONTS)],
+            'font_body' => ['nullable', 'string', 'in:'.implode(',', SiteSetting::FONTS)],
+            'base_font_size' => ['nullable', 'integer', 'min:12', 'max:24'],
+            'container_width' => ['nullable', 'integer', 'min:960', 'max:1600'],
+            // Advanced theme — buttons. btn_filled_json/btn_outline_json are
+            // assembled server-side from these flat sub-fields (below) rather
+            // than posted as raw JSON, so there's no client-side JSON encoding
+            // and no arbitrary-key JSON to validate.
+            'btn_radius' => ['nullable', 'integer', 'min:0', 'max:50'],
+            'btn_font_weight' => ['nullable', 'string', 'in:'.implode(',', SiteSetting::BTN_FONT_WEIGHTS)],
+            'btn_transition_ms' => ['nullable', 'integer', 'min:0', 'max:1000'],
+            'btn_filled_bg' => ['nullable', 'string', 'max:20'],
+            'btn_filled_text' => ['nullable', 'string', 'max:20'],
+            'btn_outline_border' => ['nullable', 'string', 'max:20'],
+            'btn_outline_text' => ['nullable', 'string', 'max:20'],
+            // Advanced theme — global background
+            'global_bg_type' => ['nullable', 'in:'.implode(',', SiteSetting::GLOBAL_BG_TYPES)],
+            'global_bg_color' => ['nullable', 'string', 'max:20'],
+            'global_bg_overlay' => ['nullable', 'numeric', 'min:0', 'max:1'],
             // Images (uploads)
             'logo' => ['nullable', 'image', 'max:2048'],
             'favicon' => ['nullable', 'image', 'max:1024'],
             'og_image' => ['nullable', 'image', 'max:2048'],
+            'global_bg_image' => ['nullable', 'image', 'max:4096'],
         ]);
 
         // ── School profile ──────────────────────────────────────────────────
@@ -108,12 +138,38 @@ class SchoolController extends Controller
         $settingData = collect($validated)->only([
             'primary_color', 'accent_color', 'heading_color',
             'topbar_text_color', 'ticker_position', 'meta_title', 'meta_description',
+            'secondary_color', 'background_color', 'surface_color', 'text_color',
+            'link_color', 'link_hover_color', 'border_color',
+            'font_heading', 'font_body', 'base_font_size', 'container_width',
+            'btn_radius', 'btn_font_weight', 'btn_transition_ms',
+            'global_bg_type', 'global_bg_color', 'global_bg_overlay',
         ])->all();
+        // btn_filled_json/btn_outline_json are stored as a small fixed-key
+        // JSON object each ({bg,text} / {border,text}) assembled from their
+        // own flat form fields — array_filter() drops empty sub-fields so an
+        // admin who only sets one of the two colors doesn't have the other
+        // silently stored as an empty string; an entirely-empty result
+        // becomes null (falls back to the CSS defaults in layout.blade.php)
+        // rather than an empty-but-truthy [] the render side would have to
+        // special-case.
+        $filled = array_filter([
+            'bg' => $validated['btn_filled_bg'] ?? null,
+            'text' => $validated['btn_filled_text'] ?? null,
+        ]);
+        $settingData['btn_filled_json'] = $filled ?: null;
+        $outline = array_filter([
+            'border' => $validated['btn_outline_border'] ?? null,
+            'text' => $validated['btn_outline_text'] ?? null,
+        ]);
+        $settingData['btn_outline_json'] = $outline ?: null;
         if ($path = $this->storeImage($request, 'favicon')) {
             $settingData['favicon'] = $path;
         }
         if ($path = $this->storeImage($request, 'og_image')) {
             $settingData['og_image'] = $path;
+        }
+        if ($path = $this->storeImage($request, 'global_bg_image')) {
+            $settingData['global_bg_image'] = $path;
         }
         $this->siteSettings->update($school->id, $settingData);
 

@@ -174,6 +174,79 @@ class SetupAreaTest extends TestCase
         $this->assertSame('1942', $this->school->fresh()->established->format('Y'));
     }
 
+    // ── Advanced theme (docs/modules/29-frontend-modernization-proposal.md Phase 1) ─────
+
+    public function test_can_save_advanced_theme_fields(): void
+    {
+        $this->actingAs($this->admin);
+
+        $this->put('/admin/school', [
+            'name' => $this->school->name,
+            'currency' => 'BDT', 'timezone' => 'Asia/Dhaka', 'locale' => 'en',
+            'academic_year_pattern' => 'jan_dec',
+            // Advanced theme
+            'secondary_color' => '#111111',
+            'background_color' => '#f5f5f5',
+            'surface_color' => '#fafafa',
+            'text_color' => '#222222',
+            'link_color' => '#333333',
+            'link_hover_color' => '#444444',
+            'border_color' => '#dddddd',
+            'font_heading' => 'Poppins',
+            'font_body' => 'Inter',
+            'base_font_size' => '18',
+            'container_width' => '1200',
+            'btn_radius' => '4',
+            'btn_font_weight' => '600',
+            'btn_transition_ms' => '200',
+            'btn_filled_bg' => '#555555',
+            'btn_filled_text' => '#ffffff',
+            'btn_outline_border' => '#666666',
+            'btn_outline_text' => '#666666',
+            'global_bg_type' => 'color',
+            'global_bg_color' => '#777777',
+            'global_bg_overlay' => '0.4',
+        ])->assertSessionHasNoErrors()->assertRedirect();
+
+        $this->assertDatabaseHas('site_settings', [
+            'school_id' => $this->school->id,
+            'secondary_color' => '#111111',
+            'background_color' => '#f5f5f5',
+            'surface_color' => '#fafafa',
+            'text_color' => '#222222',
+            'link_color' => '#333333',
+            'link_hover_color' => '#444444',
+            'border_color' => '#dddddd',
+            'font_heading' => 'Poppins',
+            'font_body' => 'Inter',
+            'base_font_size' => 18,
+            'container_width' => 1200,
+            'btn_radius' => 4,
+            'btn_font_weight' => '600',
+            'btn_transition_ms' => 200,
+            'global_bg_type' => 'color',
+            'global_bg_color' => '#777777',
+        ]);
+        $settings = \App\Modules\Website\Models\SiteSetting::forSchool($this->school->id)->fresh();
+        $this->assertSame(['bg' => '#555555', 'text' => '#ffffff'], $settings->btn_filled_json);
+        $this->assertSame(['border' => '#666666', 'text' => '#666666'], $settings->btn_outline_json);
+    }
+
+    public function test_advanced_theme_font_rejects_values_outside_the_allow_list(): void
+    {
+        $this->actingAs($this->admin);
+
+        $this->put('/admin/school', [
+            'name' => $this->school->name,
+            'currency' => 'BDT', 'timezone' => 'Asia/Dhaka', 'locale' => 'en',
+            'academic_year_pattern' => 'jan_dec',
+            // Not on SiteSetting::FONTS — e.g. an attempt to break out of the
+            // CSS font-family declaration/Google Fonts URL this value gets
+            // interpolated into on the public site.
+            'font_heading' => '"; } body { background: red;',
+        ])->assertSessionHasErrors('font_heading');
+    }
+
     public function test_can_toggle_optional_modules(): void
     {
         $this->actingAs($this->admin);
