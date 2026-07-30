@@ -142,6 +142,53 @@ class PageBuilderTest extends TestCase
         $this->get('/contact')->assertOk()->assertSee('Reach us')->assertSee('Notices');
     }
 
+    public function test_faq_items_parse_into_pairs(): void
+    {
+        $this->actingAs($this->admin);
+        $this->post('/admin/pages', ['title' => 'FAQ', 'template' => 'full']);
+        $page = Page::first();
+
+        $this->put("/admin/pages/{$page->id}", [
+            'title' => 'FAQ', 'slug' => 'faq', 'status' => 'published', 'template' => 'full',
+            'blocks' => [
+                ['type' => 'faq', 'data' => [
+                    'heading' => 'Common questions',
+                    'faq_items' => "What are the fees?|See the Fees page.\nIs there a bus service?|Yes, several routes.",
+                ]],
+            ],
+        ])->assertRedirect();
+
+        $json = PageLayout::where('page_id', $page->id)->where('is_published', true)->latest('id')->first()->layout_json;
+        $this->assertSame(
+            [
+                ['question' => 'What are the fees?', 'answer' => 'See the Fees page.'],
+                ['question' => 'Is there a bus service?', 'answer' => 'Yes, several routes.'],
+            ],
+            $json['blocks'][0]['data']['faq_items'],
+        );
+
+        $this->get('/faq')->assertOk()->assertSee('What are the fees?')->assertSee('See the Fees page.');
+    }
+
+    public function test_announcement_bar_saves_and_renders(): void
+    {
+        $this->actingAs($this->admin);
+        $this->post('/admin/pages', ['title' => 'Home Banner', 'template' => 'full']);
+        $page = Page::first();
+
+        $this->put("/admin/pages/{$page->id}", [
+            'title' => 'Home Banner', 'slug' => 'home-banner', 'status' => 'published', 'template' => 'full',
+            'blocks' => [
+                ['type' => 'announcement_bar', 'data' => [
+                    'text' => 'Admissions open', 'link_text' => 'Apply', 'link_url' => '/online-admission',
+                    'dismissible' => '1',
+                ]],
+            ],
+        ])->assertRedirect();
+
+        $this->get('/home-banner')->assertOk()->assertSee('Admissions open')->assertSee('Apply');
+    }
+
     /**
      * Optimistic concurrency check (see §7m in
      * docs/modules/28-elementor-block-editor-plan.md): a second admin's save

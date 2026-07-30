@@ -325,6 +325,52 @@
             font-size: clamp(1.35rem, 1.1rem + 1vw, 1.75rem);
         }
 
+        /* Announcement bar block (docs/modules/29-frontend-modernization-proposal.md
+           Phase 3) — brand-colored by default; a Style tab bg_color/text_color
+           override on the block wins via plain CSS cascade (inline style set
+           by BlockPresentation beats this class rule). Dismiss behavior is a
+           small script further down this file. */
+        .announcement-bar-section {
+            background: var(--brand);
+            color: #fff;
+        }
+
+        .announcement-bar-link {
+            color: inherit;
+            font-weight: 600;
+            text-decoration: underline;
+            text-underline-offset: .15em;
+        }
+
+        .announcement-bar-dismiss {
+            background: transparent;
+            border: 0;
+            color: inherit;
+            opacity: .8;
+            line-height: 1;
+            padding: 0;
+        }
+
+        .announcement-bar-dismiss:hover {
+            opacity: 1;
+        }
+
+        /* FAQ accordion block — same brand-color treatment as everything else
+           instead of Bootstrap's default blue active state. */
+        .accordion-item {
+            border-color: var(--border);
+        }
+
+        .accordion-button:not(.collapsed) {
+            color: var(--brand);
+            background-color: color-mix(in srgb, var(--brand) 6%, transparent);
+        }
+
+        .accordion-button:focus {
+            border-color: var(--brand);
+            box-shadow: 0 0 0 .2rem color-mix(in srgb, var(--brand) 20%, transparent);
+        }
+
         .navbar .nav-link {
             position: relative;
             transition: opacity var(--transition-fast) var(--ease);
@@ -891,6 +937,33 @@
             };
             update();
             window.addEventListener('scroll', update, { passive: true });
+        })();
+
+        // Announcement bar block — "dismissible" remembers the dismissal per
+        // browser via localStorage, keyed off the message text itself (see
+        // public/blocks/render.blade.php's $abKey) so editing the message
+        // naturally re-shows it to someone who dismissed the old wording.
+        // Wrapped in try/catch: localStorage can throw in some browsers'
+        // private-browsing modes — a failure here just means "never
+        // remembered as dismissed," never a broken page.
+        (function () {
+            document.querySelectorAll('[data-announcement-bar]').forEach(function (bar) {
+                var key = 'dismissed-announcement-' + bar.getAttribute('data-announcement-bar');
+                try {
+                    if (localStorage.getItem(key) === '1') {
+                        bar.style.display = 'none';
+                    }
+                } catch (e) {}
+            });
+            document.addEventListener('click', function (e) {
+                var btn = e.target.closest('.js-announcement-dismiss');
+                if (!btn) return;
+                var bar = btn.closest('[data-announcement-bar]');
+                if (!bar) return;
+                var key = 'dismissed-announcement-' + bar.getAttribute('data-announcement-bar');
+                try { localStorage.setItem(key, '1'); } catch (e) {}
+                bar.style.display = 'none';
+            });
         })();
 
         // Gallery Photo/Video lightboxes — one shared Bootstrap modal per

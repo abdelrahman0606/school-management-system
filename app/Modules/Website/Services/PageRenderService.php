@@ -40,6 +40,8 @@ class PageRenderService
         'gallery_video' => 'Video gallery',
         'admission_form' => 'Admission form',
         'contact' => 'Contact',
+        'announcement_bar' => 'Announcement bar',
+        'faq' => 'FAQ accordion',
         'container' => 'Container',
         'grid' => 'Grid',
     ];
@@ -79,6 +81,8 @@ class PageRenderService
         'gallery_video' => 'Video gallery',
         'admission_form' => 'Admission form',
         'contact' => 'Contact',
+        'announcement_bar' => 'Announcement bar',
+        'faq' => 'FAQ accordion',
     ];
 
     /** Sidebar-only block types. */

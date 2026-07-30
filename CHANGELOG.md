@@ -30,6 +30,17 @@ follows [Semantic Versioning](https://semver.org/).
   hero heading and section titles so they scale smoothly with viewport width instead of jumping at
   breakpoints. `PublicHeaderTest` updated to match the new structure (institution codes/established year
   assertions moved into a new footer-focused test, same underlying data, same coverage).
+- Public frontend modernization, Phase 3 (`docs/modules/29-frontend-modernization-proposal.md`): two new
+  page-builder block types. **Announcement bar** — a slim, dismissible, brand-colored bar with an optional
+  link, distinct from the existing notice ticker (a scrolling feed of `Announcement` records) — this is a
+  single, admin-authored, high-intent message ("Admissions open for 2026-27"). Dismissal is remembered per
+  browser via `localStorage`, keyed off the message text itself, so editing the message re-shows it to
+  someone who dismissed the old wording. **FAQ accordion** — a Bootstrap accordion fed by a
+  `Question|Answer per line` textarea, matching the existing `quick_links`/`office_hours`
+  `Label|Value per line` convention exactly (same `pairs()` parsing helper, same multiline-textarea editing
+  UX). Both ship with the same Style/Layout tab controls (padding, background, animation, visibility) every
+  other block already has, and both are purely additive to `layout_json`'s shape — no migration, and every
+  existing page keeps rendering unchanged.
 
 ## [1.3.3] — 2026-07-28
 
