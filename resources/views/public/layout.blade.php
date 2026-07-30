@@ -280,6 +280,51 @@
             box-shadow: 0 1px 3px rgba(0, 0, 0, .08);
         }
 
+        /* Merged logo+nav+CTA bar (docs/modules/29-frontend-modernization-proposal.md
+           Phase 2) — shrinks slightly once scrolled, toggled by the small
+           script at the bottom of this file. The transition covers padding
+           and the logo's max-height so the change reads as a smooth resize,
+           not a jump. */
+        .pub-mainbar {
+            transition: padding var(--transition) var(--ease), box-shadow var(--transition) var(--ease);
+            z-index: 1030;
+        }
+
+        .pub-logo {
+            max-height: 64px;
+            max-width: 100%;
+            transition: max-height var(--transition) var(--ease);
+        }
+
+        .pub-mainbar.is-scrolled {
+            box-shadow: var(--shadow-sm);
+        }
+
+        .pub-mainbar.is-scrolled .pub-logo {
+            max-height: 44px;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+
+            .pub-mainbar,
+            .pub-logo {
+                transition: none;
+            }
+        }
+
+        /* Fluid type scale — headings scale smoothly between mobile and
+           desktop instead of jumping at breakpoints. Overrides Bootstrap's
+           fixed .display-4/.h3 sizes for just these two, most-visible
+           heading roles; every other heading level keeps Bootstrap's own
+           (already-responsive-enough) defaults. */
+        .display-4 {
+            font-size: clamp(2.1rem, 1.3rem + 3.2vw, 3.5rem);
+        }
+
+        .section-title {
+            font-size: clamp(1.35rem, 1.1rem + 1vw, 1.75rem);
+        }
+
         .navbar .nav-link {
             position: relative;
             transition: opacity var(--transition-fast) var(--ease);
@@ -773,7 +818,25 @@
                     @if ($school?->address ?? false)
                     <p class="mb-1 small"><i class="bi bi-geo-alt"></i> {{ $school->address }}</p>@endif
                     @if ($school?->email ?? false)
-                    <p class="mb-0 small"><i class="bi bi-envelope"></i> {{ $school->email }}</p>@endif
+                    <p class="mb-1 small"><i class="bi bi-envelope"></i> {{ $school->email }}</p>@endif
+                    @php
+                        // Institution codes + established year — moved here from
+                        // the old header's row 2 (docs/modules/29-frontend-modernization-proposal.md
+                        // Phase 2): reference info a visitor looks up, not
+                        // something that needs to sit above the nav on every page.
+                        $footerCodes = collect([
+                            ['label' => $school?->institution_code_label, 'value' => $school?->institution_code],
+                            ['label' => $school?->school_code_label, 'value' => $school?->school_code],
+                            ['label' => $school?->technical_branch_code_label, 'value' => $school?->technical_branch_code],
+                        ])->filter(fn ($c) => filled($c['value']));
+                        $footerEstablished = $school?->established ? (optional($school->established)->format('Y') ?? $school->established) : null;
+                    @endphp
+                    @if ($footerCodes->isNotEmpty() || $footerEstablished)
+                    <p class="mb-0 small text-white-50">
+                        @foreach ($footerCodes as $c){{ $c['label'] ?: 'Code' }}: <strong>{{ $c['value'] }}</strong>@if(!$loop->last)&nbsp;&middot;&nbsp;@endif @endforeach
+                        @if ($footerEstablished)@if($footerCodes->isNotEmpty())&nbsp;&middot;&nbsp;@endif{{ __('Established') }}: <strong>{{ $footerEstablished }}</strong>@endif
+                    </p>
+                    @endif
                 </div>
                 <div class="col-md-4">
                     <h6 class="text-white-50 text-uppercase small mb-2">{{ __('Quick Links') }}</h6>
@@ -814,6 +877,20 @@
                 });
             }, { threshold: .15, rootMargin: '0px 0px -10% 0px' });
             els.forEach(function (el) { io.observe(el); });
+        })();
+
+        // Merged logo+nav+CTA bar (#pub-mainbar) shrinks slightly once the
+        // page has scrolled — a passive scroll listener toggling one class,
+        // not a per-frame layout read; the actual size change is pure CSS
+        // (.pub-mainbar.is-scrolled, see this file's <style> block).
+        (function () {
+            var bar = document.getElementById('pub-mainbar');
+            if (!bar) return;
+            var update = function () {
+                bar.classList.toggle('is-scrolled', window.scrollY > 8);
+            };
+            update();
+            window.addEventListener('scroll', update, { passive: true });
         })();
 
         // Gallery Photo/Video lightboxes — one shared Bootstrap modal per

@@ -20,6 +20,16 @@ follows [Semantic Versioning](https://semver.org/).
   render time, rather than accepted as free text — these values get interpolated directly into a `<style>`
   block and a Google Fonts URL, so an unvalidated value would be a CSS/HTML injection vector once actually
   wired into a real render path (previously moot, since nothing read these columns at all).
+- Public frontend modernization, Phase 2 (`docs/modules/29-frontend-modernization-proposal.md`): collapsed
+  the public site header from three stacked rows (utility bar, logo/institution-data row, nav row) into a
+  slim utility strip plus a single sticky logo+nav+CTA bar — institution codes and the established year
+  moved to the footer, where they're still fully visible, just not competing with the nav for space above
+  the fold. The merged bar shrinks slightly once the page scrolls (a passive scroll listener toggling one
+  CSS class, no per-frame layout work). Added an "Apply Now" admissions CTA in the nav, distinct from the
+  Login button (previously the only button in the header). Added a `clamp()`-based fluid type scale for the
+  hero heading and section titles so they scale smoothly with viewport width instead of jumping at
+  breakpoints. `PublicHeaderTest` updated to match the new structure (institution codes/established year
+  assertions moved into a new footer-focused test, same underlying data, same coverage).
 
 ## [1.3.3] — 2026-07-28
 
