@@ -162,6 +162,87 @@ class PageRenderTest extends TestCase
         $response->assertDontSee('No image selected');
     }
 
+    public function test_announcement_bar_renders_message_link_and_dismiss_control(): void
+    {
+        $this->publishPage('with-banner', 'With Banner', [
+            'template' => 'full',
+            'blocks' => [
+                ['type' => 'announcement_bar', 'data' => [
+                    'text' => 'Admissions open for 2026-27',
+                    'link_url' => '/online-admission', 'link_text' => 'Apply now',
+                    'dismissible' => true,
+                ]],
+            ],
+        ]);
+
+        $response = $this->get('/with-banner');
+        $response->assertOk()
+            ->assertSee('Admissions open for 2026-27')
+            ->assertSee('Apply now')
+            ->assertSee('href="/online-admission"', false)
+            ->assertSee('data-announcement-bar', false)
+            ->assertSee('js-announcement-dismiss', false);
+    }
+
+    public function test_announcement_bar_without_dismissible_has_no_dismiss_control(): void
+    {
+        $this->publishPage('no-dismiss', 'No Dismiss', [
+            'template' => 'full',
+            'blocks' => [
+                ['type' => 'announcement_bar', 'data' => ['text' => 'Just a message']],
+            ],
+        ]);
+
+        $this->get('/no-dismiss')
+            ->assertOk()
+            ->assertSee('Just a message')
+            ->assertDontSee('data-announcement-bar', false)
+            ->assertDontSee('js-announcement-dismiss', false);
+    }
+
+    public function test_empty_announcement_bar_shows_a_placeholder(): void
+    {
+        $this->publishPage('empty-banner', 'Empty Banner', [
+            'template' => 'full',
+            'blocks' => [['type' => 'announcement_bar', 'data' => []]],
+        ]);
+
+        $this->get('/empty-banner')->assertOk()->assertSee('No announcement text set');
+    }
+
+    public function test_faq_block_renders_accordion_with_first_item_expanded(): void
+    {
+        $this->publishPage('faq-page', 'FAQ', [
+            'template' => 'full',
+            'blocks' => [
+                ['type' => 'faq', 'data' => ['heading' => 'Common questions', 'faq_items' => [
+                    ['question' => 'What are the school hours?', 'answer' => '8am to 3pm.'],
+                    ['question' => 'Is transport provided?', 'answer' => 'Yes, on select routes.'],
+                ]]],
+            ],
+        ]);
+
+        $response = $this->get('/faq-page');
+        $response->assertOk()
+            ->assertSee('Common questions')
+            ->assertSee('What are the school hours?')
+            ->assertSee('8am to 3pm.')
+            ->assertSee('Is transport provided?')
+            ->assertSee('accordion', false)
+            // First item starts expanded, later ones collapsed.
+            ->assertSeeInOrder(['What are the school hours?', 'collapsed'], false);
+    }
+
+    public function test_faq_block_with_no_items_shows_a_placeholder(): void
+    {
+        $this->publishPage('faq-empty', 'FAQ Empty', [
+            'template' => 'full',
+            'blocks' => [['type' => 'faq', 'data' => ['heading' => 'Questions']]],
+        ]);
+
+        $this->get('/faq-empty')->assertOk()->assertSee('No FAQs Added Yet.');
+    }
+
     public function test_unknown_block_type_is_ignored(): void
     {
         $this->publishPage('mixed', 'Mixed', [
