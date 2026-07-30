@@ -31,8 +31,9 @@ off-canvas sidebar with backdrop. All 206 admin feature tests pass.
 - Controllers thin (max 40 lines/method) — business logic in Services.
 - Every write endpoint: `FormRequest` with `authorize()`+`rules()`. Every response: `JsonResource` (never a
   raw Model).
-- Repositories: `Cache::tags([...])->remember()` (see `StudentRepository`). Observers flush tags on
-  saved/deleted.
+- Repositories: cache-aside via `BaseRepository::remember()`/`flush()` (see `StudentRepository`), backed by
+  `App\Support\CacheTags` — never the raw `Cache::tags()` facade, which only works on redis/memcached/array.
+  Observers flush tags on saved/deleted.
 - Financial/mark-entry writes: `DB::transaction()`, no cache.
 - Sanctum: `middleware(['auth:sanctum', 'ability:admin:*'])`. Every table has `school_id`.
 - All queries scoped to `school_id` via `app('current_school_id')` (set by `SetCurrentSchoolFromSession`).
@@ -132,7 +133,7 @@ V2 is global (v1 was BD-only) — never bake BD assumptions into core code.
   `grade_boundaries`, `marks` (marks_obtained, is_absent, entered_by, locked_at), `exam_results` (total_marks,
   percentage, grade, gpa, is_pass, merit_position, is_locked).
 - `exam_results` written on calculation, locked after Moderator approval — never recompute a locked result.
-  Tabulation cached under `Cache::tags(['tabulation'])`.
+  Tabulation cached under `CacheTags::remember(['tabulation'], ...)`.
 - Must support: absent≠zero ("Ab"), optional/4th-subject GPA bonus (bd_national: GPA=(Σcompulsory GP +
   max(0,optional GP−2.00))/compulsory count, cap 5.00), combined subjects (shared pass mark), merit tie-break
   (GPA→total→percentage, failed ranked after passed), N/A for non-enrolled.
@@ -158,12 +159,17 @@ class StudentRepository extends BaseRepository
 
 **Observer (cache flush):**
 ```php
+use App\Support\CacheTags;
+
 class StudentObserver
 {
-    public function saved(Student $student): void { Cache::tags(['student'])->flush(); }
-    public function deleted(Student $student): void { Cache::tags(['student'])->flush(); }
+    public function saved(Student $student): void { CacheTags::flush(['student']); }
+    public function deleted(Student $student): void { CacheTags::flush(['student']); }
 }
 ```
+Never the raw `Cache::tags()` facade — native Laravel tagging only exists on redis/memcached/array, not the
+database/file drivers shared cPanel hosting needs (see `docs/cpanel-deployment.md`). `App\Support\CacheTags`
+emulates tagging on any driver via versioned keys; every Repository/Observer in the app goes through it.
 
 **Financial write (always transactional):**
 ```php
@@ -187,7 +193,6 @@ DB::transaction(function () use ($data) {
 - **Fresh-model `JsonResource` auto-returns 201** (via `wasRecentlyCreated`). Calling `->fresh()` on a
   just-created model discards that flag (200 instead) — use `->load()` if you need relations but want to keep
   201. Force `->setStatusCode(200)` explicitly on idempotent PUT/toggle endpoints that use a freshly-inserted row.
-  Force `->setStatusCode(200)` explicitly on idempotent PUT/toggle endpoints that use a freshly-inserted row.
 - **Sync queue does NOT swallow job exceptions** — under `QUEUE_CONNECTION=sync`, an uncaught exception in a
   job's `handle()` propagates straight into the dispatching HTTP request as a 500. Every queued job must
   catch everything internally and never rethrow.
@@ -225,6 +230,21 @@ DB::transaction(function () use ($data) {
   the same color again. Three places to change one color, only one of which was "the" design-tokens file.
   Pick one file as the actual source of truth for a token and have everything else reference it with `var()`
   — never redeclare the literal value a second time "to be sure."
+- **Never call the raw `Cache::tags()` facade directly — always `App\Support\CacheTags`.** Native Laravel
+  cache tagging only exists on the redis/memcached/array drivers, not database/file — which is what
+  `CACHE_STORE` needs to be on shared cPanel hosting with no Redis (see `docs/cpanel-deployment.md`).
+  `PageRenderService::renderPage()`'s page-view cache was the one place in the app still on the raw facade;
+  it worked fine under Redis and was invisible under `phpunit.xml`'s `CACHE_STORE=array` (array also supports
+  native tagging), so it went unnoticed until `CACHE_STORE=database`/`file` was actually tried, at which
+  point it threw "This cache store does not support tagging." `App\Support\CacheTags` emulates tags on any
+  driver via versioned keys — every Repository (`BaseRepository::remember()`/`flush()`) and Observer already
+  goes through it; a new one should too, never the bare facade.
+- **A hand-typed VERSION number is not the same as a verified one.** `config('app.version')` reads a
+  git-tracked `/VERSION` file (not `.env` — `.env` isn't git-tracked, so bumping `APP_VERSION` there never
+  actually updated an already-deployed server's footer, only fresh installs). `App\Support\VersionIntegrity`
+  additionally checks, on demand (`GET /api/v2/health`, `php artisan version:verify`), whether that version
+  number corresponds to a real tagged commit reachable from `HEAD` — catches a hand-edited/stale `VERSION`
+  file rather than silently displaying (or trusting) whatever it says.
 
 ## Git Commit Convention
 ```
