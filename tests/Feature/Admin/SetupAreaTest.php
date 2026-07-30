@@ -7,6 +7,7 @@ use App\Modules\Academic\Models\AcademicYear;
 use App\Modules\Academic\Models\SchoolClass;
 use App\Modules\Academic\Models\Section;
 use App\Modules\School\Models\School;
+use App\Modules\Website\Models\SiteSetting;
 use Database\Seeders\RoleSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -227,7 +228,7 @@ class SetupAreaTest extends TestCase
             'global_bg_type' => 'color',
             'global_bg_color' => '#777777',
         ]);
-        $settings = \App\Modules\Website\Models\SiteSetting::forSchool($this->school->id)->fresh();
+        $settings = SiteSetting::forSchool($this->school->id)->fresh();
         $this->assertSame(['bg' => '#555555', 'text' => '#ffffff'], $settings->btn_filled_json);
         $this->assertSame(['border' => '#666666', 'text' => '#666666'], $settings->btn_outline_json);
     }

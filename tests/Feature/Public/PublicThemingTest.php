@@ -63,8 +63,8 @@ class PublicThemingTest extends TestCase
             ->assertSee('background: #123123', false)            // secondary_color -> footer background
             ->assertSee('#fedcba', false)                        // surface_color -> --surface
             ->assertSee('#111222', false)                        // border_color -> --border
-            ->assertSee("family=Poppins", false)                  // Google Fonts request built
-            ->assertSee("family=Inter", false)
+            ->assertSee('family=Poppins', false)                  // Google Fonts request built
+            ->assertSee('family=Inter', false)
             ->assertSee('font-size: 18px', false)
             ->assertSee('max-width: 1200px', false)
             ->assertSee('border-radius: 3px', false)
