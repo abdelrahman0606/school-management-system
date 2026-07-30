@@ -6,6 +6,17 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.3.3] — 2026-07-28
+
+### Changed
+- Routine dependency bumps via Dependabot: `laravel/framework` 13.21.1 → 13.23.0, `laravel/pint` 1.29.3 →
+  1.30.0 (both `dev-dependencies`/`laravel` grouped PRs), and `concurrently` 10.0.3 → 10.0.4. The
+  `concurrently` bump is notable on its own: 10.0.4 now pins `shell-quote@1.9.0` directly upstream, which
+  independently confirms the `shell-quote` DoS fix earlier in this release was correct — the `overrides` entry
+  in `package.json` is harmless-but-now-redundant rather than removed, since it's still satisfied either way.
+  Ran `npm install` after merging to sync `node_modules`/`package-lock.json`; `npm audit` still reports 0
+  vulnerabilities.
+
 ### Fixed
 - Removed 3 leftover `console.log()` debug statements from the admin page-builder's Admission Form custom
   field editor (`resources/views/admin/website/pages/_admission_form_fields.blade.php`) — every admin using
@@ -23,8 +34,6 @@ follows [Semantic Versioning](https://semver.org/).
   don't support native tagging) if a future module's Repository/Observer copied the stale example verbatim.
   Added a corresponding "Gotchas Learned" entry so this doesn't quietly regress a third time. Also fixed an
   unrelated literal duplicated sentence in the same section.
-
-## [1.3.3] — 2026-07-28
 
 ### Security
 - Bumped the transitive `shell-quote` dependency (pulled in only by `concurrently`, a devDependency used by
