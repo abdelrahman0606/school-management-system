@@ -10,6 +10,49 @@
         $accent = $s->accent_color ?? '#f59e0b';
         $heading = $s->heading_color ?? '#0f172a';
         $siteName = $s->site_name ?? ($school->name ?? 'Our School');
+
+        // ── Advanced theme (Phase 1 of docs/modules/29-frontend-modernization-proposal.md) ──
+        // Every value below falls back to the exact hardcoded default this file
+        // already used before these SiteSetting columns existed — a school that
+        // never opens Website > Settings' "Advanced Theme" section renders
+        // byte-for-byte the same as before this block was added.
+        $bodyTextColor = $s->text_color ?? '#1f2937';
+        // background_color (simple flat page background) and global_bg_color
+        // (the "Global Background" section's own color, which also doubles
+        // as the tint under a background image) overlap in the schema —
+        // global_bg_color wins when both are set, since it's the more
+        // specific/later section in the admin form; background_color alone
+        // covers the common "just tint the page" case without needing to
+        // open the Global Background sub-section at all.
+        $backgroundColor = $s->global_bg_color ?? $s->background_color ?? null;
+        $footerBg = $s->secondary_color ?? '#0f172a';
+        $surfaceColor = $s->surface_color ?? '#ffffff';
+        $borderColorSetting = $s->border_color ?? '#e5e7eb';
+        $linkColor = $s->link_color ?? null; // null = keep existing var(--brand) behavior
+        $linkHoverColor = $s->link_hover_color ?? null; // null = keep existing color-mix() behavior
+        $baseFontSize = $s->base_font_size ?? null;
+        $containerWidth = $s->container_width ?? null;
+        $btnRadius = $s->btn_radius ?? null;
+        $btnFontWeight = $s->btn_font_weight ?? null;
+        $btnTransitionMs = $s->btn_transition_ms ?? null;
+        $btnFilled = is_array($s->btn_filled_json ?? null) ? $s->btn_filled_json : [];
+        $btnOutline = is_array($s->btn_outline_json ?? null) ? $s->btn_outline_json : [];
+        $globalBgType = ($s->global_bg_type ?? 'color') === 'image' ? 'image' : 'color';
+        $globalBgImageUrl = \App\Support\Media::url($s->global_bg_image ?? null);
+        $globalBgOverlay = $s->global_bg_overlay !== null ? max(0, min(1, (float) $s->global_bg_overlay)) : 0;
+
+        // Fonts are re-validated against the same fixed allow-list the admin
+        // form/controller already enforce (SiteSetting::FONTS) — defense in
+        // depth: these get interpolated straight into a Google Fonts URL and
+        // a CSS font-family declaration below, so a value that somehow bypassed
+        // validation (a stale row from before the allow-list existed, a direct
+        // DB edit) is simply ignored rather than trusted.
+        $fontHeading = in_array($s->font_heading ?? null, \App\Modules\Website\Models\SiteSetting::FONTS, true) ? $s->font_heading : null;
+        $fontBody = in_array($s->font_body ?? null, \App\Modules\Website\Models\SiteSetting::FONTS, true) ? $s->font_body : null;
+        $googleFontFamilies = collect([$fontHeading, $fontBody])->filter()->unique()
+            ->map(fn ($f) => 'family='.str_replace(' ', '+', $f).':wght@400;600;700');
+        $fontHeadingStack = $fontHeading ? "'{$fontHeading}', " : '';
+        $fontBodyStack = $fontBody ? "'{$fontBody}', " : '';
         $faviconUrl = \App\Support\Media::url($s->favicon ?? null);
         // Per-page SEO overrides (page.blade.php's 'meta_description'/'og_image'
         // sections, only defined when the page has its own value set) win over
@@ -44,6 +87,13 @@
     <meta name="twitter:image" content="{{ $ogUrl }}">@endif
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    @if ($googleFontFamilies->isNotEmpty())
+    {{-- Only loaded when a school has actually picked a font — no extra
+         external request for the (default) schools that leave this unset. --}}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?{{ $googleFontFamilies->implode('&') }}&display=swap" rel="stylesheet">
+    @endif
     <style>
         :root {
             --brand:
@@ -59,9 +109,13 @@
                shared by every element below instead of one-off values, so a
                future tweak (e.g. a rounder or flatter look) is a handful of
                edits here rather than a hunt through every rule. */
-            --ink: #1f2937;
+            --ink:
+                {{ $bodyTextColor }}
+            ;
             --ink-muted: #64748b;
-            --border: #e5e7eb;
+            --border:
+                {{ $borderColorSetting }}
+            ;
             --radius-sm: .5rem;
             --radius-md: .75rem;
             --shadow-sm: 0 1px 2px rgba(16, 24, 40, .06), 0 1px 3px rgba(16, 24, 40, .05);
@@ -69,6 +123,15 @@
             --ease: cubic-bezier(.4, 0, .2, 1);
             --transition-fast: .15s;
             --transition: .25s;
+            /* Advanced theme tokens — see the PHP block at the top of this
+               file's <head> for how each falls back to this file's
+               pre-existing hardcoded default. */
+            --surface:
+                {{ $surfaceColor }}
+            ;
+            --btn-transition:
+                {{ $btnTransitionMs !== null ? ($btnTransitionMs.'ms') : '.15s' }}
+            ;
         }
 
         /* Bootstrap 5.3's shipped spacer scale stops at 5 (3rem) — these
@@ -91,19 +154,40 @@
         body {
             color: var(--ink);
             -webkit-font-smoothing: antialiased;
+            @if ($fontBodyStack !== '')
+            font-family: {{ $fontBodyStack }}-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            @endif
+            @if ($baseFontSize !== null)
+            font-size: {{ (int) $baseFontSize }}px;
+            @endif
+            @if ($backgroundColor)
+            background-color: {{ $backgroundColor }};
+            @endif
+            @if ($globalBgType === 'image' && $globalBgImageUrl)
+            background-image: linear-gradient(rgba(255,255,255,{{ $globalBgOverlay }}),rgba(255,255,255,{{ $globalBgOverlay }})), url('{{ $globalBgImageUrl }}');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            @endif
         }
+
+        @if ($fontHeadingStack !== '')
+        h1, h2, h3, h4, h5, h6, .section-title, .stat-num {
+            font-family: {{ $fontHeadingStack }}-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+        @endif
 
         .text-muted {
             color: var(--ink-muted) !important;
         }
 
         a {
-            color: var(--brand);
+            color: {{ $linkColor ?: 'var(--brand)' }};
             transition: color var(--transition-fast) var(--ease);
         }
 
         a:hover {
-            color: color-mix(in srgb, var(--brand) 80%, black);
+            color: {{ $linkHoverColor ?: 'color-mix(in srgb, var(--brand) 80%, black)' }};
         }
 
         .navbar-brand {
@@ -113,13 +197,23 @@
 
         /* Every Bootstrap button gets the same restrained hover treatment —
            a 1px lift + soft shadow, not a color/scale change, so it reads as
-           "responsive to touch" without calling attention to itself. */
+           "responsive to touch" without calling attention to itself.
+           --btn-transition (Website > Settings > Advanced Theme > Buttons)
+           replaces the usual var(--transition-fast) here specifically, so a
+           school's "hover speed" setting affects buttons only, not every
+           other var(--transition-fast) user (nav links, link-arrow, …). */
         .btn {
-            transition: filter var(--transition-fast) var(--ease),
-                        transform var(--transition-fast) var(--ease),
-                        box-shadow var(--transition-fast) var(--ease),
-                        background-color var(--transition-fast) var(--ease),
-                        border-color var(--transition-fast) var(--ease);
+            transition: filter var(--btn-transition) var(--ease),
+                        transform var(--btn-transition) var(--ease),
+                        box-shadow var(--btn-transition) var(--ease),
+                        background-color var(--btn-transition) var(--ease),
+                        border-color var(--btn-transition) var(--ease);
+            @if ($btnRadius !== null)
+            border-radius: {{ (int) $btnRadius }}px;
+            @endif
+            @if ($btnFontWeight !== null)
+            font-weight: {{ $btnFontWeight }};
+            @endif
         }
 
         .btn:hover {
@@ -131,20 +225,54 @@
         }
 
         .btn-brand {
-            background: var(--brand);
-            border-color: var(--brand);
-            color: #fff;
+            background: {{ $btnFilled['bg'] ?? 'var(--brand)' }};
+            border-color: {{ $btnFilled['bg'] ?? 'var(--brand)' }};
+            color: {{ $btnFilled['text'] ?? '#fff' }};
         }
 
         .btn-brand:hover {
             filter: brightness(.92);
-            color: #fff;
+            color: {{ $btnFilled['text'] ?? '#fff' }};
             box-shadow: var(--shadow-sm);
+        }
+
+        /* Outline counterpart to .btn-brand — not yet used by any template
+           (every existing outline button deliberately uses Bootstrap's own
+           light/dark variants against a colored background, a different
+           case). Defined here so Website > Settings' outline-button colors
+           are fully wired end-to-end and ready for a future block/button
+           style option to opt into, rather than validated-and-stored but
+           silently dead. */
+        .btn-brand-outline {
+            background: transparent;
+            border-color: {{ $btnOutline['border'] ?? 'var(--brand)' }};
+            color: {{ $btnOutline['text'] ?? 'var(--brand)' }};
+        }
+
+        .btn-brand-outline:hover {
+            background: {{ $btnOutline['border'] ?? 'var(--brand)' }};
+            color: {{ $btnOutline['text'] ?? '#fff' }};
         }
 
         .text-brand {
             color: var(--brand);
         }
+
+        .card {
+            background-color: var(--surface);
+        }
+
+        @if ($containerWidth !== null)
+        /* Only overrides the widest Bootstrap container breakpoint (xl,
+           1200px+) — mobile/tablet/laptop keep Bootstrap's own responsive
+           container widths untouched, so this only affects "how wide does
+           the page get on a big desktop monitor", not smaller viewports. */
+        @media (min-width: 1200px) {
+            .container, .container-lg, .container-xl {
+                max-width: {{ (int) $containerWidth }}px;
+            }
+        }
+        @endif
 
         /* Sticky nav: a permanent, soft separation from the content below —
            avoids a scroll listener just to add a shadow once the page moves. */
@@ -522,7 +650,7 @@
         }
 
         footer {
-            background: #0f172a;
+            background: {{ $footerBg }};
             color: #cbd5e1;
         }
 

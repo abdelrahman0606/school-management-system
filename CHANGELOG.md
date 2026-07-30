@@ -6,6 +6,21 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- Public frontend modernization, Phase 1 (`docs/modules/29-frontend-modernization-proposal.md`): wired up
+  ~19 `site_settings` theming columns that existed in the schema since the Website module shipped but were
+  never exposed in the admin UI nor read by `public/layout.blade.php` — secondary/background/surface/text/
+  link/link-hover/border colors, heading/body Google Fonts (curated allow-list, only loaded when a school
+  picks one — no extra request otherwise), base font size, page container width, button radius/font-weight/
+  hover-transition-speed/filled+outline colors, and a global background (flat color or image+tint overlay).
+  New "Advanced Theme" section in Website settings (School settings > Branding & Appearance), collapsed by
+  default. Every value falls back to this file's original hardcoded default, so a school that never opens
+  the new section renders byte-for-byte identically to before.
+- Font names are validated against a fixed allow-list (`SiteSetting::FONTS`) both at save time and again at
+  render time, rather than accepted as free text — these values get interpolated directly into a `<style>`
+  block and a Google Fonts URL, so an unvalidated value would be a CSS/HTML injection vector once actually
+  wired into a real render path (previously moot, since nothing read these columns at all).
+
 ## [1.3.3] — 2026-07-28
 
 ### Changed
