@@ -6,6 +6,24 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- Removed 3 leftover `console.log()` debug statements from the admin page-builder's Admission Form custom
+  field editor (`resources/views/admin/website/pages/_admission_form_fields.blade.php`) — every admin using
+  the "add custom field" button had their browser console cluttered with development breadcrumbs
+  ("addCustomField called with prefix:", etc.). Kept the two `console.error()` calls (template/container not
+  found) — those are genuine defensive diagnostics for a real failure case, not debug noise.
+- `scripts/deploy.sh` was committed non-executable (`100644`) because this repo has `core.filemode=false` set
+  (sensible for the Windows-mounted dev drive, but it means a local `chmod +x` never gets picked up by `git
+  add`) — anyone cloning fresh on a VPS and following the docs' `./scripts/deploy.sh` instructions literally
+  would have hit "Permission denied." Fixed via `git update-index --chmod=+x`.
+- `CLAUDE.md`'s own "Key Patterns" reference examples (Repository/Observer cache pattern, the Mark module's
+  tabulation cache) still showed the raw `Cache::tags([...])->flush()`/`->remember()` facade instead of
+  `App\Support\CacheTags` — the exact pattern that was already wrong once (see `PageRenderService`'s fix a
+  few releases back) and would silently break again on shared cPanel hosting (`CACHE_STORE=database`/`file`
+  don't support native tagging) if a future module's Repository/Observer copied the stale example verbatim.
+  Added a corresponding "Gotchas Learned" entry so this doesn't quietly regress a third time. Also fixed an
+  unrelated literal duplicated sentence in the same section.
+
 ## [1.3.3] — 2026-07-28
 
 ### Security
