@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Public;
 
+use App\Models\User;
 use App\Modules\Announcement\Models\Announcement;
 use App\Modules\School\Models\School;
 use App\Modules\School\Models\SchoolPhone;
@@ -31,6 +32,8 @@ class MultilingualBlockContentTest extends TestCase
 
     private School $school;
 
+    private User $author;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -41,6 +44,10 @@ class MultilingualBlockContentTest extends TestCase
             'timezone' => 'Asia/Dhaka', 'locale' => 'en', 'academic_year_pattern' => 'jan_dec',
         ]);
         SiteSetting::create(['school_id' => $this->school->id, 'site_name' => 'Test School']);
+        // announcements.created_by is NOT NULL -- every Announcement::create()
+        // in this file needs a real user id, not just a role/permission (none
+        // of these tests act as this user, it's purely the FK).
+        $this->author = User::factory()->create(['school_id' => $this->school->id, 'is_active' => true]);
     }
 
     /** @param  array<string, mixed>  $layout */
@@ -61,7 +68,8 @@ class MultilingualBlockContentTest extends TestCase
     public function test_notices_block_shows_the_bengali_translation_when_visiting_in_bengali(): void
     {
         $announcement = Announcement::create([
-            'school_id' => $this->school->id, 'title' => 'Exam Schedule', 'body' => 'Exams start Monday.',
+            'school_id' => $this->school->id, 'created_by' => $this->author->id,
+            'title' => 'Exam Schedule', 'body' => 'Exams start Monday.',
             'type' => 'exam', 'audience' => 'all', 'priority' => 'normal',
             'is_pinned' => false, 'is_trash' => false, 'publish_at' => now()->subDay(),
         ]);
@@ -82,7 +90,8 @@ class MultilingualBlockContentTest extends TestCase
     public function test_notices_block_falls_back_to_the_default_locale_when_untranslated(): void
     {
         Announcement::create([
-            'school_id' => $this->school->id, 'title' => 'Exam Schedule', 'body' => 'Exams start Monday.',
+            'school_id' => $this->school->id, 'created_by' => $this->author->id,
+            'title' => 'Exam Schedule', 'body' => 'Exams start Monday.',
             'type' => 'exam', 'audience' => 'all', 'priority' => 'normal',
             'is_pinned' => false, 'is_trash' => false, 'publish_at' => now()->subDay(),
         ]);
@@ -129,7 +138,8 @@ class MultilingualBlockContentTest extends TestCase
     public function test_header_notice_ticker_shows_the_bengali_translation(): void
     {
         $announcement = Announcement::create([
-            'school_id' => $this->school->id, 'title' => 'Exam Schedule', 'body' => 'Exams start Monday.',
+            'school_id' => $this->school->id, 'created_by' => $this->author->id,
+            'title' => 'Exam Schedule', 'body' => 'Exams start Monday.',
             'type' => 'exam', 'audience' => 'all', 'priority' => 'normal',
             'is_pinned' => false, 'is_trash' => false, 'publish_at' => now()->subDay(),
         ]);
@@ -156,7 +166,8 @@ class MultilingualBlockContentTest extends TestCase
         Carbon::setTestNow(Carbon::create(2026, 7, 31, 10));
 
         Announcement::create([
-            'school_id' => $this->school->id, 'title' => 'Exam Schedule', 'body' => 'Exams start Monday.',
+            'school_id' => $this->school->id, 'created_by' => $this->author->id,
+            'title' => 'Exam Schedule', 'body' => 'Exams start Monday.',
             'type' => 'exam', 'audience' => 'all', 'priority' => 'normal',
             'is_pinned' => false, 'is_trash' => false, 'publish_at' => now()->subDay(), // 2026-07-30
         ]);

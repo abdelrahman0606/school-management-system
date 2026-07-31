@@ -70,6 +70,15 @@ follows [Semantic Versioning](https://semver.org/).
   (`tests/Feature/Admin/MultilingualAnnouncementAndStaffContentTest.php`).
 
 ### Fixed
+- `php artisan test` reported 4 errors in `MultilingualBlockContentTest.php`: `SQLSTATE[23000]...
+  NOT NULL constraint failed: announcements.created_by`. Four pre-existing test methods (not part
+  of this session's own additions to the file) called `Announcement::create()` without
+  `created_by`, which the `announcements` migration declares NOT NULL with no default — this was
+  latent since whichever earlier phase wrote those tests, only surfacing now that the file was
+  actually executed rather than just read/edited. Added a `private User $author` created once in
+  `setUp()` (`created_by` is a plain FK here — none of these tests act as this user, no role
+  needed) and passed `'created_by' => $this->author->id` into all four `Announcement::create()`
+  calls.
 - `vendor/bin/phpstan analyse` reported 9 fresh errors, all from this session's multilingual work
   never having been checked against the (level 5, Larastan) analyser before now:
   - 8 were `property.notFound` on plain-Eloquent-attribute reads (`$lang->code`, `$translation->value`/
