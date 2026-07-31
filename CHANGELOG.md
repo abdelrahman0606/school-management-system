@@ -4,25 +4,6 @@ All notable changes to this project are documented here. Format loosely
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning
 follows [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
-
-### Added
-- `DemoCompletionSeeder`: demo data for previously-empty modules — Certificate, IdCard, Sms, Payroll,
-  Loan, Refund, Holidays, and Contact messages.
-- `bn.json` refreshed from a live dev DB export — 126 new UI-string keys, plus real edits to School/
-  SiteSetting/Designation/Announcement bn content (name spelling, EIIN transliteration, Bengali-digit
-  codes).
-
-### Fixed
-- Cleaned up `bn.json` translation quality: fixed ~30 wrong or garbled entries (mistranslations,
-  leaked artifacts, inconsistent terms) found across two review passes, and removed one scanner
-  false-positive key.
-- Online admission form: several field labels stayed in English under `bn` because
-  `PageRenderService` baked in a hardcoded default instead of leaving it `null` for the `__()`
-  fallback to catch.
-- Merged 61 case-variant duplicate keys in the UI-string catalog onto one Title Case canonical form;
-  repointed 104 `__()` call sites across 53 admin views.
-
 ## [1.4.0] — 2026-07-31
 
 ### Added
@@ -37,6 +18,11 @@ follows [Semantic Versioning](https://semver.org/).
   all public pages, and the primary nav menu.
 - Translation-status columns (tick/cross per language) on the Staff, Designation, Department,
   Pages, and Announcements admin list screens.
+- `DemoCompletionSeeder`: demo data for previously-empty modules — Certificate, IdCard, Sms, Payroll,
+  Loan, Refund, Holidays, and Contact messages.
+- `bn.json` refreshed from a live dev DB export — 126 new UI-string keys, plus real edits to School/
+  SiteSetting/Designation/Announcement bn content (name spelling, EIIN transliteration, Bengali-digit
+  codes).
 
 ### Fixed
 - Admin and public backend language were coupled — switching your own admin working language no
@@ -53,6 +39,14 @@ follows [Semantic Versioning](https://semver.org/).
 - "Suggest translation (AI)" used to close the edit modal on Staff/Announcement/Designation/
   Department — now updates in place.
 - Cleared 9 `phpstan` errors and a handful of test failures found by actually running the suite.
+- Cleaned up `bn.json` translation quality: fixed ~30 wrong or garbled entries (mistranslations,
+  leaked artifacts, inconsistent terms) found across two review passes, and removed one scanner
+  false-positive key.
+- Online admission form: several field labels stayed in English under `bn` because
+  `PageRenderService` baked in a hardcoded default instead of leaving it `null` for the `__()`
+  fallback to catch.
+- Merged 61 case-variant duplicate keys in the UI-string catalog onto one Title Case canonical form;
+  repointed 104 `__()` call sites across 53 admin views.
 
 ### Changed
 - Removed the Menu editor's redundant "Copy from default language" button (superseded by
