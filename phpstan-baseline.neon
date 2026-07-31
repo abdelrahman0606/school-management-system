@@ -9357,7 +9357,7 @@ parameters:
 		-
 			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\PageLayout\:\:\$layout_json\.$#'
 			identifier: property.notFound
-			count: 2
+			count: 1
 			path: app/Modules/Language/Jobs/SuggestPageTranslationJob.php
 
 		-
