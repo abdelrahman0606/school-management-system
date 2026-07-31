@@ -19,6 +19,13 @@ follows [Semantic Versioning](https://semver.org/).
   (`tests/Feature/Admin/MultilingualAnnouncementAndStaffContentTest.php`).
 
 ### Fixed
+- Reported: the public footer's "© 2026 &lt;school name&gt;. All rights reserved." only translated
+  the school name — "All rights reserved." was a bare literal string, never wrapped in `__()`,
+  unlike every other string in `public/layout.blade.php`'s footer. Also fixed the same bug in the
+  footer's institution-code fallback label ("Code"). Wrapping in `__()` alone isn't a complete fix
+  for an already-deployed school: run `php artisan translations:scan` to register the new key, then
+  fill in its Bengali value under Settings → Languages → Translations (bn) — e.g. "সর্বস্বত্ব
+  সংরক্ষিত।" for "All rights reserved."
 - Reported: clicking "Suggest translation (AI)" on Announcement/Staff/Designation/Department closed
   the edit modal (a plain form POST+redirect), forcing the admin to reopen Edit just to see what
   the AI filled in. Fixed by having the button fetch() the same endpoint with

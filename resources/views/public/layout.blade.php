@@ -892,7 +892,7 @@
                     @endphp
                     @if ($footerCodes->isNotEmpty() || $footerEstablished)
                     <p class="mb-0 small text-white-50">
-                        @foreach ($footerCodes as $c){{ $c['label'] ?: 'Code' }}: <strong>{{ $c['value'] }}</strong>@if(!$loop->last)&nbsp;&middot;&nbsp;@endif @endforeach
+                        @foreach ($footerCodes as $c){{ $c['label'] ?: __('Code') }}: <strong>{{ $c['value'] }}</strong>@if(!$loop->last)&nbsp;&middot;&nbsp;@endif @endforeach
                         @if ($footerEstablished)@if($footerCodes->isNotEmpty())&nbsp;&middot;&nbsp;@endif{{ __('Established') }}: <strong>{{ $footerEstablished }}</strong>@endif
                     </p>
                     @endif
@@ -911,7 +911,7 @@
                 </div>
             </div>
             <hr class="border-secondary my-4">
-            <p class="small mb-0 text-center text-white-50">© {{ date('Y') }} {{ $siteName }}. All rights reserved.</p>
+            <p class="small mb-0 text-center text-white-50">© {{ date('Y') }} {{ $siteName }}. {{ __('All rights reserved.') }}</p>
         </div>
     </footer>
 
