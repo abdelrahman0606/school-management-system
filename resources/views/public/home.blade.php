@@ -13,7 +13,7 @@
             <div class="row align-items-center g-5">
                 <div class="col-lg-7">
                     <span class="eyebrow mb-3">{{ __('Welcome') }}</span>
-                    <h1 class="display-4 mb-3 mt-2">{{ $settings->site_name ?? $school?->name ?? 'Demo School' }}</h1>
+                    <h1 class="display-4 mb-3 mt-2">{{ $settings->site_name ?? $school?->transOr('name') ?? 'Demo School' }}</h1>
                     <p class="lead mb-4 text-white-50" style="max-width:38rem;">
                         {{ $settings->transOr('meta_description') ?? 'Nurturing curious minds and building a community of lifelong learners.' }}
                     </p>

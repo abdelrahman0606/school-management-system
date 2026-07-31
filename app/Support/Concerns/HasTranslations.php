@@ -19,9 +19,18 @@ trait HasTranslations
     /** Translated value for $field in $locale (defaults to the current app locale), or null if not set. */
     public function trans(string $field, ?string $locale = null): ?string
     {
+        // An unsaved model (e.g. HomeController's `new SiteSetting` "no
+        // school" fallback) has no key and therefore can't have any
+        // translations -- short-circuit rather than passing a null $id into
+        // ContentTranslation::linesFor(), which type-hints int|string.
+        $key = $this->getKey();
+        if ($key === null) {
+            return null;
+        }
+
         $locale ??= app()->getLocale();
 
-        return ContentTranslation::linesFor(static::class, $this->getKey(), $locale)[$field] ?? null;
+        return ContentTranslation::linesFor(static::class, $key, $locale)[$field] ?? null;
     }
 
     /** Translated value, falling back to this record's own default-locale column value. */
