@@ -38,7 +38,7 @@ class PageRenderTest extends TestCase
             'status' => 'published', 'is_homepage' => $homepage,
         ]);
         PageLayout::create([
-            'school_id' => $this->school->id, 'page_id' => $page->id,
+            'school_id' => $this->school->id, 'page_id' => $page->id, 'locale' => 'en',
             'layout_json' => $layout, 'is_published' => true, 'published_at' => now(),
         ]);
 
@@ -116,7 +116,7 @@ class PageRenderTest extends TestCase
             'school_id' => $this->school->id, 'slug' => 'secret', 'title' => 'Secret', 'status' => 'draft',
         ]);
         PageLayout::create([
-            'school_id' => $this->school->id, 'page_id' => $page->id,
+            'school_id' => $this->school->id, 'page_id' => $page->id, 'locale' => 'en',
             'layout_json' => ['template' => 'full', 'blocks' => []], 'is_published' => false,
         ]);
 

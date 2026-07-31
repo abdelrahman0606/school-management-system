@@ -50,7 +50,8 @@ class AdmissionFormTest extends TestCase
         );
         PageLayout::where('page_id', $page->id)->delete();
         PageLayout::create([
-            'school_id' => $this->school->id, 'page_id' => $page->id, 'is_published' => true, 'published_at' => now(),
+            'school_id' => $this->school->id, 'page_id' => $page->id, 'locale' => 'en',
+            'is_published' => true, 'published_at' => now(),
             'layout_json' => ['template' => 'full', 'blocks' => [['type' => 'admission_form', 'data' => $blockData]]],
         ]);
     }
