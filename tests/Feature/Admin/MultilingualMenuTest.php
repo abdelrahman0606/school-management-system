@@ -39,6 +39,58 @@ class MultilingualMenuTest extends TestCase
         $this->admin->assignRole('admin');
     }
 
+    /**
+     * Reported: saving a menu that mixes a dropdown (with children) among
+     * top-level items left some items behind after a save that should have
+     * fully replaced them — a second save on top piled a full duplicate
+     * tree on top of a partial leftover of the first, rather than cleanly
+     * replacing it. Root cause: MenuService::replaceItems() used to delete
+     * via $menu->allItems()->delete(), which carries orderBy('sort_order')
+     * — and a child's own sort_order is independently 0-based per parent,
+     * so it routinely ties with unrelated top-level items' sort_order. That
+     * ordering could cause MySQL to delete a dropdown parent (cascading its
+     * children away) before the same DELETE statement's own scan reached
+     * those children, silently skipping rows the cascade never raced.
+     * Repeated saves (mirroring "Build from default language (AI)"
+     * immediately followed by "Save Menu") must always leave EXACTLY the
+     * submitted tree — never more, never fewer.
+     */
+    public function test_repeated_saves_of_a_tree_with_a_dropdown_never_leave_leftover_or_duplicate_items(): void
+    {
+        $home = Page::create(['school_id' => $this->school->id, 'slug' => 'home', 'title' => 'Home', 'status' => 'published', 'is_homepage' => true]);
+
+        $tree = [
+            ['label' => 'Home', 'type' => 'page', 'page_id' => $home->id, 'target' => '_self'],
+            ['label' => 'About', 'type' => 'dropdown', 'target' => '_self', 'children' => [
+                ['label' => 'History', 'type' => 'external', 'url' => '/history', 'target' => '_self'],
+                ['label' => 'Mission', 'type' => 'external', 'url' => '/mission', 'target' => '_self'],
+            ]],
+            ['label' => 'Faculty', 'type' => 'external', 'url' => '/faculty', 'target' => '_self'],
+            ['label' => 'Teachers', 'type' => 'external', 'url' => '/teachers', 'target' => '_self'],
+            ['label' => 'Gallery', 'type' => 'dropdown', 'target' => '_self', 'children' => [
+                ['label' => 'Photos', 'type' => 'external', 'url' => '/photos', 'target' => '_self'],
+                ['label' => 'Videos', 'type' => 'external', 'url' => '/videos', 'target' => '_self'],
+            ]],
+            ['label' => 'Contact', 'type' => 'external', 'url' => '/contact', 'target' => '_self'],
+        ];
+
+        // Save it twice in a row — same shape as "AI-suggest built the tree,
+        // then Save Menu was clicked" (or simply saving twice), against the
+        // SAME menu both times.
+        $this->actingAs($this->admin)->put('/admin/menus', ['locale' => 'bn', 'items' => json_encode($tree)])->assertRedirect();
+        $this->actingAs($this->admin)->put('/admin/menus', ['locale' => 'bn', 'items' => json_encode($tree)])->assertRedirect();
+
+        $bn = Menu::forSchool($this->school->id)->where('locale', 'bn')->with('items.children')->first();
+
+        // 6 top-level items; About and Gallery each have 2 children = 10 total.
+        $this->assertCount(6, $bn->items);
+        $this->assertSame(10, $bn->allItems()->count());
+        $this->assertCount(2, $bn->items->firstWhere('label', 'About')->children);
+        $this->assertCount(2, $bn->items->firstWhere('label', 'Gallery')->children);
+        // No leftover rows from the first save's IDs, no duplicate labels.
+        $this->assertSame(['Home', 'About', 'Faculty', 'Teachers', 'Gallery', 'Contact'], $bn->items->pluck('label')->all());
+    }
+
     public function test_menu_editor_shows_a_language_switcher_marking_untranslated_locales(): void
     {
         $this->actingAs($this->admin)
@@ -111,71 +163,5 @@ class MultilingualMenuTest extends TestCase
         // No Bangla menu has ever been built — a Bangla visitor still sees
         // the English nav instead of an empty/hardcoded fallback.
         $this->withSession(['app_locale' => 'bn'])->get('/')->assertOk()->assertSee('Contact Us');
-    }
-
-    // ── Copy from default language (plain, non-AI) ─────────────────────────
-
-    public function test_admin_can_copy_the_default_languages_menu_into_an_untranslated_locale(): void
-    {
-        $home = Page::create(['school_id' => $this->school->id, 'slug' => 'home', 'title' => 'Home', 'status' => 'published', 'is_homepage' => true]);
-
-        $this->actingAs($this->admin)->put('/admin/menus', [
-            'locale' => 'en',
-            'items' => json_encode([
-                ['label' => 'Home', 'type' => 'page', 'page_id' => $home->id, 'target' => '_self'],
-                ['label' => 'About', 'type' => 'dropdown', 'target' => '_self', 'children' => [
-                    ['label' => 'History', 'type' => 'external', 'url' => '/history', 'target' => '_blank'],
-                ]],
-            ]),
-        ])->assertRedirect();
-
-        $this->get('/admin/menus?locale=bn')->assertOk()->assertSee('Copy from default language to start translating');
-
-        $this->post('/admin/menus/copy-locale', ['from_locale' => 'en', 'to_locale' => 'bn'])->assertRedirect();
-
-        $bn = Menu::forSchool($this->school->id)->where('locale', 'bn')->with('items.children')->first();
-        $this->assertNotNull($bn);
-        $this->assertCount(2, $bn->items);
-        // Labels are copied AS-IS — this is the plain copy, not the AI one.
-        $this->assertSame('Home', $bn->items->first()->label);
-        $about = $bn->items->firstWhere('type', 'dropdown');
-        $this->assertSame('About', $about->label);
-        $this->assertCount(1, $about->children);
-        $this->assertSame('History', $about->children->first()->label);
-        $this->assertSame('/history', $about->children->first()->url);
-        $this->assertSame('_blank', $about->children->first()->target);
-
-        // The English menu is completely untouched.
-        $en = Menu::forSchool($this->school->id)->where('locale', 'en')->with('items')->first();
-        $this->assertCount(2, $en->items);
-    }
-
-    public function test_copy_refuses_to_overwrite_a_locale_that_already_has_menu_items(): void
-    {
-        $home = Page::create(['school_id' => $this->school->id, 'slug' => 'home', 'title' => 'Home', 'status' => 'published', 'is_homepage' => true]);
-
-        $this->actingAs($this->admin)->put('/admin/menus', [
-            'locale' => 'en',
-            'items' => json_encode([['label' => 'Home', 'type' => 'page', 'page_id' => $home->id, 'target' => '_self']]),
-        ]);
-        $this->actingAs($this->admin)->put('/admin/menus', [
-            'locale' => 'bn',
-            'items' => json_encode([['label' => 'হোম হাতে', 'type' => 'page', 'page_id' => $home->id, 'target' => '_self']]),
-        ]);
-
-        $this->post('/admin/menus/copy-locale', ['from_locale' => 'en', 'to_locale' => 'bn'])->assertRedirect();
-
-        $bn = Menu::forSchool($this->school->id)->where('locale', 'bn')->with('items')->first();
-        $this->assertSame('হোম হাতে', $bn->items->first()->label);
-        $this->assertCount(1, $bn->items);
-    }
-
-    public function test_copy_is_a_no_op_when_the_source_language_has_no_menu_yet(): void
-    {
-        $this->actingAs($this->admin)
-            ->post('/admin/menus/copy-locale', ['from_locale' => 'en', 'to_locale' => 'bn'])
-            ->assertRedirect();
-
-        $this->assertNull(Menu::forSchool($this->school->id)->where('locale', 'bn')->first());
     }
 }

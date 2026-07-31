@@ -65,53 +65,6 @@ class MenuController extends Controller
     }
 
     /**
-     * "Copy from default language to start translating" — plain, non-AI
-     * copy, same offering as the page builder's own copyLocale() action.
-     * Only proceeds when the target locale currently has zero items: a menu
-     * save is a full-tree REPLACE, so copying into a locale that already
-     * has hand-built/translated items would destroy them (same rule
-     * MenuService::copyLocale() and SuggestMenuTranslationJob both enforce
-     * for the same reason — see MenuService's own docblock).
-     */
-    public function copyLocale(Request $request): RedirectResponse
-    {
-        $schoolId = app('current_school_id');
-        $data = $request->validate([
-            'from_locale' => ['required', 'string', 'max:10'],
-            'to_locale' => ['required', 'string', 'max:10'],
-        ]);
-        $from = Language::resolve($data['from_locale']);
-        $to = Language::resolve($data['to_locale']);
-
-        if ($to === $from) {
-            return redirect()->route('admin.menus.index', ['locale' => $to])
-                ->with('warning', __('Nothing to copy — source and target are the same language.'));
-        }
-
-        $sourceMenu = Menu::forSchool($schoolId)->where('locale', $from)->with('items.children')->first();
-        if (! $sourceMenu || $sourceMenu->items->isEmpty()) {
-            return redirect()->route('admin.menus.index', ['locale' => $to])
-                ->with('warning', __('Nothing to copy — that language has no menu items yet.'));
-        }
-
-        $targetMenu = $this->menuFor($schoolId, $to);
-
-        // The authoritative "target still has zero items" check happens
-        // INSIDE copyLocale() itself, against a locked row — not here. A
-        // pre-check here would only be advisory and couldn't prevent two
-        // near-simultaneous requests (a double-click, or Copy and Suggest
-        // both firing) from both passing it and both writing. See
-        // MenuService::copyLocale()'s own docblock.
-        if (! $this->menus->copyLocale($sourceMenu, $targetMenu)) {
-            return redirect()->route('admin.menus.index', ['locale' => $to])
-                ->with('warning', __('That language already has menu items — copying would replace them.'));
-        }
-
-        return redirect()->route('admin.menus.index', ['locale' => $to])
-            ->with('status', __('Copied — translate the labels below, then Save.'));
-    }
-
-    /**
      * "Suggest translation (AI)" — docs/modules/30-multilingual-content-plan.md
      * Phase 5. Only proceeds when this locale's menu currently has zero
      * items (SuggestMenuTranslationJob's own safety check) — a full-tree

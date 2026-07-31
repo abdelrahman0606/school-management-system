@@ -66,7 +66,10 @@ new query layer.
   reloads the editor for that locale (`?locale=xx` on the existing GET, hidden field on the
   existing POST; both routes are already plain form round-trips, not AJAX, so this is a small
   change). A "Copy from default language" action seeds a new locale's first draft from the
-  default-locale content instead of starting blank.
+  default-locale content instead of starting blank. *(Removed for Menus specifically after Phase
+  5 shipped "Suggest translation (AI)" — see Phase 5 follow-ups below — since it duplicated that
+  button's purpose and having both on screen was more confusing than useful; Pages keeps its own
+  Copy button, which offers something AI-suggest there doesn't.)*
 
 ### 2. Scalar fields on singleton rows → generic polymorphic translation table
 

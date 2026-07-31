@@ -21,27 +21,17 @@
     </div>
   @endif
 
-  {{-- "Copy from default language" / "Suggest translation (AI)" —
-       docs/modules/30-multilingual-content-plan.md Phases 3 + 5. Both only
-       offered for an untranslated locale (zero items): a Menu save is a
-       full-tree REPLACE, so running either against a locale that already
-       has items would destroy hand-built/translated work — MenuService's
-       copyLocale() / SuggestMenuTranslationJob both refuse to run in that
-       case too (see their own docblocks), this is just the same rule
-       reflected in the UI so it isn't in the way. "Copy" is the plain,
-       non-AI starter (labels stay in the source language, same offering as
-       the page builder's own Copy button); "Suggest" runs it through
-       MyMemory first. --}}
+  {{-- "Suggest translation (AI)" — docs/modules/30-multilingual-content-plan.md
+       Phase 5. Only offered for an untranslated locale (zero items): a Menu
+       save is a full-tree REPLACE, so running it against a locale that
+       already has items would destroy hand-built/translated work —
+       SuggestMenuTranslationJob refuses to run in that case too (see its
+       own docblock), this is just the same rule reflected in the UI so it
+       isn't in the way. --}}
   @if ($locale !== $defaultLocale && ! in_array($locale, $localesWithItems, true))
     <div class="alert alert-info d-flex align-items-center justify-content-between gap-3 py-2 px-3 flex-wrap" role="alert">
       <span><i class="bi bi-translate"></i> {{ __('This language has no menu yet.') }}</span>
       <div class="d-flex align-items-center gap-2">
-        <form method="POST" action="{{ route('admin.menus.copy-locale') }}" class="d-flex align-items-center">
-          @csrf
-          <input type="hidden" name="from_locale" value="{{ $defaultLocale }}">
-          <input type="hidden" name="to_locale" value="{{ $locale }}">
-          <button type="submit" class="btn btn-outline-primary btn-sm">{{ __('Copy from default language to start translating') }}</button>
-        </form>
         <form method="POST" action="{{ route('admin.menus.suggest-translation') }}" class="d-flex align-items-center">
           @csrf
           <input type="hidden" name="locale" value="{{ $locale }}">
@@ -106,7 +96,7 @@
         <div class="card">
           <div class="card-header d-flex justify-content-between align-items-center">
             <span>{{ __('Menu Structure') }}</span>
-            <button class="btn btn-primary btn-sm" type="submit"><i class="bi bi-save"></i> {{ __('Save Menu') }}</button>
+            <button class="btn btn-primary btn-sm" type="submit" id="menu-save-btn"><i class="bi bi-save"></i> {{ __('Save Menu') }}</button>
           </div>
           <div class="card-body">
             <ul class="menu-list list-unstyled mb-0" id="menu-root"></ul>
@@ -237,8 +227,17 @@
           .filter(function (o) { return o.label; });
       }
 
+      // Disabling the button synchronously (before the browser has even
+      // started the navigation) closes off a double-click/double-tap as a
+      // way to fire two overlapping saves — belt-and-suspenders alongside
+      // the server-side row lock in MenuService::replaceItems(), which is
+      // the actual authoritative guard (this alone wouldn't stop two
+      // separate tabs, or a genuine retry).
       document.getElementById('menu-form').addEventListener('submit', function () {
         document.getElementById('menu-items-json').value = JSON.stringify(serialize(root));
+        var saveBtn = document.getElementById('menu-save-btn');
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm" aria-hidden="true"></span> {{ __('Saving…') }}';
       });
 
       // Initial render
