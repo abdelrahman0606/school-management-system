@@ -7,57 +7,21 @@ follows [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
-- `DemoCompletionSeeder`: demo data for the modules that were reachable but permanently empty on a
-  fresh install — Certificate (admit cards, testimonials, a transfer certificate), IdCard (student +
-  staff templates with a completed batch each), Sms (a completed due-reminder batch with per-recipient
-  logs, including one deliberately-failed send), Payroll (an approved run with entries derived from
-  the existing salary components), Loan (an approved staff loan with its repayment schedule), Refund
-  (a partial refund against an existing payment), Holidays, and public Contact messages. Runs after
-  `DemoOptionalSeeder`, which it depends on for staff salary values.
-- `bn.json` refreshed from a live dev DB export: 126 UI-string keys that only existed as machine
-  translations (via Settings → Languages → "Suggest translations (AI)", MyMemory) had no seed-pack
-  entry at all — added as-is per explicit instruction, though a handful are known-rough (e.g. "Font
-  Weight" picked up a stray `@ label` artifact, "Background Image" translated as if it were "Account
-  name") and should be spot-checked in the admin Translations editor rather than trusted blindly.
-- `SchoolSeeder`/`DemoDataSeeder` bn values updated to match hand-edits found in the same DB export:
-  School name spelling (গ্রীন → গ্রিন, applied to both `School.name` and `SiteSetting.meta_title`),
-  `institution_code_label` transliterated instead of left as Latin "EIIN", native-Bengali-digit
-  translations added for institution_code/school_code/technical_branch_code (previously skipped as
-  "meaningless" — they're not, BD documents commonly render codes in Bengali numerals), the "Accounts
-  Officer" designation's bn label, and all 3 seeded announcements' bn titles.
+- `DemoCompletionSeeder`: demo data for previously-empty modules — Certificate, IdCard, Sms, Payroll,
+  Loan, Refund, Holidays, and Contact messages.
+- `bn.json` refreshed from a live dev DB export — 126 new UI-string keys, plus real edits to School/
+  SiteSetting/Designation/Announcement bn content (name spelling, EIIN transliteration, Bengali-digit
+  codes).
 
 ### Fixed
-- `bn.json` full-catalog sweep for remaining translation-quality issues (whitespace, values reused
-  across keys with unrelated meanings, cross-checked against the actual call site rather than
-  assumed): fixed a trailing space on "Mother's Name", "Apply action to" (a bulk-action confirm
-  dialog fragment) which had been reduced to just "নির্বাচিত" ("selected"), losing the actual verb,
-  and "Promoted" which shared "উত্তীর্ণ" ("passed [an exam]") with "Pass" — promoting a student to the
-  next class is a different concept, now "উন্নীত". Two other flagged duplicates turned out correct on
-  inspection of their real call sites and were left alone: "Run" (a report button — চালান is also the
-  Bengali imperative "run/operate it", not just the noun "invoice" it happens to share a spelling
-  with) and "Clear" (an actual bulk-delete action on exam seating, so মুছুন/"Delete" is accurate).
-- `bn.json` review pass over the 126 AI-suggested (MyMemory) keys added in the previous entry: fixed
-  26 that were wrong, garbled, or inconsistent with the rest of the catalog — outright mistranslations
-  ("Background Image" was "Account name", "Body Text Color" was "Heading text color", "og:image" was
-  rendered as "e.g.: image"), a leaked artifact ("Font Weight" had a stray `@ label` suffix), an
-  untranslated passthrough ("Not Translated"), broken grammar ("Get In Touch" → "টাচ পান", missing
-  "in"), a non-word ("Save as Template" used "ফর্মা", not a real Bengali word for template — every
-  other template-related string in the catalog uses টেমপ্লেট), and several units/terms left
-  inconsistent with how the same word is translated elsewhere (রং vs কালার, গ্লোবাল vs বিশ্বব্যাপী,
-  টিন্ট vs টিনের/"tin metal"). Also removed `sms_templates.due_reminder` — a `TranslationScanner`
-  false positive: that's a dotted Laravel group-file key (resolved via
-  `resources/lang/bn/sms_templates.php`, which already has a correct template), not a flat catalog
-  string, so it was never actually looked up through this table; it just sat there as noise.
-- Online admission form: Last name, Blood group, Student phone, Student photo, Permanent address,
-  and Notes still showed English under `bn` even after wrapping their fallback labels in `__()`.
-  Root cause was upstream in `PageRenderService::normalizeAdmissionFields()`, which always baked in
-  a hardcoded English label even when the admin hadn't customized the field, so the Blade layer's
-  `__()` fallback never actually ran. Fixed by leaving the label `null` until the admin sets one.
-- Merged 61 case-variant duplicate keys in the flat UI-string translation catalog (e.g. `Permanent
-  address` / `Permanent Address`) onto a single Title Case canonical form — `TranslationScanner`
-  never prunes stale keys, so these had accumulated as call sites drifted between casing styles.
-  Repointed 104 `__()` call sites across 53 admin views to the canonical key and removed the 61
-  non-canonical entries from `bn.json`.
+- Cleaned up `bn.json` translation quality: fixed ~30 wrong or garbled entries (mistranslations,
+  leaked artifacts, inconsistent terms) found across two review passes, and removed one scanner
+  false-positive key.
+- Online admission form: several field labels stayed in English under `bn` because
+  `PageRenderService` baked in a hardcoded default instead of leaving it `null` for the `__()`
+  fallback to catch.
+- Merged 61 case-variant duplicate keys in the UI-string catalog onto one Title Case canonical form;
+  repointed 104 `__()` call sites across 53 admin views.
 
 ## [1.4.0] — 2026-07-31
 
