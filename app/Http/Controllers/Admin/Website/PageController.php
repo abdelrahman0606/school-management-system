@@ -224,10 +224,20 @@ class PageController extends Controller
                 ->with('warning', __('Nothing to translate — that is the default language.'));
         }
 
-        SuggestPageTranslationJob::dispatch($page->id, $locale);
+        // dispatchSync(), not dispatch(): under this app's normal
+        // QUEUE_CONNECTION=redis, a queued dispatch returns before Horizon
+        // ever picks the job up, so the redirect below used to land back on
+        // the editor with the OLD content still showing and no indication
+        // translation was even still in progress — "refresh in a few
+        // seconds and check History" was papering over that gap. Running it
+        // inline keeps this a synchronous, best-effort, tries=1 call (same
+        // as before) — the request just waits for MyMemory instead of a
+        // background worker doing so, and the result is guaranteed to be
+        // there the moment this redirect resolves.
+        SuggestPageTranslationJob::dispatchSync($page->id, $locale);
 
         return redirect()->route('admin.pages.edit', ['id' => $page->id, 'locale' => $locale])
-            ->with('status', __('Translation suggestion is being generated as a new draft — refresh in a few seconds and check History.'));
+            ->with('status', __('Translated draft created — review it below or in History before publishing.'));
     }
 
     /**

@@ -60,6 +60,33 @@ follows [Semantic Versioning](https://semver.org/).
   just left in the source language for the admin to finish by hand. Tests exercise the real
   end-to-end flow via `Http::fake()`, never a real network call.
 
+### Fixed
+- Phase 5 follow-ups reported after the above shipped:
+  - The page editor's Update/Publish button starts disabled and only re-enables once the form
+    differs from what was just loaded — but Copy from default language / Suggest translation (AI)
+    / Restore all create a brand-new unpublished `PageLayout` revision and reload straight into it,
+    so nothing "differs" and the button stayed stuck disabled even on an already-published page,
+    with no way to publish the new draft short of a throwaway edit. `PageController::edit()` now
+    computes a `needsPublish` flag (page published overall, but the locale's loaded revision isn't
+    itself the published one) that keeps Update usable in that case.
+  - `SuggestSchoolTranslationJob`/`SuggestPageTranslationJob`/`SuggestMenuTranslationJob` now run
+    via `dispatchSync()` instead of a queued `dispatch()` — under this app's normal
+    `QUEUE_CONNECTION=redis`, a queued dispatch returns before Horizon ever runs the job, so the
+    "Suggest translation" actions could redirect back showing stale content with no real signal
+    translation was still in flight ("sometimes delayed"). Running inline keeps them exactly as
+    best-effort/`tries=1` as before, just synchronous, and drops the Horizon dependency for these
+    specific actions entirely.
+  - The page editor's Copy/Suggest actions are now fetch()-driven: they splice the resulting
+    blocks/fields/History/language-switcher state straight into the live editor instead of doing a
+    full form-post navigation, with a progress bar covering the real (multi-second, sequential
+    per-field MyMemory calls) wait and a toast surfacing the result — addresses "get the
+    translation without refreshing the page."
+  - Fixed a misaligned dismiss icon on the page editor's own "Page Saved" toast: `.alert-dismissible`
+    reserves padding and absolutely-positions `.btn-close` for the *default* `.alert` box size, which
+    didn't match this toast's smaller `py-2`/`px-3` override (and `.btn-close-sm`, also used there,
+    isn't a real Bootstrap class — it did nothing to compensate). Switched to a plain flex row, which
+    sizes and centers the close button correctly regardless of the alert's own padding.
+
 ## [1.3.4] — 2026-07-31
 
 ### Added

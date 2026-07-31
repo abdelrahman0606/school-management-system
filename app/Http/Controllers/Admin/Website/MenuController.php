@@ -82,10 +82,15 @@ class MenuController extends Controller
                 ->with('warning', __('Nothing to translate — that is the default language.'));
         }
 
-        SuggestMenuTranslationJob::dispatch($schoolId, $locale);
+        // dispatchSync() — see PageController::suggestTranslation()'s own
+        // comment: queued dispatch() returns before Horizon actually runs
+        // the job under this app's normal QUEUE_CONNECTION=redis, so the
+        // redirect used to land back on the editor before the menu existed
+        // yet. Inline keeps it just as best-effort/tries=1 as before.
+        SuggestMenuTranslationJob::dispatchSync($schoolId, $locale);
 
         return redirect()->route('admin.menus.index', ['locale' => $locale])
-            ->with('status', __('Translation suggestion is being generated — refresh in a few seconds.'));
+            ->with('status', __('Menu translated from the default language — review it below.'));
     }
 
     /** Get (or create) this school's menu for one locale — each language owns its own full tree. */

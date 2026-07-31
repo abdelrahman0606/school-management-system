@@ -287,8 +287,14 @@ class SchoolController extends Controller
             return back()->with('status', __('Nothing to translate — that is the default language.'));
         }
 
-        SuggestSchoolTranslationJob::dispatch($schoolId, $locale);
+        // dispatchSync() — see PageController::suggestTranslation()'s own
+        // comment: queued dispatch() returns before Horizon actually runs
+        // the job under this app's normal QUEUE_CONNECTION=redis, so the
+        // redirect used to land back on this page before anything was
+        // actually filled in yet. Inline keeps it just as best-effort/
+        // tries=1 as before.
+        SuggestSchoolTranslationJob::dispatchSync($schoolId, $locale);
 
-        return back()->with('status', __('Translation suggestions are being generated — refresh in a few seconds to see the drafts.'));
+        return back()->with('status', __('Translation suggestions filled in below — review before saving.'));
     }
 }

@@ -50,6 +50,31 @@ class MultilingualPageContentTest extends TestCase
         $this->get("/admin/pages/{$page->id}/edit")->assertOk()->assertSee('untranslated');
     }
 
+    /**
+     * Regression guard for the editor's own JS: the Copy-from-default-
+     * language / Suggest-translation(AI) actions run over fetch() and splice
+     * the response's DOM fragments straight into the live page (see
+     * edit.blade.php's own trailing script) instead of doing a full
+     * navigation — that script locates everything it needs purely by
+     * element id. PHPUnit can't execute that JS, but it can at least catch
+     * one of those ids ever being accidentally renamed/removed from the
+     * markup, which would silently break the in-place update client-side
+     * with no server-side error to surface it.
+     */
+    public function test_editor_markup_carries_the_element_ids_the_ajax_translation_script_depends_on(): void
+    {
+        $this->actingAs($this->admin);
+        $this->post('/admin/pages', ['title' => 'About', 'template' => 'full']);
+        $page = Page::first();
+
+        $response = $this->get("/admin/pages/{$page->id}/edit?locale=bn")->assertOk();
+
+        foreach (['translation-banner', 'translation-progress', 'known-layout-id', 'lang-switcher', 'history-list', 'blocks-list', 'sidebar-list'] as $id) {
+            $response->assertSee('id="'.$id.'"', false);
+        }
+        $response->assertSee('data-needs-publish=', false);
+    }
+
     public function test_saving_a_non_default_locale_does_not_touch_the_default_locales_content(): void
     {
         $this->actingAs($this->admin);
