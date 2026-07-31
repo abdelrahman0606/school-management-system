@@ -43,12 +43,37 @@ class WebsitePagesSeedTest extends TestCase
         // Identity pages render their content.
         $this->get('/history')->assertOk()->assertSee('A proud history')->assertSee('Quick Links');
         $this->get('/online-admission')->assertOk()->assertSee('Apply for admission');
+
+        // Online Admission's seeded faq block (docs/modules/29-frontend-modernization-proposal.md Phase 3).
+        $this->get('/online-admission')->assertOk()
+            ->assertSee('Frequently asked questions')
+            ->assertSee('Is there an admission test?');
     }
 
     public function test_homepage_renders_the_block_built_home_page(): void
     {
         // "/" now resolves to the is_homepage block page (not the hardcoded fallback).
         $this->get('/')->assertOk()->assertSee('Admissions are open');
+    }
+
+    public function test_homepage_leads_with_the_seeded_announcement_bar(): void
+    {
+        // docs/modules/29-frontend-modernization-proposal.md Phase 3.
+        $this->get('/')->assertOk()
+            ->assertSee('Admissions open for the 2026')
+            ->assertSee('Apply now')
+            ->assertSee('data-announcement-bar="', false);
+    }
+
+    public function test_advanced_theme_demo_values_are_applied(): void
+    {
+        // docs/modules/29-frontend-modernization-proposal.md Phase 1 — the
+        // demo school is the one place these are deliberately set, so the
+        // seed itself should prove they actually render.
+        $this->get('/')->assertOk()
+            ->assertSee('family=Poppins', false)
+            ->assertSee('family=Inter', false)
+            ->assertSee('border-radius: 10px', false);
     }
 
     public function test_public_nav_is_driven_by_the_seeded_menu(): void
