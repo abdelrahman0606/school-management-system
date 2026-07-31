@@ -112,4 +112,70 @@ class MultilingualMenuTest extends TestCase
         // the English nav instead of an empty/hardcoded fallback.
         $this->withSession(['app_locale' => 'bn'])->get('/')->assertOk()->assertSee('Contact Us');
     }
+
+    // ── Copy from default language (plain, non-AI) ─────────────────────────
+
+    public function test_admin_can_copy_the_default_languages_menu_into_an_untranslated_locale(): void
+    {
+        $home = Page::create(['school_id' => $this->school->id, 'slug' => 'home', 'title' => 'Home', 'status' => 'published', 'is_homepage' => true]);
+
+        $this->actingAs($this->admin)->put('/admin/menus', [
+            'locale' => 'en',
+            'items' => json_encode([
+                ['label' => 'Home', 'type' => 'page', 'page_id' => $home->id, 'target' => '_self'],
+                ['label' => 'About', 'type' => 'dropdown', 'target' => '_self', 'children' => [
+                    ['label' => 'History', 'type' => 'external', 'url' => '/history', 'target' => '_blank'],
+                ]],
+            ]),
+        ])->assertRedirect();
+
+        $this->get('/admin/menus?locale=bn')->assertOk()->assertSee('Copy from default language to start translating');
+
+        $this->post('/admin/menus/copy-locale', ['from_locale' => 'en', 'to_locale' => 'bn'])->assertRedirect();
+
+        $bn = Menu::forSchool($this->school->id)->where('locale', 'bn')->with('items.children')->first();
+        $this->assertNotNull($bn);
+        $this->assertCount(2, $bn->items);
+        // Labels are copied AS-IS — this is the plain copy, not the AI one.
+        $this->assertSame('Home', $bn->items->first()->label);
+        $about = $bn->items->firstWhere('type', 'dropdown');
+        $this->assertSame('About', $about->label);
+        $this->assertCount(1, $about->children);
+        $this->assertSame('History', $about->children->first()->label);
+        $this->assertSame('/history', $about->children->first()->url);
+        $this->assertSame('_blank', $about->children->first()->target);
+
+        // The English menu is completely untouched.
+        $en = Menu::forSchool($this->school->id)->where('locale', 'en')->with('items')->first();
+        $this->assertCount(2, $en->items);
+    }
+
+    public function test_copy_refuses_to_overwrite_a_locale_that_already_has_menu_items(): void
+    {
+        $home = Page::create(['school_id' => $this->school->id, 'slug' => 'home', 'title' => 'Home', 'status' => 'published', 'is_homepage' => true]);
+
+        $this->actingAs($this->admin)->put('/admin/menus', [
+            'locale' => 'en',
+            'items' => json_encode([['label' => 'Home', 'type' => 'page', 'page_id' => $home->id, 'target' => '_self']]),
+        ]);
+        $this->actingAs($this->admin)->put('/admin/menus', [
+            'locale' => 'bn',
+            'items' => json_encode([['label' => 'হোম হাতে', 'type' => 'page', 'page_id' => $home->id, 'target' => '_self']]),
+        ]);
+
+        $this->post('/admin/menus/copy-locale', ['from_locale' => 'en', 'to_locale' => 'bn'])->assertRedirect();
+
+        $bn = Menu::forSchool($this->school->id)->where('locale', 'bn')->with('items')->first();
+        $this->assertSame('হোম হাতে', $bn->items->first()->label);
+        $this->assertCount(1, $bn->items);
+    }
+
+    public function test_copy_is_a_no_op_when_the_source_language_has_no_menu_yet(): void
+    {
+        $this->actingAs($this->admin)
+            ->post('/admin/menus/copy-locale', ['from_locale' => 'en', 'to_locale' => 'bn'])
+            ->assertRedirect();
+
+        $this->assertNull(Menu::forSchool($this->school->id)->where('locale', 'bn')->first());
+    }
 }

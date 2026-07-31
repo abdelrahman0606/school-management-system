@@ -354,6 +354,7 @@ Route::middleware(['auth', 'school'])->prefix('admin')->name('admin.')->group(fu
         // Navigation menu editor
         Route::get('/menus', [MenuController::class, 'edit'])->name('menus.index');
         Route::put('/menus', [MenuController::class, 'save'])->name('menus.save');
+        Route::post('/menus/copy-locale', [MenuController::class, 'copyLocale'])->name('menus.copy-locale');
         Route::post('/menus/suggest-translation', [MenuController::class, 'suggestTranslation'])->name('menus.suggest-translation');
 
         Route::get('/academic-years', [AcademicYearController::class, 'index'])->name('academic-years.index');

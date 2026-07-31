@@ -55,13 +55,21 @@ class SuggestMenuTranslationJob implements ShouldQueue
             ['name' => "Main menu ({$this->locale})"],
         );
 
-        // Safety: never clobber a menu the admin already built or translated
-        // by hand — see this job's own docblock.
+        // Cheap advisory check first — avoids burning MyMemory API calls
+        // (translateItems() below is a real network call per label)
+        // translating a whole tree that's just going to be discarded in the
+        // common case where the target locale already has items. This
+        // alone does NOT close the race (two requests could both pass it
+        // before either writes) — the AUTHORITATIVE check is inside
+        // replaceItemsIfEmpty() itself, against a locked row, so it stays
+        // correct even if this job and the plain "Copy from default
+        // language" action both fire for the same just-created locale at
+        // once. See that method's own docblock.
         if ($targetMenu->allItems()->exists()) {
             return;
         }
 
-        $menus->replaceItems($targetMenu, $this->translateItems($sourceMenu->items, $source, $gateway));
+        $menus->replaceItemsIfEmpty($targetMenu, $this->translateItems($sourceMenu->items, $source, $gateway));
     }
 
     /**
