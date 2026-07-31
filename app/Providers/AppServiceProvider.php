@@ -37,6 +37,8 @@ use App\Modules\Leave\Models\StudentLeaveRequest;
 use App\Modules\Leave\Observers\LeaveTypeObserver;
 use App\Modules\Leave\Observers\StaffLeaveRequestObserver;
 use App\Modules\Leave\Observers\StudentLeaveRequestObserver;
+use App\Modules\Language\Gateways\MyMemoryTranslator;
+use App\Modules\Language\Gateways\TranslationGatewayContract;
 use App\Modules\LMS\Gateways\AiCheckerContract;
 use App\Modules\LMS\Gateways\AnthropicAiChecker;
 use App\Modules\LMS\Models\Assignment;
@@ -126,6 +128,15 @@ class AppServiceProvider extends ServiceProvider
         // unlike Sms's stub gateway). Swap this binding for a different provider
         // by implementing AiCheckerContract; nothing else in the module changes.
         $this->app->bind(AiCheckerContract::class, AnthropicAiChecker::class);
+
+        // Multilingual content AI-assisted draft translation (docs/modules/
+        // 30-multilingual-content-plan.md Phase 5) — free, keyless MyMemory
+        // API rather than LMS's paid Anthropic key, since translation drafts
+        // aren't an LMS-specific feature and every school should get the
+        // "Suggest" button without needing the LMS module enabled. Swap this
+        // binding for a different provider by implementing
+        // TranslationGatewayContract; nothing else in the feature changes.
+        $this->app->bind(TranslationGatewayContract::class, MyMemoryTranslator::class);
     }
 
     public function boot(): void

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\Website;
 
+use App\Modules\Language\Jobs\SuggestPageTranslationJob;
 use App\Modules\Language\Models\Language;
 use App\Modules\School\Models\School;
 use App\Modules\Website\Models\Page;
@@ -188,6 +189,30 @@ class PageController extends Controller
 
         return redirect()->route('admin.pages.edit', ['id' => $page->id, 'locale' => $to])
             ->with('status', __('Copied — translate the content below, then Save.'));
+    }
+
+    /**
+     * "Suggest translation (AI)" — docs/modules/30-multilingual-content-plan.md
+     * Phase 5. Always safe to dispatch regardless of what the target locale
+     * already has: SuggestPageTranslationJob only ever creates a brand new
+     * draft revision (PageLayout is append-only), so it can never overwrite
+     * an existing hand-translated draft or the published page.
+     */
+    public function suggestTranslation(Request $request, int $id): RedirectResponse
+    {
+        $schoolId = app('current_school_id');
+        $page = Page::forSchool($schoolId)->findOrFail($id);
+        $locale = Language::resolve($request->input('locale'));
+
+        if ($locale === Language::defaultCode()) {
+            return redirect()->route('admin.pages.edit', ['id' => $page->id, 'locale' => $locale])
+                ->with('warning', __('Nothing to translate — that is the default language.'));
+        }
+
+        SuggestPageTranslationJob::dispatch($page->id, $locale);
+
+        return redirect()->route('admin.pages.edit', ['id' => $page->id, 'locale' => $locale])
+            ->with('status', __('Translation suggestion is being generated as a new draft — refresh in a few seconds and check History.'));
     }
 
     /**
