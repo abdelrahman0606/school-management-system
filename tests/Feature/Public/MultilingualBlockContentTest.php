@@ -160,6 +160,14 @@ class MultilingualBlockContentTest extends TestCase
      * name + digit localization. The notices block's date line
      * (optional($n->publish_at)->format('d M Y') before this) is the most
      * visible place this shows up.
+     *
+     * Format is 'd M Y' -- the SHORT month token ('M'), consistently across
+     * all three notice-date call sites (sidebar, home, notices block). Carbon's
+     * bn locale (vendor/nesbot/carbon/src/Carbon/Lang/bn.php) keeps 'months'
+     * (full: "জুলাই") and 'months_short' (abbreviated: "জুল") as separate
+     * arrays, so the expected string here has to be the SHORT form -- asserting
+     * the full month name was the actual bug the first time this test ran
+     * (found via a real `php artisan test` failure, not just reasoned about).
      */
     public function test_notices_block_date_shows_bengali_month_name_and_native_digits(): void
     {
@@ -179,7 +187,7 @@ class MultilingualBlockContentTest extends TestCase
 
         $this->withSession(['app_locale' => 'bn'])->get('/notices-date')
             ->assertOk()
-            ->assertSee('৩০ জুলাই ২০২৬');
+            ->assertSee('৩০ জুল ২০২৬');
 
         Carbon::setTestNow();
     }

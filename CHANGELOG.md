@@ -70,6 +70,16 @@ follows [Semantic Versioning](https://semver.org/).
   (`tests/Feature/Admin/MultilingualAnnouncementAndStaffContentTest.php`).
 
 ### Fixed
+- `php artisan test` reported a failed assertion in
+  `test_notices_block_date_shows_bengali_month_name_and_native_digits` once the `created_by` errors
+  above stopped masking it: expected `'৩০ জুলাই ২০২৬'` (full month name) but the notices block
+  renders dates via `LocalizedDate::format($n->publish_at, 'd M Y')` — the SHORT month token
+  (`M`, not `F`), consistently across all three notice-date call sites (sidebar, home, notices
+  block). Carbon's `bn` locale (`vendor/nesbot/carbon/src/Carbon/Lang/bn.php`) keeps `months`
+  (full: "জুলাই") and `months_short` (abbreviated: "জুল") as genuinely different arrays — the test's
+  expected string was wrong, not the code (the header's own date test, which DOES use the full
+  month token `F`, was already asserting the correct `'৩১ জুলাই ২০২৬'` and needed no change).
+  Corrected the assertion to `'৩০ জুল ২০২৬'`.
 - `php artisan test` reported 4 errors in `MultilingualBlockContentTest.php`: `SQLSTATE[23000]...
   NOT NULL constraint failed: announcements.created_by`. Four pre-existing test methods (not part
   of this session's own additions to the file) called `Announcement::create()` without
