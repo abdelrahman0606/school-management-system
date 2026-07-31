@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Modules\Language\Models\Language;
 use App\Modules\Language\Models\Translation;
 use App\Modules\School\Models\School;
+use App\Modules\Website\Models\Page;
 use Database\Seeders\LanguageSeeder;
 use Database\Seeders\RoleSeeder;
 use Database\Seeders\TranslationSeeder;
@@ -98,6 +99,32 @@ class LanguageModuleTest extends TestCase
     {
         $this->get('/backend/language/bn')->assertRedirect('/login');
         $this->assertNull(session('backend_locale'));
+    }
+
+    /**
+     * Regression: Request::is('admin*', ...) matches on raw string prefix,
+     * not path segment boundaries — a PUBLIC page whose slug merely starts
+     * with "admin" (a school's own "/administration" page, same as
+     * WebsitePagesSeeder's demo content) used to match 'admin*' and get
+     * wrongly classified as backend, silently reading the (unset)
+     * 'backend_locale' instead of the public 'app_locale' the visitor had
+     * actually chosen — reported as "the language switcher reverts back to
+     * English" on that specific page. SetLocale now matches 'admin'/'admin/*'
+     * (an exact segment boundary) instead.
+     */
+    public function test_a_public_page_whose_slug_starts_with_admin_still_uses_the_public_locale(): void
+    {
+        $this->actingAs($this->admin);
+        $this->post('/admin/pages', ['title' => 'Administration', 'template' => 'full']);
+        $page = Page::first();
+        $this->put("/admin/pages/{$page->id}", [
+            'title' => 'Administration', 'slug' => 'administration', 'status' => 'published',
+            'template' => 'full', 'locale' => 'en',
+            'blocks' => [['type' => 'heading', 'data' => ['text' => 'Our Administration']]],
+        ])->assertRedirect();
+
+        $this->withSession(['app_locale' => 'bn'])->get('/administration')->assertOk();
+        $this->assertSame('bn', app()->getLocale());
     }
 
     public function test_db_translation_is_served_for_the_active_locale(): void

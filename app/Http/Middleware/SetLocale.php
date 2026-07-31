@@ -42,7 +42,16 @@ class SetLocale
             return $next($request);
         }
 
-        $sessionKey = $request->is('admin*', 'staff*', 'portal*') ? 'backend_locale' : 'app_locale';
+        // NOT 'admin*'/'staff*'/'portal*' — Request::is() wildcards match on
+        // raw string prefix, not path segment boundaries, so a PUBLIC page
+        // whose slug merely starts with those letters (e.g. a school's own
+        // "/administration" page) would wrongly match 'admin*' and get
+        // treated as backend, silently losing whatever the public switcher
+        // had set (reported: a public "Administration" page always reverted
+        // to English). 'admin'/'admin/*' only matches the literal /admin
+        // path or something genuinely underneath it.
+        $sessionKey = $request->is('admin', 'admin/*', 'staff', 'staff/*', 'portal', 'portal/*')
+            ? 'backend_locale' : 'app_locale';
         $chosen = (string) $request->session()->get($sessionKey, $default);
         if (! $languages->contains(fn ($l) => $l->code === $chosen)) {
             $chosen = $default;

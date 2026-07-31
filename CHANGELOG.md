@@ -95,6 +95,14 @@ follows [Semantic Versioning](https://semver.org/).
   the latter (the only thing `partials/language-switcher.blade.php`, shared by the admin/staff/
   portal headers, links to). An admin can now run the backend in one language while the public
   site serves visitors in a completely different one.
+- Follow-up to the above: that path match was originally `admin*`/`staff*`/`portal*`
+  (`Request::is()` wildcards match on raw string prefix, not path segment boundaries), so a
+  **public** page whose slug merely started with those letters — e.g. a school's own
+  `/administration` page, same slug `WebsitePagesSeeder`'s demo content uses — was wrongly
+  classified as backend and silently read the unset `backend_locale` instead of the public
+  `app_locale` a visitor had actually chosen (reported: the language switcher "reverts back to
+  English" on that page specifically). Now matches `admin`/`admin/*` (an exact segment boundary)
+  instead.
 
 ## [1.3.4] — 2026-07-31
 
