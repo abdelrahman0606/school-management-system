@@ -369,6 +369,30 @@ parameters:
 		-
 			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\Page\:\:\$title\.$#'
 			identifier: property.notFound
+			count: 3
+			path: app/Http/Controllers/Admin/Website/PageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\Page\:\:\$meta_title\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Admin/Website/PageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\Page\:\:\$meta_desc\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Admin/Website/PageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\Page\:\:\$og_image\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Admin/Website/PageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Language\\Models\\Language\:\:\$code\.$#'
+			identifier: property.notFound
 			count: 1
 			path: app/Http/Controllers/Admin/Website/PageController.php
 
@@ -3545,6 +3569,24 @@ parameters:
 			identifier: property.notFound
 			count: 2
 			path: app/Modules/LMS/Services/SubmissionService.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Language\\Models\\ContentTranslation\:\:\$translatable_type\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Modules/Language/Models/ContentTranslation.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Language\\Models\\ContentTranslation\:\:\$translatable_id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Modules/Language/Models/ContentTranslation.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Language\\Models\\ContentTranslation\:\:\$locale\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Modules/Language/Models/ContentTranslation.php
 
 		-
 			message: '#^Access to an undefined property App\\Modules\\Language\\Models\\Translation\:\:\$key\.$#'
@@ -9003,11 +9045,17 @@ parameters:
 		-
 			message: '#^Generic type Illuminate\\Database\\Eloquent\\Relations\\HasMany\<App\\Modules\\Website\\Models\\PageLayout\> in PHPDoc tag @return does not specify all template types of class Illuminate\\Database\\Eloquent\\Relations\\HasMany\: TRelatedModel, TDeclaringModel$#'
 			identifier: generics.lessTypes
-			count: 2
+			count: 3
 			path: app/Modules/Website/Models/Page.php
 
 		-
 			message: '#^Method App\\Modules\\Website\\Models\\Page\:\:layouts\(\) should return Illuminate\\Database\\Eloquent\\Relations\\HasMany\<App\\Modules\\Website\\Models\\PageLayout\> but returns Illuminate\\Database\\Eloquent\\Relations\\HasMany\<App\\Modules\\Website\\Models\\PageLayout, \$this\(App\\Modules\\Website\\Models\\Page\)\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Modules/Website/Models/Page.php
+
+		-
+			message: '#^Method App\\Modules\\Website\\Models\\Page\:\:layoutsForLocale\(\) should return Illuminate\\Database\\Eloquent\\Relations\\HasMany\<App\\Modules\\Website\\Models\\PageLayout\> but returns Illuminate\\Database\\Eloquent\\Relations\\HasMany\<App\\Modules\\Website\\Models\\PageLayout, \$this\(App\\Modules\\Website\\Models\\Page\)\>\.$#'
 			identifier: return.type
 			count: 1
 			path: app/Modules/Website/Models/Page.php
@@ -9068,6 +9116,30 @@ parameters:
 
 		-
 			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\PageLayout\:\:\$layout_json\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Website/Services/PageRenderService.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\PageLayout\:\:\$title\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Website/Services/PageRenderService.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\PageLayout\:\:\$meta_title\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Website/Services/PageRenderService.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\PageLayout\:\:\$meta_desc\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Website/Services/PageRenderService.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\PageLayout\:\:\$og_image\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Modules/Website/Services/PageRenderService.php
@@ -9141,7 +9213,7 @@ parameters:
 		-
 			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\Page\:\:\$school_id\.$#'
 			identifier: property.notFound
-			count: 9
+			count: 10
 			path: app/Modules/Website/Services/PageService.php
 
 		-
@@ -9165,7 +9237,37 @@ parameters:
 		-
 			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\PageLayout\:\:\$layout_json\.$#'
 			identifier: property.notFound
+			count: 3
+			path: app/Modules/Website/Services/PageService.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\PageLayout\:\:\$locale\.$#'
+			identifier: property.notFound
 			count: 2
+			path: app/Modules/Website/Services/PageService.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\PageLayout\:\:\$title\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Modules/Website/Services/PageService.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\PageLayout\:\:\$meta_title\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Modules/Website/Services/PageService.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\PageLayout\:\:\$meta_desc\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Modules/Website/Services/PageService.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\PageLayout\:\:\$og_image\.$#'
+			identifier: property.notFound
+			count: 3
 			path: app/Modules/Website/Services/PageService.php
 
 		-

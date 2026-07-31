@@ -15,6 +15,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 /**
@@ -395,9 +396,9 @@ class PageController extends Controller
      * hidden field (e.g. a language later deactivated mid-edit) can never
      * 500 or silently write into a locale that doesn't exist.
      *
-     * @param  \Illuminate\Support\Collection<int, \App\Modules\Language\Models\Language>  $languages
+     * @param  Collection<int, Language>  $languages
      */
-    private function resolveLocale(?string $requested, \Illuminate\Support\Collection $languages, string $default): string
+    private function resolveLocale(?string $requested, Collection $languages, string $default): string
     {
         if ($requested && $languages->contains(fn ($l) => $l->code === $requested)) {
             return $requested;
