@@ -6,15 +6,6 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
-### Changed
-- Demo site seed (`database/seeders/SchoolSeeder.php`, `WebsitePagesSeeder.php`) now exercises every piece of
-  `docs/modules/29-frontend-modernization-proposal.md`'s Phases 1–3 in real use, not just their empty/default
-  states: the demo school's `SiteSetting` sets Advanced Theme values (Poppins/Inter fonts, a forest-green
-  footer via `secondary_color`, a tinted card `surface_color`, `10px` button radius/`600` weight) alongside
-  its existing brand color; the homepage leads with a dismissible announcement bar linking to Online
-  Admission; Online Admission ends with a 4-question FAQ accordion. `WebsitePagesSeedTest` extended to cover
-  all of it.
-
 ## [1.3.4] — 2026-07-31
 
 ### Added
@@ -52,6 +43,14 @@ follows [Semantic Versioning](https://semver.org/).
   UX). Both ship with the same Style/Layout tab controls (padding, background, animation, visibility) every
   other block already has, and both are purely additive to `layout_json`'s shape — no migration, and every
   existing page keeps rendering unchanged.
+
+### Changed
+- Demo site seed (`database/seeders/SchoolSeeder.php`, `WebsitePagesSeeder.php`) now exercises every piece of
+  Phases 1–3 above in real use, not just their empty/default states: the demo school's `SiteSetting` sets
+  Advanced Theme values (Poppins/Inter fonts, a forest-green footer via `secondary_color`, a tinted card
+  `surface_color`, `10px` button radius/`600` weight) alongside its existing brand color; the homepage leads
+  with a dismissible announcement bar linking to Online Admission; Online Admission ends with a 4-question
+  FAQ accordion. `WebsitePagesSeedTest` extended to cover all of it.
 
 ## [1.3.3] — 2026-07-28
 
