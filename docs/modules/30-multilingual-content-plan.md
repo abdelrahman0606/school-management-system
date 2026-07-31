@@ -315,6 +315,24 @@ easy for the reviewing admin to spot and finish by hand.
     strict superset of "Save," never a data-loss risk. Tests
     (`tests/Feature/Admin/UiTranslationSuggestTest.php`).
 
+11. ✅ **Bilingual seed/demo data** — everything above wires up the *mechanism* (admin editing +
+    AI-suggest) for translating live content, but a fresh install's seeded demo data was
+    English-only, so switching to `bn` on a brand-new demo site showed an empty translation
+    everywhere until an admin manually typed one in. `SchoolSeeder`, `DemoDataSeeder`, and
+    `WebsitePagesSeeder` now call `setTranslation('field', 'bn', ...)` (School/SiteSetting,
+    Department/Designation names, all 12 seeded Staff names, all 3 seeded Announcements) and seed
+    a parallel Bangla `PageLayout` for all 11 public pages plus a Bangla primary navigation `Menu`
+    (`WebsitePagesSeeder::pageTranslation()`, reusing the same `Page` row per
+    `docs/modules/30-multilingual-content-plan.md`'s own "one Page serves every locale"
+    convention — never a second `Page` row). Every Bangla string here is **hand-written directly
+    in the seeder**, not run through `TranslationGatewayContract`/AI-suggest — seed data needs to
+    be correct and stable at seed time, not dependent on a live network call succeeding during
+    `db:seed`. Fixed a latent bug while doing this: `WebsitePagesSeeder::page()`'s
+    `PageLayout::where('page_id', ...)->delete()` was unscoped by locale, so re-running the
+    seeder after this phase would have deleted the just-seeded Bangla layout every time the
+    English pass ran first in the same `run()`; scoped to `Language::defaultCode()` so each
+    locale's delete-then-recreate only ever touches its own rows.
+
 Each phase is its own branch off `dev`, its own commit(s), tests green before merge — same
 workflow as modules 20/29. Small follow-up fixes after a phase's initial merge (like #6 above) go
 directly onto `dev` instead, same convention CLAUDE.md documents for every other module.

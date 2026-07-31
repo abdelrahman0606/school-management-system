@@ -89,5 +89,31 @@ class SchoolSeeder extends Seeder
                 $hours,
             );
         }
+
+        $this->seedBengaliTranslations($school);
+    }
+
+    /**
+     * Bangla (bn) translations for every HasTranslations field the public
+     * site + admin editor actually surface for School/SiteSetting — see
+     * docs/modules/30-multilingual-content-plan.md Phase 4. Hand-written,
+     * not run through the AI-suggest gateway: seed/demo data should be
+     * correct and stable, not a live network call at seed time. Numeric
+     * codes (institution_code/school_code/technical_branch_code) are left
+     * untranslated on purpose — transOr() already falls back to the raw
+     * value with no translation row needed, and translating a digit string
+     * is meaningless.
+     */
+    private function seedBengaliTranslations(School $school): void
+    {
+        $school->setTranslation('name', 'bn', 'গ্রীন ভ্যালি মডেল স্কুল');
+        $school->setTranslation('institution_code_label', 'bn', 'EIIN');
+        $school->setTranslation('school_code_label', 'bn', 'কারিগরি শাখা কোড');
+        $school->setTranslation('technical_branch_code_label', 'bn', 'বিদ্যালয় কোড');
+        $school->setTranslation('address', 'bn', 'নাটুদহ, দামুড়হুদা, চুয়াডাঙ্গা');
+
+        $settings = SiteSetting::forSchool($school->id);
+        $settings->setTranslation('meta_title', 'bn', 'গ্রীন ভ্যালি মডেল স্কুল');
+        $settings->setTranslation('meta_description', 'bn', '১৯৮৫ সাল থেকে কৌতূহলী মনের লালনকারী একটি ঐতিহ্যবাহী প্রতিষ্ঠান।');
     }
 }

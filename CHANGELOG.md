@@ -7,6 +7,17 @@ follows [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Bilingual (en + bn) seed/demo data: `SchoolSeeder`/`DemoDataSeeder`/`WebsitePagesSeeder` now
+  seed hand-written Bangla translations for School/SiteSetting identity fields, Department/
+  Designation names, all 12 demo Staff names, all 3 demo Announcements, all 11 public pages'
+  block content, and a Bangla primary navigation Menu — so a fresh install already shows real
+  Bangla content when switching languages, instead of an empty translation until an admin fills
+  one in by hand. New `WebsitePagesSeeder::pageTranslation()` seeds a locale-specific
+  `PageLayout` against the SAME `Page` row (never a second `Page`); fixed a latent bug where
+  `page()`'s `PageLayout` delete was unscoped by locale, which would have wiped the Bangla layout
+  on every reseed. None of this content goes through the AI-suggest gateway — seed data is
+  hand-written and stable, not a live network call at seed time. See
+  `docs/modules/30-multilingual-content-plan.md` Phase 11.
 - "Suggest translations (AI)" for the general UI-string catalog (Settings → Languages →
   Translations editor) — previously only the per-model content (School, Pages, Menus, Announcement,
   Staff, ...) had an AI-suggest button; the flat `__()` string catalog (~2,200 keys) was manual-only.

@@ -103,32 +103,49 @@ class DemoDataSeeder extends Seeder
 
         // ── Departments + designations ──────────────────────────────────────
         $admDept = Department::firstOrCreate(['school_id' => $sid, 'name' => 'Administrative']);
+        $admDept->setTranslation('name', 'bn', 'প্রশাসনিক');
         $acaDept = Department::firstOrCreate(['school_id' => $sid, 'name' => 'Academic']);
+        $acaDept->setTranslation('name', 'bn', 'একাডেমিক');
 
+        // Bangla (bn) labels for the designations below — docs/modules/
+        // 30-multilingual-content-plan.md Phase 7. Hand-written, not run
+        // through the AI-suggest gateway (see SchoolSeeder's own comment on
+        // why seed data doesn't use a live translation call).
+        $desigBn = [
+            'Head Teacher' => 'প্রধান শিক্ষক',
+            'Assistant Head Teacher' => 'সহকারী প্রধান শিক্ষক',
+            'Librarian' => 'গ্রন্থাগারিক',
+            'Admission Officer' => 'ভর্তি কর্মকর্তা',
+            'Accounts Officer' => 'হিসাব কর্মকর্তা',
+            'Teacher' => 'শিক্ষক',
+            'Assistant Teacher' => 'সহকারী শিক্ষক',
+        ];
         $desig = [];
-        foreach ([
-            'Head Teacher', 'Assistant Head Teacher', 'Librarian', 'Admission Officer',
-            'Accounts Officer', 'Teacher', 'Assistant Teacher',
-        ] as $name) {
+        foreach (array_keys($desigBn) as $name) {
             $desig[$name] = Designation::firstOrCreate(['school_id' => $sid, 'name' => $name]);
+            $desig[$name]->setTranslation('name', 'bn', $desigBn[$name]);
         }
 
         // ── Staff ───────────────────────────────────────────────────────────
+        // 'name_bn' -- Bangla spelling of the same person's name (not a
+        // machine transliteration; hand-written, see SchoolSeeder's own
+        // comment on why seed data is never run through the AI-suggest
+        // gateway).
         $adminStaff = [
-            ['name' => 'Abdul Karim',   'gender' => 'male',   'desig' => 'Head Teacher'],
-            ['name' => 'Ayesha Rahman', 'gender' => 'female', 'desig' => 'Assistant Head Teacher'],
-            ['name' => 'Nurul Islam',   'gender' => 'male',   'desig' => 'Librarian'],
-            ['name' => 'Shirin Akter',  'gender' => 'female', 'desig' => 'Admission Officer'],
-            ['name' => 'Jahangir Alam', 'gender' => 'male',   'desig' => 'Accounts Officer'],
+            ['name' => 'Abdul Karim',   'name_bn' => 'আব্দুল করিম',   'gender' => 'male',   'desig' => 'Head Teacher'],
+            ['name' => 'Ayesha Rahman', 'name_bn' => 'আয়েশা রহমান',  'gender' => 'female', 'desig' => 'Assistant Head Teacher'],
+            ['name' => 'Nurul Islam',   'name_bn' => 'নূরুল ইসলাম',   'gender' => 'male',   'desig' => 'Librarian'],
+            ['name' => 'Shirin Akter',  'name_bn' => 'শিরিন আক্তার',  'gender' => 'female', 'desig' => 'Admission Officer'],
+            ['name' => 'Jahangir Alam', 'name_bn' => 'জাহাঙ্গীর আলম', 'gender' => 'male',   'desig' => 'Accounts Officer'],
         ];
         $teachingStaff = [
-            ['name' => 'Mohammad Hasan', 'gender' => 'male',   'desig' => 'Teacher',           'subject' => 'Mathematics'],
-            ['name' => 'Rehana Begum',   'gender' => 'female', 'desig' => 'Teacher',           'subject' => 'English'],
-            ['name' => 'Kamrul Islam',   'gender' => 'male',   'desig' => 'Teacher',           'subject' => 'Bangla'],
-            ['name' => 'Sabina Yasmin',  'gender' => 'female', 'desig' => 'Teacher',           'subject' => 'Science'],
-            ['name' => 'Tariq Aziz',     'gender' => 'male',   'desig' => 'Teacher',           'subject' => 'Social Science'],
-            ['name' => 'Farhana Haque',  'gender' => 'female', 'desig' => 'Assistant Teacher', 'subject' => 'ICT'],
-            ['name' => 'Mizanur Rahman', 'gender' => 'male',   'desig' => 'Assistant Teacher', 'subject' => 'Religion'],
+            ['name' => 'Mohammad Hasan', 'name_bn' => 'মোহাম্মদ হাসান', 'gender' => 'male',   'desig' => 'Teacher',           'subject' => 'Mathematics'],
+            ['name' => 'Rehana Begum',   'name_bn' => 'রেহানা বেগম',    'gender' => 'female', 'desig' => 'Teacher',           'subject' => 'English'],
+            ['name' => 'Kamrul Islam',   'name_bn' => 'কামরুল ইসলাম',   'gender' => 'male',   'desig' => 'Teacher',           'subject' => 'Bangla'],
+            ['name' => 'Sabina Yasmin',  'name_bn' => 'সাবিনা ইয়াসমিন', 'gender' => 'female', 'desig' => 'Teacher',           'subject' => 'Science'],
+            ['name' => 'Tariq Aziz',     'name_bn' => 'তারিক আজিজ',     'gender' => 'male',   'desig' => 'Teacher',           'subject' => 'Social Science'],
+            ['name' => 'Farhana Haque',  'name_bn' => 'ফারহানা হক',     'gender' => 'female', 'desig' => 'Assistant Teacher', 'subject' => 'ICT'],
+            ['name' => 'Mizanur Rahman', 'name_bn' => 'মিজানুর রহমান',  'gender' => 'male',   'desig' => 'Assistant Teacher', 'subject' => 'Religion'],
         ];
 
         $staffByName = [];
@@ -147,6 +164,7 @@ class DemoDataSeeder extends Seeder
                     'joining_date' => now()->subYears(5)->toDateString(),
                 ],
             );
+            $staffByName[$row['name']]->setTranslation('name', 'bn', $row['name_bn']);
             $seq++;
         }
         foreach ($teachingStaff as $row) {
@@ -164,6 +182,7 @@ class DemoDataSeeder extends Seeder
                     'joining_date' => now()->subYears(3)->toDateString(),
                 ],
             );
+            $staffByName[$row['name']]->setTranslation('name', 'bn', $row['name_bn']);
             $seq++;
         }
 
@@ -306,13 +325,33 @@ class DemoDataSeeder extends Seeder
         }
 
         // ── Notices ─────────────────────────────────────────────────────────
+        // 'title_bn'/'body_bn' -- hand-written Bangla (see SchoolSeeder's own
+        // comment on why seed data skips the AI-suggest gateway).
         if ($admin) {
             foreach ([
-                ['title' => 'Admission open for the new academic year', 'body' => 'Applications for classes 3 to 8 are now open. Apply online or visit the school office.', 'is_pinned' => true],
-                ['title' => 'Annual sports day on Friday', 'body' => 'The annual sports day will be held this Friday on the school ground. All students must attend.', 'is_pinned' => false],
-                ['title' => 'Half-yearly examination schedule published', 'body' => 'The half-yearly examination routine has been published. Collect it from your class teacher.', 'is_pinned' => false],
+                [
+                    'title' => 'Admission open for the new academic year',
+                    'body' => 'Applications for classes 3 to 8 are now open. Apply online or visit the school office.',
+                    'is_pinned' => true,
+                    'title_bn' => 'নতুন শিক্ষাবর্ষের জন্য ভর্তি চলছে',
+                    'body_bn' => '৩য় থেকে ৮ম শ্রেণির জন্য আবেদন গ্রহণ চলছে। অনলাইনে আবেদন করুন অথবা বিদ্যালয় কার্যালয়ে যোগাযোগ করুন।',
+                ],
+                [
+                    'title' => 'Annual sports day on Friday',
+                    'body' => 'The annual sports day will be held this Friday on the school ground. All students must attend.',
+                    'is_pinned' => false,
+                    'title_bn' => 'শুক্রবার বার্ষিক ক্রীড়া প্রতিযোগিতা',
+                    'body_bn' => 'এই শুক্রবার বিদ্যালয় মাঠে বার্ষিক ক্রীড়া প্রতিযোগিতা অনুষ্ঠিত হবে। সকল শিক্ষার্থীর উপস্থিতি বাধ্যতামূলক।',
+                ],
+                [
+                    'title' => 'Half-yearly examination schedule published',
+                    'body' => 'The half-yearly examination routine has been published. Collect it from your class teacher.',
+                    'is_pinned' => false,
+                    'title_bn' => 'ষাণ্মাসিক পরীক্ষার সময়সূচি প্রকাশিত',
+                    'body_bn' => 'ষাণ্মাসিক পরীক্ষার রুটিন প্রকাশিত হয়েছে। আপনার শ্রেণি শিক্ষকের কাছ থেকে সংগ্রহ করুন।',
+                ],
             ] as $nn) {
-                Announcement::firstOrCreate(
+                $announcement = Announcement::firstOrCreate(
                     ['school_id' => $sid, 'title' => $nn['title']],
                     [
                         'created_by' => $admin->id,
@@ -322,6 +361,8 @@ class DemoDataSeeder extends Seeder
                         'publish_at' => now()->subDays(2),
                     ],
                 );
+                $announcement->setTranslation('title', 'bn', $nn['title_bn']);
+                $announcement->setTranslation('body', 'bn', $nn['body_bn']);
             }
         }
     }
