@@ -392,7 +392,7 @@
                  since School::address is a HasTranslations field -- a raw ->address here would
                  always render the school's default-locale address regardless of visitor locale. --}}
             @if(($d['address'] ?? null) || ($d['school']?->transOr('address') ?? null))<li class="d-flex align-items-center gap-3 mb-3"><span class="icon-badge d-inline-flex align-items-center justify-content-center"><i class="bi bi-geo-alt"></i></span> {{ $d['address'] ?? $d['school']->transOr('address') }}</li>@endif
-            @if($d['phone'] ?? null)<li class="d-flex align-items-center gap-3 mb-3"><span class="icon-badge d-inline-flex align-items-center justify-content-center"><i class="bi bi-telephone"></i></span> {{ $d['phone'] }}</li>@endif
+            @if($d['phone'] ?? null)<li class="d-flex align-items-center gap-3 mb-3"><span class="icon-badge d-inline-flex align-items-center justify-content-center"><i class="bi bi-telephone"></i></span> {{ \App\Support\LocalizedDate::digits($d['phone']) }}</li>@endif
             @if(($d['email'] ?? null) || ($d['school']->email ?? null))<li class="d-flex align-items-center gap-3 mb-3"><span class="icon-badge d-inline-flex align-items-center justify-content-center"><i class="bi bi-envelope"></i></span> {{ $d['email'] ?? $d['school']->email }}</li>@endif
           </ul>
           @if(!empty($d['map_embed']))<div class="ratio ratio-4x3 mt-3 rounded-3 overflow-hidden media-shadow"><iframe src="{{ $d['map_embed'] }}" loading="lazy" style="border:0;"></iframe></div>@endif

@@ -4,6 +4,7 @@ namespace Tests\Feature\Public;
 
 use App\Modules\Announcement\Models\Announcement;
 use App\Modules\School\Models\School;
+use App\Modules\School\Models\SchoolPhone;
 use App\Modules\Staff\Models\Designation;
 use App\Modules\Staff\Models\Staff;
 use App\Modules\Student\Models\Student;
@@ -266,5 +267,30 @@ class MultilingualBlockContentTest extends TestCase
             ->assertOk()
             ->assertSee('নাটুদহ, দামুড়হুদা, চুয়াডাঙ্গা')
             ->assertDontSee('Natipota, Damurhuda, Chuadanga');
+    }
+
+    /**
+     * Reported: "header mobile number link will be in English but the shown
+     * content should be in translation" — the header's tel: link text used
+     * raw ASCII digits like every other number on the site used to. Fixed by
+     * localizing the visible text with LocalizedDate::digits() while leaving
+     * the href alone -- a tel: link has to stay dialable, so native-digit
+     * glyphs there would break click-to-call on most devices.
+     */
+    public function test_header_phone_link_text_uses_native_digits_but_href_stays_dialable(): void
+    {
+        SchoolPhone::create([
+            'school_id' => $this->school->id, 'phone' => '01712345678',
+            'is_primary' => true, 'show_in_header' => true,
+        ]);
+
+        $this->publishPage('header-phone', [
+            'template' => 'full',
+            'blocks' => [['type' => 'heading', 'data' => ['text' => 'Hi']]],
+        ]);
+
+        $response = $this->withSession(['app_locale' => 'bn'])->get('/header-phone')->assertOk();
+        $response->assertSee('href="tel:01712345678"', false);
+        $response->assertSee(LocalizedDate::digits('01712345678', 'bn'));
     }
 }

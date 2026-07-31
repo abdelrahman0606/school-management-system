@@ -47,8 +47,13 @@
                 @if($headerPhones->isNotEmpty())
                     <span>
                         <i class="bi bi-telephone-fill"></i>
+                        {{-- href stays plain ASCII digits (preg_replace already strips
+                             everything but 0-9/+) -- a tel: link has to stay dialable,
+                             native-digit glyphs there would break click-to-call on most
+                             devices. Only the visible TEXT is localized, same as every
+                             other number on the public site. --}}
                         @foreach($headerPhones as $ph)<a href="tel:{{ preg_replace('/[^0-9+]/', '', $ph->phone) }}"
-                            style="color: {{ $topText }}; text-decoration:none;">{{ $ph->phone }}</a>@if(!$loop->last), @endif
+                            style="color: {{ $topText }}; text-decoration:none;">{{ \App\Support\LocalizedDate::digits($ph->phone) }}</a>@if(!$loop->last), @endif
                         @endforeach
                     </span>
                 @endif

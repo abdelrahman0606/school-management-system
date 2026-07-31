@@ -70,6 +70,14 @@ follows [Semantic Versioning](https://semver.org/).
   (`tests/Feature/Admin/MultilingualAnnouncementAndStaffContentTest.php`).
 
 ### Fixed
+- Reported: "header mobile number link will be in English but the shown content should be in
+  translation" — the header's `tel:` phone link (and the contact/contact_info block's plain-text
+  phone display) showed raw ASCII digits like every other number on the site used to. Localized
+  the visible link/text with `LocalizedDate::digits()` while leaving the `tel:` `href` itself
+  alone — a click-to-call link has to stay dialable, so native-digit glyphs there would break it
+  on most devices/apps. Test:
+  `test_header_phone_link_text_uses_native_digits_but_href_stays_dialable`
+  (`tests/Feature/Public/MultilingualBlockContentTest.php`).
 - Reported: "stats block number is in English even in bn" and "contact block isn't receiving
   translated content" — two separate gaps in `public/blocks/render.blade.php` (contact's sidebar
   twin in `public/sidebar/render.blade.php` too):
