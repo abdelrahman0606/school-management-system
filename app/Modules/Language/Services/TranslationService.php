@@ -2,7 +2,11 @@
 
 namespace App\Modules\Language\Services;
 
+use App\Modules\Announcement\Models\Announcement;
 use App\Modules\School\Models\School;
+use App\Modules\Staff\Models\Department;
+use App\Modules\Staff\Models\Designation;
+use App\Modules\Staff\Models\Staff;
 use App\Modules\Website\Models\SiteSetting;
 
 /**
@@ -10,16 +14,19 @@ use App\Modules\Website\Models\SiteSetting;
  * covers every active (non-default) language at once for one HasTranslations
  * host model. docs/modules/30-multilingual-content-plan.md Phase 4.
  *
- * Union-typed to School|SiteSetting rather than a generic Model — those are
- * the only two HasTranslations hosts in scope so far (same models the trait
- * itself is documented against); widen this the day a third one needs it.
+ * Union-typed rather than a generic Model — HasTranslations doesn't declare
+ * an interface of its own (see the trait's own docblock), so there's nothing
+ * narrower than "list every current host" to type-hint against. Widen this
+ * union the day a new HasTranslations host needs it (originally just
+ * School|SiteSetting; Announcement/Staff/Designation/Department added when
+ * those modules gained per-field translation).
  */
 class TranslationService
 {
     /**
      * @param  array<string, array<string, mixed>>  $translationsByLocale  [locale => [field => value]]
      */
-    public function saveMany(School|SiteSetting $record, array $translationsByLocale): void
+    public function saveMany(School|SiteSetting|Announcement|Staff|Designation|Department $record, array $translationsByLocale): void
     {
         foreach ($translationsByLocale as $locale => $fields) {
             foreach ($fields as $field => $value) {

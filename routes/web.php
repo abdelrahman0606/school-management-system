@@ -408,12 +408,14 @@ Route::middleware(['auth', 'school'])->prefix('admin')->name('admin.')->group(fu
         Route::post('/staff', [StaffController::class, 'store'])->name('staff.store');
         Route::put('/staff/{id}', [StaffController::class, 'update'])->name('staff.update');
         Route::patch('/staff/{id}/deactivate', [StaffController::class, 'deactivate'])->name('staff.deactivate');
+        Route::post('/staff/{id}/translations/suggest', [StaffController::class, 'suggestTranslation'])->name('staff.translations.suggest');
 
         foreach (['designations', 'departments'] as $type) {
             Route::get("/{$type}", [StaffReferenceController::class, 'index'])->defaults('type', $type)->name("{$type}.index");
             Route::post("/{$type}", [StaffReferenceController::class, 'store'])->defaults('type', $type)->name("{$type}.store");
             Route::put("/{$type}/{id}", [StaffReferenceController::class, 'update'])->defaults('type', $type)->name("{$type}.update");
             Route::delete("/{$type}/{id}", [StaffReferenceController::class, 'destroy'])->defaults('type', $type)->name("{$type}.destroy");
+            Route::post("/{$type}/{id}/translations/suggest", [StaffReferenceController::class, 'suggestTranslation'])->defaults('type', $type)->name("{$type}.translations.suggest");
         }
 
         // Online admission applications
@@ -506,6 +508,7 @@ Route::middleware(['auth', 'school'])->prefix('admin')->name('admin.')->group(fu
         Route::patch('/announcements/{id}/publish', [AnnouncementController::class, 'publish'])->name('announcements.publish');
         Route::patch('/announcements/{id}/expire', [AnnouncementController::class, 'expire'])->name('announcements.expire');
         Route::delete('/announcements/{id}', [AnnouncementController::class, 'destroy'])->name('announcements.destroy');
+        Route::post('/announcements/{id}/translations/suggest', [AnnouncementController::class, 'suggestTranslation'])->name('announcements.translations.suggest');
 
         Route::get('/sms', [SmsController::class, 'index'])->name('sms.index');
         Route::post('/sms', [SmsController::class, 'store'])->name('sms.store');

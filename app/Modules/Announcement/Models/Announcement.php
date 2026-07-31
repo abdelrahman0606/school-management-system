@@ -2,12 +2,15 @@
 
 namespace App\Modules\Announcement\Models;
 
+use App\Support\Concerns\HasTranslations;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Announcement extends Model
 {
+    use HasTranslations;
+
     protected $fillable = [
         'school_id',
         'created_by',

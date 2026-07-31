@@ -237,6 +237,27 @@ easy for the reviewing admin to spot and finish by hand.
      `/backend/language/{code}` — the only thing `partials/language-switcher.blade.php` links to)
      — see module 26's own docs for the full detail. Tests
      (`tests/Feature/Language/LanguageModuleTest.php`).
+   - Menu save could delete items non-deterministically: `menu_items.parent_id`'s
+     `cascadeOnDelete()` racing `MenuService::replaceItems()`'s `ORDER BY sort_order` delete —
+     see CLAUDE.md's own Gotchas Learned entry for the full mechanism. Fixed by deleting children
+     before parents explicitly, with no ordering on either step. Also removed the Menu editor's
+     "Copy from default language to start translating" button — it duplicated "Build from default
+     language (AI)" (Phase 5) for no real benefit once that shipped.
+7. ✅ **Announcement + Staff/Designation/Department** (extends this plan beyond the public
+   website — see Non-goals below, updated): `HasTranslations` wired onto `Announcement`
+   (title/body), `Staff` (name), `Designation` (name), `Department` (name) — all four reuse
+   Phase 4/5's exact mechanism (`content_translations`, `TranslationService::saveMany()`, a
+   per-model `Suggest*TranslationJob`) unchanged, just for admin-only content (staff directory,
+   announcements board) rather than the public site. The one real difference: these are all
+   per-row list-with-modal-per-row admin screens (DataTable + Bootstrap modal), not a singleton
+   settings page or a dedicated edit route — so the language-panel-per-`<details>` and "hidden
+   sibling AI-suggest form" pattern from School's editor had to go *inside* each row's own edit
+   modal, with per-row-unique DOM/route ids (`ai-suggest-{model}-{id}-{locale}`) instead of one
+   set per page. Designation and Department share one `SuggestStaffReferenceTranslationJob`
+   (parameterized by model class string) the same way `StaffReferenceController` already shares
+   one controller for both. `TranslationService::saveMany()`'s union type widened to admit all
+   four new hosts (see its own docblock). Tests
+   (`tests/Feature/Admin/MultilingualAnnouncementAndStaffContentTest.php`). Merged to `dev`.
 
 Each phase is its own branch off `dev`, its own commit(s), tests green before merge — same
 workflow as modules 20/29. Small follow-up fixes after a phase's initial merge (like #6 above) go
@@ -247,5 +268,7 @@ directly onto `dev` instead, same convention CLAUDE.md documents for every other
 - Locale-prefixed URLs (`/en/about`) — out of scope, stays session-based.
 - Machine-translating existing untouched content in bulk on migration — new content only,
   admin/AI-assist opts in per field.
-- Translating `Announcement`/`Notice` module content, staff/student-facing portals, or anything
-  outside the public website — this plan is scoped to the public-facing site only.
+- Translating staff/student-facing portal UI strings, or any further admin-only content beyond
+  what Phase 7 above already covers (Announcement title/body, Staff/Designation/Department name)
+  — those four were the specific, explicitly-requested exceptions to this plan's original
+  public-website-only scope; nothing else in the admin panel gained translation from this work.

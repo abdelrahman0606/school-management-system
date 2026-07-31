@@ -6,6 +6,18 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- Per-field translation for Announcement (title + body) and Staff/Designation/Department (name),
+  extending `docs/modules/30-multilingual-content-plan.md`'s Phase 4/5 pattern beyond the public
+  website to these four admin-only screens. `HasTranslations` wired onto all four models; each
+  gets a "Translations" section (one collapsed panel per active non-default language, same
+  convention as School settings) inside its existing modal-per-row edit form, plus a "Suggest
+  translations (AI)" button per language. Designation and Department share one
+  `SuggestStaffReferenceTranslationJob` (parameterized by model class) the same way
+  `StaffReferenceController` already shares one controller for both types.
+  `TranslationService::saveMany()`'s type widened to admit the four new hosts. Tests
+  (`tests/Feature/Admin/MultilingualAnnouncementAndStaffContentTest.php`).
+
 ### Fixed
 - Reported: saving the Menu editor for a locale after using "Build from default language (AI)"
   left the tree corrupted — some top-level items duplicated, the Gallery dropdown split into two
