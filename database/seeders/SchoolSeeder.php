@@ -36,7 +36,13 @@ class SchoolSeeder extends Seeder
         $school = School::first();
         $school ? $school->update($profile) : $school = School::create($profile);
 
-        // Public-site appearance defaults.
+        // Public-site appearance defaults. The "Advanced Theme" fields below
+        // (secondary/surface colors, fonts, button styling) are deliberately
+        // set here too — docs/modules/29-frontend-modernization-proposal.md
+        // Phase 1 wired these up, but every one of them is optional and
+        // invisible until a school actually sets a value; the demo site is
+        // the one place that should actually show them in use, not just
+        // exercise their defaults like every other seeded school would.
         SiteSetting::updateOrCreate(
             ['school_id' => $school->id],
             [
@@ -47,6 +53,13 @@ class SchoolSeeder extends Seeder
                 'ticker_position' => 'below_nav',
                 'meta_title' => 'Green Valley Model School',
                 'meta_description' => 'A traditional institution nurturing curious minds since 1985.',
+                // Advanced theme (Phase 1)
+                'secondary_color' => '#0b3d24', // footer background — a deep forest green pairing with primary
+                'surface_color' => '#f8faf8',   // subtle warm-green tint behind cards, instead of plain white
+                'font_heading' => 'Poppins',
+                'font_body' => 'Inter',
+                'btn_radius' => 10,
+                'btn_font_weight' => '600',
             ],
         );
 
