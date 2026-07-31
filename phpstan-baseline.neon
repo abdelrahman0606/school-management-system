@@ -9211,31 +9211,25 @@ parameters:
 			path: app/Modules/Website/Services/PageRenderService.php
 
 		-
-			message: '#^Offset ''enabled'' on array\{enabled\: bool, label\: string, required\: bool\} on left side of \?\? always exists and is not nullable\.$#'
+			message: '#^Offset ''enabled'' on array\{enabled\: bool, label\: string\|null, required\: bool\} on left side of \?\? always exists and is not nullable\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Modules/Website/Services/PageRenderService.php
 
 		-
-			message: '#^Offset ''label'' on array\{enabled\: bool, label\: string, required\: bool\} on left side of \?\? always exists and is not nullable\.$#'
-			identifier: nullCoalesce.offset
-			count: 1
-			path: app/Modules/Website/Services/PageRenderService.php
-
-		-
-			message: '#^Offset ''options'' on array\{enabled\: bool, label\: string, required\: bool\} on left side of \?\? does not exist\.$#'
+			message: '#^Offset ''options'' on array\{enabled\: bool, label\: string\|null, required\: bool\} on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
 			count: 2
 			path: app/Modules/Website/Services/PageRenderService.php
 
 		-
-			message: '#^Offset ''required'' on array\{enabled\: bool, label\: string, required\: bool\} on left side of \?\? always exists and is not nullable\.$#'
+			message: '#^Offset ''required'' on array\{enabled\: bool, label\: string\|null, required\: bool\} on left side of \?\? always exists and is not nullable\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Modules/Website/Services/PageRenderService.php
 
 		-
-			message: '#^Offset ''type'' on array\{enabled\: bool, label\: string, required\: bool\} on left side of \?\? does not exist\.$#'
+			message: '#^Offset ''type'' on array\{enabled\: bool, label\: string\|null, required\: bool\} on left side of \?\? does not exist\.$#'
 			identifier: nullCoalesce.offset
 			count: 1
 			path: app/Modules/Website/Services/PageRenderService.php
@@ -9713,3 +9707,63 @@ parameters:
 			identifier: property.notFound
 			count: 1
 			path: app/Modules/Website/Services/PublicPortalService.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Examination\\Models\\ExamSeating\:\:\$student_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: database/seeders/DemoCompletionSeeder.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Academic\\Models\\AcademicYear\:\:\$year\.$#'
+			identifier: property.notFound
+			count: 3
+			path: database/seeders/DemoCompletionSeeder.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Student\\Models\\StudentGuardian\:\:\$phone\.$#'
+			identifier: property.notFound
+			count: 1
+			path: database/seeders/DemoCompletionSeeder.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\School\\Models\\School\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: database/seeders/DemoCompletionSeeder.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Student\\Models\\Student\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: database/seeders/DemoCompletionSeeder.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Payroll\\Models\\SalaryComponent\:\:\$component_type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: database/seeders/DemoCompletionSeeder.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Payroll\\Models\\StaffSalaryValue\:\:\$amount\.$#'
+			identifier: property.notFound
+			count: 1
+			path: database/seeders/DemoCompletionSeeder.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Payroll\\Models\\SalaryComponent\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: database/seeders/DemoCompletionSeeder.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Payment\\Models\\Payment\:\:\$amount\.$#'
+			identifier: property.notFound
+			count: 1
+			path: database/seeders/DemoCompletionSeeder.php
+
+		-
+			message: '#^Using nullsafe property access "\?\-\>year" on left side of \?\? is unnecessary\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: database/seeders/DemoCompletionSeeder.php

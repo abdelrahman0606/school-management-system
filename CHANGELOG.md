@@ -39,6 +39,10 @@ follows [Semantic Versioning](https://semver.org/).
 - "Suggest translation (AI)" used to close the edit modal on Staff/Announcement/Designation/
   Department — now updates in place.
 - Cleared 9 `phpstan` errors and a handful of test failures found by actually running the suite.
+- `phpstan-baseline.neon` drift: `DemoCompletionSeeder.php`'s undefined-property noise (no `@property`
+  annotations anywhere in this codebase, same as everywhere else) wasn't baselined yet, and a `label`
+  type change in `PageRenderService` from an earlier fix had gone stale against its old baseline
+  entries.
 - Cleaned up `bn.json` translation quality: fixed ~30 wrong or garbled entries (mistranslations,
   leaked artifacts, inconsistent terms) found across two review passes, and removed one scanner
   false-positive key.
