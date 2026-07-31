@@ -161,7 +161,7 @@ class PageController extends Controller
             // is published overall but the revision on screen right now
             // isn't the one that's live for this locale — the one case the
             // plain form-diff check can't see for itself.
-            'needsPublish' => $page->status === 'published' && ! ($layout?->is_published ?? false),
+            'needsPublish' => $layout !== null && $page->status === 'published' && ! $layout->is_published,
             'locale' => $locale,
             'defaultLocale' => $defaultLocale,
             'languages' => $languages,
