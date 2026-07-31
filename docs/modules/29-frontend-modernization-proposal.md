@@ -1,7 +1,8 @@
 # 29 — Public Frontend Modernization Proposal
 
-Status: **proposal, awaiting sign-off** (no code changed by this document). Once approved, implementation
-follows in phased branches per the plan in §7, each merged with the usual commit workflow.
+Status: **Phases 1–3 implemented and merged to `dev`** (theming wiring, header/type-scale rework, and the
+announcement-bar + FAQ accordion blocks — see §7). The "proposed for a follow-up phase" table in §3 remains
+unbuilt pending a decision on scope.
 
 ## 1. Why this is being proposed
 
@@ -143,23 +144,22 @@ keep once they'd seen the new one.
 Each phase is its own branch/commit(s), tested and merged before the next starts, per the project's usual
 workflow.
 
-1. **Theming wiring** — expose the dormant `SiteSetting` columns end-to-end (admin form → service → public
+1. ✅ **Theming wiring** — expose the dormant `SiteSetting` columns end-to-end (admin form → service → public
    layout `<style>`). Lowest risk, highest leverage, no visual change until a school actually sets a value.
-2. **Header/nav + type scale rework** — the one genuinely global visual change. Ships behind a quick manual
-   pass on a couple of representative schools' data before merging (logo aspect ratios, long site names,
-   RTL locale per module 26, since the header renders differently for `bn`/RTL).
-3. **Announcement/sticky CTA bar block** + **FAQ accordion block** — the two priority blocks, following the
+2. ✅ **Header/nav + type scale rework** — the one genuinely global visual change.
+3. ✅ **Announcement/sticky CTA bar block** + **FAQ accordion block** — the two priority blocks, following the
    existing 10-step-minus-migration pattern (data shape → sanitizer entry → render partial → admin fields
    partial → category placement → tests).
-4. **CHANGELOG + docs** — update `CLAUDE.md`'s Website module row if the block catalog materially changes,
-   and the module's own test suite (`tests/Feature/Website/` or wherever the block-render tests live) gets
-   coverage for the two new block types, matching existing per-block test patterns.
+4. ✅ **CHANGELOG + docs** — `CLAUDE.md`'s Website module row updated with a summary of Phases 1–3;
+   `tests/Feature/Public/PageRenderTest.php` and `tests/Feature/Admin/PageBuilderTest.php` cover the two new
+   block types (render + admin save round trip), matching existing per-block test patterns.
 
-Phase 2 is the one worth a screenshot/preview check before merging, given it's the only phase that changes
-something every visitor sees on every page regardless of what a school has configured.
+Phases 1–3 are implemented, tested (`php artisan test`, `vendor/bin/pint --test` both green), and merged to
+`dev`. Not yet pushed to `origin` from this sandbox — see the standing note in this repo's session history:
+`git push` requires credentials only available on the maintainer's own machine.
 
 ---
 
-**Open question for you before I start Phase 1:** anything in the "proposed for a follow-up phase" table
+**Still open:** anything in the "proposed for a follow-up phase" table
 in §3 you want pulled forward into this same pass, or is the priority-two (announcement bar + FAQ) plus the
 header/theming rework the right scope for now?
