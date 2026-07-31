@@ -2,10 +2,13 @@
 
 namespace App\Modules\Website\Models;
 
+use App\Support\Concerns\HasTranslations;
 use Illuminate\Database\Eloquent\Model;
 
 class SiteSetting extends Model
 {
+    use HasTranslations;
+
     public const GLOBAL_BG_TYPES = ['color', 'image'];
 
     /**
