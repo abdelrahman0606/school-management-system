@@ -33,7 +33,7 @@ class ContentTranslation extends Model
     public static function linesFor(string $type, int|string $id, string $locale): array
     {
         return Cache::remember(
-            static::cacheKey($type, $id, $locale),
+            self::cacheKey($type, $id, $locale),
             3600,
             fn () => static::query()
                 ->where('translatable_type', $type)
@@ -47,7 +47,7 @@ class ContentTranslation extends Model
 
     public static function flushCache(string $type, int|string $id, string $locale): void
     {
-        Cache::forget(static::cacheKey($type, $id, $locale));
+        Cache::forget(self::cacheKey($type, $id, $locale));
     }
 
     private static function cacheKey(string $type, int|string $id, string $locale): string
