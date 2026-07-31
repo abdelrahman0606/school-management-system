@@ -44,8 +44,11 @@
     <div class="card"><div class="card-body">
       <h3 class="h6 section-title mb-3">{{ $d['heading'] ?? __('Contact') }}</h3>
       <ul class="list-unstyled small mb-0">
-        @if(($d['address'] ?? null) || ($d['school']->address ?? null))<li class="d-flex align-items-center gap-2 mb-2"><span class="icon-badge d-inline-flex align-items-center justify-content-center" style="width:1.75rem;height:1.75rem;font-size:.8rem;"><i class="bi bi-geo-alt"></i></span> {{ $d['address'] ?? $d['school']->address }}</li>@endif
-        @if($d['phone'] ?? null)<li class="d-flex align-items-center gap-2 mb-2"><span class="icon-badge d-inline-flex align-items-center justify-content-center" style="width:1.75rem;height:1.75rem;font-size:.8rem;"><i class="bi bi-telephone"></i></span> {{ $d['phone'] }}</li>@endif
+        {{-- School::address is a HasTranslations field -- transOr() (not a raw ->address)
+             so the sidebar contact card follows the visitor's locale, same fix as the main
+             contact block in public/blocks/render.blade.php. --}}
+        @if(($d['address'] ?? null) || ($d['school']?->transOr('address') ?? null))<li class="d-flex align-items-center gap-2 mb-2"><span class="icon-badge d-inline-flex align-items-center justify-content-center" style="width:1.75rem;height:1.75rem;font-size:.8rem;"><i class="bi bi-geo-alt"></i></span> {{ $d['address'] ?? $d['school']->transOr('address') }}</li>@endif
+        @if($d['phone'] ?? null)<li class="d-flex align-items-center gap-2 mb-2"><span class="icon-badge d-inline-flex align-items-center justify-content-center" style="width:1.75rem;height:1.75rem;font-size:.8rem;"><i class="bi bi-telephone"></i></span> {{ \App\Support\LocalizedDate::digits($d['phone']) }}</li>@endif
         @if(($d['email'] ?? null) || ($d['school']->email ?? null))<li class="d-flex align-items-center gap-2"><span class="icon-badge d-inline-flex align-items-center justify-content-center" style="width:1.75rem;height:1.75rem;font-size:.8rem;"><i class="bi bi-envelope"></i></span> {{ $d['email'] ?? $d['school']->email }}</li>@endif
       </ul>
     </div></div>
@@ -57,7 +60,7 @@
       @forelse(($d['notices'] ?? collect())->take($d['limit'] ?? 5) as $n)
         <div class="small border-bottom py-2">
           <div class="fw-semibold">{{ $n->title }}</div>
-          <div class="text-muted">{{ optional($n->publish_at ?? $n->created_at)->format('d M Y') }}</div>
+          <div class="text-muted">{{ \App\Support\LocalizedDate::format($n->publish_at ?? $n->created_at, 'd M Y') }}</div>
         </div>
       @empty
         <p class="text-muted small mb-0">{{ __('No Notices.') }}</p>

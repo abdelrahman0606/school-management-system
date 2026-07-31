@@ -49,8 +49,17 @@ to flush the cache via `Language::flushCache()`.
 1. Loads active languages and the default code (both cached). Pre-migration
    (installer / early artisan), it catches the error and leaves the app locale
    alone so setup commands don't crash.
-2. Resolves the chosen locale from the session (`app_locale`), falling back to
-   the default language, and rejecting codes that aren't in the active set.
+2. Picks ONE of two independent session keys based on the request path —
+   `backend_locale` for `/admin*`, `/staff*`, `/portal*`, otherwise
+   `app_locale` (the public site, including `/login` and every guest page) —
+   and resolves the chosen locale from THAT key, falling back to the default
+   language, and rejecting codes that aren't in the active set. The two keys
+   are deliberately independent: an admin/staff/portal user's own backend
+   working language and whatever a public visitor is browsing the site in
+   must never overwrite each other. `/language/{code}` (public, anyone) only
+   ever writes `app_locale`; `/backend/language/{code}` (auth-gated, the only
+   thing `partials/language-switcher.blade.php` links to) only ever writes
+   `backend_locale`.
 3. Calls `app()->setLocale($chosen)`.
 4. For non-English locales, loads the DB translations
    (`Translation::linesFor()`, cached per locale) and feeds them to the

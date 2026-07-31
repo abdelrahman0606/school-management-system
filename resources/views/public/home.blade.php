@@ -5,7 +5,7 @@
      escapes it again, so a site name containing &, ", <, or > would render
      double-escaped. --}}
 @section('title')
-{!! $settings->site_name ?? $school?->name ?? 'Our School' !!}
+{!! $settings->site_name ?? $school?->transOr('name') ?? 'Our School' !!}
 @endsection
 @section('content')
     <header class="hero py-5 py-lg-6">
@@ -13,9 +13,9 @@
             <div class="row align-items-center g-5">
                 <div class="col-lg-7">
                     <span class="eyebrow mb-3">{{ __('Welcome') }}</span>
-                    <h1 class="display-4 mb-3 mt-2">{{ $settings->site_name ?? $school?->name ?? 'Demo School' }}</h1>
+                    <h1 class="display-4 mb-3 mt-2">{{ $settings->site_name ?? $school?->transOr('name') ?? 'Demo School' }}</h1>
                     <p class="lead mb-4 text-white-50" style="max-width:38rem;">
-                        {{ $settings->meta_description ?? 'Nurturing curious minds and building a community of lifelong learners.' }}
+                        {{ $settings->transOr('meta_description') ?? 'Nurturing curious minds and building a community of lifelong learners.' }}
                     </p>
                     <div class="d-flex flex-wrap gap-3">
                         <a href="#results" class="btn btn-light btn-lg px-4"><i class="bi bi-mortarboard"></i> {{ __('Check Results') }}</a>
@@ -62,7 +62,7 @@
                                     <div class="d-flex align-items-center justify-content-center notice-icon mb-3">
                                         <i class="bi bi-megaphone-fill"></i>
                                     </div>
-                                    <div class="small text-muted mb-1">{{ optional($n->publish_at ?? $n->created_at)->format('d M Y') }}</div>
+                                    <div class="small text-muted mb-1">{{ \App\Support\LocalizedDate::format($n->publish_at ?? $n->created_at, 'd M Y') }}</div>
                                     <h3 class="h6 fw-semibold">{{ $n->title }}</h3>
                                     <p class="text-muted small mb-0">{{ \Illuminate\Support\Str::limit(strip_tags($n->body), 120) }}
                                     </p>

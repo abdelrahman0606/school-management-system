@@ -3,6 +3,7 @@
 namespace App\Modules\Website\Services;
 
 use App\Models\User;
+use App\Modules\Language\Models\Language;
 use App\Modules\Website\Models\Page;
 use App\Modules\Website\Models\PageLayout;
 use App\Modules\Website\Models\PageRedirect;
@@ -55,27 +56,48 @@ class PageService
         });
     }
 
-    /** Creates a new (draft) revision — never overwrites a prior one. */
-    public function saveLayout(Page $page, array $layoutJson, ?User $user): PageLayout
+    /**
+     * Creates a new (draft) revision for one locale — never overwrites a
+     * prior one. $locale is required (not defaulted) so every call site has
+     * to be explicit about which language it's writing; $meta carries this
+     * revision's own per-locale title/meta_title/meta_desc/og_image (see
+     * docs/modules/30-multilingual-content-plan.md Phase 2 — every
+     * PageLayout row now owns its own SEO meta, not just the shared `pages`
+     * row).
+     *
+     * @param  array{title?: ?string, meta_title?: ?string, meta_desc?: ?string, og_image?: ?string}  $meta
+     */
+    public function saveLayout(Page $page, array $layoutJson, ?User $user, string $locale, array $meta = []): PageLayout
     {
         return PageLayout::create([
             'school_id' => $page->school_id,
             'page_id' => $page->id,
+            'locale' => $locale,
+            'title' => $meta['title'] ?? null,
+            'meta_title' => $meta['meta_title'] ?? null,
+            'meta_desc' => $meta['meta_desc'] ?? null,
+            'og_image' => $meta['og_image'] ?? null,
             'layout_json' => $layoutJson,
             'is_published' => false,
             'created_by' => $user?->id,
         ]);
     }
 
-    /** Publishes one revision (defaults to the latest) and unpublishes any other. */
-    public function publish(Page $page, ?int $layoutId = null): Page
+    /**
+     * Publishes one revision of ONE locale (defaults to that locale's
+     * latest) and unpublishes any other revision of the SAME locale only —
+     * each language's published state is independent (publishing the
+     * English content doesn't touch a Bangla draft, and vice versa; see
+     * Page::publishedLayout()'s docblock).
+     */
+    public function publish(Page $page, ?int $layoutId, string $locale): Page
     {
-        return DB::transaction(function () use ($page, $layoutId): Page {
+        return DB::transaction(function () use ($page, $layoutId, $locale): Page {
             $target = $layoutId
-                ? $page->layouts()->findOrFail($layoutId)
-                : $page->layouts()->firstOrFail();
+                ? $page->layoutsForLocale($locale)->findOrFail($layoutId)
+                : $page->layoutsForLocale($locale)->firstOrFail();
 
-            $page->layouts()->where('is_published', true)->update(['is_published' => false]);
+            $page->layoutsForLocale($locale)->where('is_published', true)->update(['is_published' => false]);
             $target->update(['is_published' => true, 'published_at' => now()]);
 
             $page->update(['status' => 'published']);
@@ -84,7 +106,13 @@ class PageService
         });
     }
 
-    /** Clones the page (new slug) and its latest layout — never the published-only one, so drafts carry over. */
+    /**
+     * Clones the page (new slug) and the DEFAULT language's latest layout —
+     * never the published-only one, so drafts carry over. Deliberately only
+     * the default locale: a duplicate is a brand-new page, translations
+     * aren't assumed to still apply and are re-added per-locale afterward
+     * the same way any other page's are.
+     */
     public function duplicate(Page $page): Page
     {
         return DB::transaction(function () use ($page): Page {
@@ -101,11 +129,16 @@ class PageService
                 'is_homepage' => false,
             ]);
 
-            $latest = $page->layouts()->first();
+            $latest = $page->layoutsForLocale(Language::defaultCode())->first();
             if ($latest) {
                 PageLayout::create([
                     'school_id' => $copy->school_id,
                     'page_id' => $copy->id,
+                    'locale' => $latest->locale,
+                    'title' => $latest->title,
+                    'meta_title' => $latest->meta_title,
+                    'meta_desc' => $latest->meta_desc,
+                    'og_image' => $latest->og_image,
                     'layout_json' => $latest->layout_json,
                     'is_published' => false,
                     'created_by' => $latest->created_by,
@@ -116,13 +149,40 @@ class PageService
         });
     }
 
-    /** Restores an old revision by creating a NEW row copying it — history is never rewound or destroyed. */
+    /** Restores an old revision by creating a NEW row copying it (same locale + meta) — history is never rewound or destroyed. */
     public function restore(Page $page, PageLayout $revision, ?User $user): PageLayout
     {
         return PageLayout::create([
             'school_id' => $page->school_id,
             'page_id' => $page->id,
+            'locale' => $revision->locale,
+            'title' => $revision->title,
+            'meta_title' => $revision->meta_title,
+            'meta_desc' => $revision->meta_desc,
+            'og_image' => $revision->og_image,
             'layout_json' => $revision->layout_json,
+            'is_published' => false,
+            'created_by' => $user?->id,
+        ]);
+    }
+
+    /**
+     * Seeds a locale's first draft by copying another locale's revision —
+     * the admin editor's "Copy from default language" action. Creates a
+     * normal new draft row (same versioning rules as any other save); the
+     * admin still reviews/translates/Saves it like any other edit.
+     */
+    public function copyLayoutToLocale(Page $page, PageLayout $source, string $toLocale, ?User $user): PageLayout
+    {
+        return PageLayout::create([
+            'school_id' => $page->school_id,
+            'page_id' => $page->id,
+            'locale' => $toLocale,
+            'title' => $source->title,
+            'meta_title' => $source->meta_title,
+            'meta_desc' => $source->meta_desc,
+            'og_image' => $source->og_image,
+            'layout_json' => $source->layout_json,
             'is_published' => false,
             'created_by' => $user?->id,
         ]);

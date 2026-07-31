@@ -1,19 +1,30 @@
 @php
     $primary = $settings->primary_color ?? '#1d4ed8';
     $topText = $settings->topbar_text_color ?? '#ffffff';
-    $siteName = $settings->site_name ?? ($school->name ?? 'Our School');
+    // docs/modules/30-multilingual-content-plan.md Phase 4: same fallback
+    // swap as layout.blade.php's own $siteName computation.
+    $siteName = $settings->site_name ?? ($school?->transOr('name') ?? 'Our School');
 
-    $loc = $school?->locale ?? app()->getLocale();
+    // Follows the VISITOR's browsing locale (app()->getLocale()), same as
+    // every other date on the public site (footer copyright year, notices,
+    // sidebar) -- LocalizedDate::format() already defaults its $locale param
+    // to app()->getLocale() when null, so no override is passed here. (This
+    // used to pin to $school->locale -- the school's configured home-
+    // language column, seeded 'en' -- on the theory that "today" should
+    // reflect the institution's own language regardless of visitor. That
+    // made the header date the one place on the site that silently ignored
+    // the language switcher, which read as "the date hasn't changed" rather
+    // than as an intentional institutional-language date.)
     $tz = $school?->timezone ?? config('app.timezone');
     try {
-        $today = \Illuminate\Support\Carbon::now($tz)->locale($loc);
+        $today = \Illuminate\Support\Carbon::now($tz);
     } catch (\Throwable $e) {
-        $today = now()->locale($loc);
+        $today = now();
     }
-    $dateStr = $today->translatedFormat('l j F Y');
-    if (str_starts_with((string) $loc, 'bn')) {
-        $dateStr = strtr($dateStr, ['0' => '০', '1' => '১', '2' => '২', '3' => '৩', '4' => '৪', '5' => '৫', '6' => '৬', '7' => '৭', '8' => '৮', '9' => '৯']);
-    }
+    // App\Support\LocalizedDate -- translatedFormat() for the month/day
+    // names (Carbon's own bundled locale data, no API call) + a native-digit
+    // swap Carbon doesn't do on its own.
+    $dateStr = \App\Support\LocalizedDate::format($today, 'l j F Y');
 
     $tickerPos = $settings->ticker_position ?? 'below_nav';
     $showTicker = $tickerPos !== 'hidden' && ($ticker ?? collect())->isNotEmpty();
@@ -36,8 +47,13 @@
                 @if($headerPhones->isNotEmpty())
                     <span>
                         <i class="bi bi-telephone-fill"></i>
+                        {{-- href stays plain ASCII digits (preg_replace already strips
+                             everything but 0-9/+) -- a tel: link has to stay dialable,
+                             native-digit glyphs there would break click-to-call on most
+                             devices. Only the visible TEXT is localized, same as every
+                             other number on the public site. --}}
                         @foreach($headerPhones as $ph)<a href="tel:{{ preg_replace('/[^0-9+]/', '', $ph->phone) }}"
-                            style="color: {{ $topText }}; text-decoration:none;">{{ $ph->phone }}</a>@if(!$loop->last), @endif
+                            style="color: {{ $topText }}; text-decoration:none;">{{ \App\Support\LocalizedDate::digits($ph->phone) }}</a>@if(!$loop->last), @endif
                         @endforeach
                     </span>
                 @endif

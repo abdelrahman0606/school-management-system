@@ -18,7 +18,16 @@
 
   <div class="card"><div class="card-body">
     <table class="table table-hover align-middle w-100 js-dt">
-      <thead><tr><th>{{ __('Title') }}</th><th>{{ __('Type') }}</th><th>{{ __('Audience') }}</th><th>{{ __('Priority') }}</th><th>{{ __('Status') }}</th><th class="text-end" data-orderable="false">{{ __('Actions') }}</th></tr></thead>
+      <thead><tr><th>{{ __('Title') }}</th><th>{{ __('Type') }}</th><th>{{ __('Audience') }}</th><th>{{ __('Priority') }}</th><th>{{ __('Status') }}</th>
+        {{-- One column per active non-default language, header = short code.
+             Tick only if BOTH title and body are translated for that
+             language, not just one of them. --}}
+        @if (isset($contentLanguages))
+          @foreach ($contentLanguages as $lang)
+            <th class="text-center" title="{{ $lang->native_name }}">{{ strtoupper($lang->code) }}</th>
+          @endforeach
+        @endif
+        <th class="text-end" data-orderable="false">{{ __('Actions') }}</th></tr></thead>
       <tbody>
         @foreach ($items as $a)
           @php [$label, $clr] = $statusOf($a); @endphp
@@ -28,6 +37,17 @@
             <td class="text-capitalize">{{ $a->audience }}</td>
             <td><x-badge :variant="$a->priority === 'urgent' ? 'danger' : ($a->priority === 'important' ? 'warning' : 'neutral')">{{ ucfirst($a->priority) }}</x-badge></td>
             <td><x-badge :variant="$clr">{{ $label }}</x-badge></td>
+            @if (isset($contentLanguages))
+              @foreach ($contentLanguages as $lang)
+                <td class="text-center">
+                  @if ($a->isTranslated(['title', 'body'], $lang->code))
+                    <i class="bi bi-check-lg text-success" aria-label="{{ __('Translated') }}"></i>
+                  @else
+                    <i class="bi bi-x-lg text-muted" aria-label="{{ __('Not Translated') }}"></i>
+                  @endif
+                </td>
+              @endforeach
+            @endif
             <td class="text-end">
               <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editModal{{ $a->id }}">{{ __('Edit') }}</button>
               @if ($label === 'Draft' || $label === 'Scheduled')
@@ -48,3 +68,7 @@
     @include('admin.comms.announcements._form', ['mode' => 'edit', 'a' => $a])
   @endforeach
 @endsection
+
+@push('scripts')
+  @include('admin.partials.translation-suggest-script')
+@endpush

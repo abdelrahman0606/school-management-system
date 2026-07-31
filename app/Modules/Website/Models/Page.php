@@ -55,10 +55,51 @@ class Page extends Model
         return $this->hasMany(PageLayout::class)->orderByDesc('created_at')->orderByDesc('id');
     }
 
-    /** @return HasMany<PageLayout> */
+    /**
+     * Same ordering as layouts(), scoped to one locale — docs/modules/
+     * 30-multilingual-content-plan.md Phase 2. "Latest revision" is now
+     * per-locale: each language has its own independent draft/publish
+     * history, so admin edit()/history() need this instead of layouts()
+     * whenever "latest" means "latest FOR THE LOCALE BEING EDITED".
+     *
+     * @return HasMany<PageLayout>
+     */
+    public function layoutsForLocale(string $locale): HasMany
+    {
+        return $this->hasMany(PageLayout::class)->where('locale', $locale)
+            ->orderByDesc('created_at')->orderByDesc('id');
+    }
+
+    /**
+     * NOT locale-scoped by itself — a page can have one published row PER
+     * locale simultaneously now (Phase 2: publishing the English content
+     * doesn't touch a Bangla draft, and vice versa). Callers that need "the
+     * published layout for locale X" must add ->where('locale', ...)
+     * themselves (see PageRenderService::publishedLayoutFor()) rather than
+     * relying on ->first() here, which would return whichever locale's
+     * published row the query happens to return first once more than one
+     * exists.
+     *
+     * @return HasMany<PageLayout>
+     */
     public function publishedLayout(): HasMany
     {
         return $this->hasMany(PageLayout::class)->where('is_published', true);
+    }
+
+    /**
+     * True if this page has a currently-PUBLISHED layout for $locale — what's
+     * actually live on the public site for that language, not merely "a
+     * draft revision exists" (see publishedLayout()'s own docblock: a page
+     * can have one published row per locale simultaneously). Backs the
+     * tick/cross translation-status columns on the admin Pages list.
+     * Expects `publishedLayout` to be eager-loaded (PageController::index()
+     * does this via `with('publishedLayout:id,page_id,locale')`) so this is
+     * an in-memory check, not a query per row per language.
+     */
+    public function hasPublishedTranslation(string $locale): bool
+    {
+        return $this->publishedLayout->contains(fn (PageLayout $l) => $l->locale === $locale);
     }
 
     /** @param Builder<Page> $query */

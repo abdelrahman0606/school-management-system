@@ -38,7 +38,7 @@ class PageSeoMetaTagsTest extends TestCase
             'status' => 'published',
         ], $attrs));
         PageLayout::create([
-            'school_id' => $this->school->id, 'page_id' => $page->id,
+            'school_id' => $this->school->id, 'page_id' => $page->id, 'locale' => 'en',
             'layout_json' => ['template' => 'full', 'blocks' => []],
             'is_published' => true, 'published_at' => now(),
         ]);

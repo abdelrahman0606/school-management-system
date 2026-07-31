@@ -50,7 +50,8 @@ class AdmissionFormTest extends TestCase
         );
         PageLayout::where('page_id', $page->id)->delete();
         PageLayout::create([
-            'school_id' => $this->school->id, 'page_id' => $page->id, 'is_published' => true, 'published_at' => now(),
+            'school_id' => $this->school->id, 'page_id' => $page->id, 'locale' => 'en',
+            'is_published' => true, 'published_at' => now(),
             'layout_json' => ['template' => 'full', 'blocks' => [['type' => 'admission_form', 'data' => $blockData]]],
         ]);
     }
@@ -97,7 +98,7 @@ class AdmissionFormTest extends TestCase
         $page = Page::where('school_id', $this->school->id)->where('slug', 'online-admission')->firstOrFail();
         $layout = $page->publishedLayout->first();
 
-        $view = app(PageRenderService::class)->buildView($this->school->id, $layout->layout_json);
+        $view = app(PageRenderService::class)->buildView($this->school->id, $layout->layout_json, 'en');
 
         $this->assertIsString(serialize($view));
     }

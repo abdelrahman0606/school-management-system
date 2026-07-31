@@ -37,9 +37,11 @@ class PageController extends Controller
         }
 
         // renderPage() is cached (keyed by the published layout's own id);
-        // null only when the page has no published layout yet, in which
-        // case this still renders — just with empty blocks, same as before.
-        $view = $this->render->renderPage($page) ?? $this->render->buildView($school->id, null);
+        // null only when the page has NEITHER this locale's NOR the default
+        // locale's published layout, in which case this still renders —
+        // just with empty blocks, same as before. app()->getLocale() is set
+        // by SetLocale from the session's chosen language (Language module).
+        $view = $this->render->renderPage($page, app()->getLocale()) ?? $this->render->buildView($school->id, null, app()->getLocale());
 
         return view('public.page', [
             'page' => $page,

@@ -6,6 +6,333 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.4.0] — 2026-07-31
+
+### Added
+- Translation-status columns on the Staff, Designation, Department, Pages, and Announcements admin
+  list screens — one column per active non-default language, header = the language's short code
+  (e.g. "BN"), with a tick (`bi-check-lg`, green) or cross (`bi-x-lg`, muted) per row showing
+  whether that record is translated into that language, at a glance, with no need to open each
+  edit modal/editor to check. New `HasTranslations::isTranslated(array $fields, ?string $locale)`
+  — true only if EVERY given field has a non-null translation for that language (Announcement's
+  title+body must both be filled in to tick, not just one) — backs Staff/Designation/Department/
+  Announcement. Pages don't use `HasTranslations` (per-locale content lives in versioned
+  `PageLayout` rows instead) — new `Page::hasPublishedTranslation(string $locale)` checks for a
+  currently-**published** layout in that language specifically (a draft alone doesn't tick it,
+  since a draft isn't live on the public site yet); `PageController::index()` eager-loads
+  `publishedLayout` so this is an in-memory check, not a query per row per language. Tests:
+  `test_staff_index_shows_a_bn_column_ticked_only_for_translated_rows`,
+  `test_designation_index_shows_a_bn_column_ticked_only_for_translated_rows`,
+  `test_announcement_index_ticks_bn_only_when_both_title_and_body_are_translated`
+  (`tests/Feature/Admin/MultilingualAnnouncementAndStaffContentTest.php`),
+  `test_pages_index_shows_a_bn_column_ticked_only_once_bengali_is_published`
+  (`tests/Feature/Admin/MultilingualPageContentTest.php`).
+- Bilingual (en + bn) seed/demo data: `SchoolSeeder`/`DemoDataSeeder`/`WebsitePagesSeeder` now
+  seed hand-written Bangla translations for School/SiteSetting identity fields, Department/
+  Designation names, all 12 demo Staff names, all 3 demo Announcements, all 11 public pages'
+  block content, and a Bangla primary navigation Menu — so a fresh install already shows real
+  Bangla content when switching languages, instead of an empty translation until an admin fills
+  one in by hand. New `WebsitePagesSeeder::pageTranslation()` seeds a locale-specific
+  `PageLayout` against the SAME `Page` row (never a second `Page`); fixed a latent bug where
+  `page()`'s `PageLayout` delete was unscoped by locale, which would have wiped the Bangla layout
+  on every reseed. None of this content goes through the AI-suggest gateway — seed data is
+  hand-written and stable, not a live network call at seed time. See
+  `docs/modules/30-multilingual-content-plan.md` Phase 11.
+- "Suggest translations (AI)" for the general UI-string catalog (Settings → Languages →
+  Translations editor) — previously only the per-model content (School, Pages, Menus, Announcement,
+  Staff, ...) had an AI-suggest button; the flat `__()` string catalog (~2,200 keys) was manual-only.
+  New `SuggestUiTranslationsJob` translates a given list of `Translation` row ids via the existing
+  MyMemory gateway, never overwriting an already-translated row. The editor's "Suggest translations
+  (AI)" button is a second submit on the same form as "Save Translations" (via `formaction`) and
+  operates on exactly the ids currently on screen — one paginated page at a time (≤50 rows), not the
+  whole catalog in one request. Clicking it also saves any values you've already typed in but not
+  yet clicked Save for, so it can never discard in-progress edits. Tests
+  (`tests/Feature/Admin/UiTranslationSuggestTest.php`).
+- `App\Support\LocalizedDate` — native (offline, no third-party translation API) date
+  localization: translated month/day names via Carbon's own bundled locale data
+  (`vendor/nesbot/carbon`, a one-time composer install, never a runtime network call), plus a
+  hardcoded native-digit map (currently Bengali ০-৯) Carbon doesn't apply on its own. `SetLocale`
+  middleware now also calls `Carbon::setLocale()` alongside `app()->setLocale()`, so every
+  `translatedFormat()` call downstream (this helper, or a raw Carbon call anywhere else) picks up
+  the visitor's locale automatically. Wired into the public site's four date-rendering call sites:
+  the header's "today" date, the notices block/sidebar/homepage-fallback date lines, and the
+  footer's copyright year + established year. Tests: `tests/Unit/Support/LocalizedDateTest.php`,
+  plus two new cases in `MultilingualBlockContentTest.php`. Admin/portal/staff areas (~70 more
+  `->format()` call sites) are NOT touched by this — public-site-only for now, same scoping
+  discipline as the rest of this multilingual work; a good next step if wanted.
+- Per-field translation for Announcement (title + body) and Staff/Designation/Department (name),
+  extending `docs/modules/30-multilingual-content-plan.md`'s Phase 4/5 pattern beyond the public
+  website's original scope to these four models. `HasTranslations` wired onto all four models; each
+  gets a "Translations" section (one collapsed panel per active non-default language, same
+  convention as School settings) inside its existing modal-per-row edit form, plus a "Suggest
+  translations (AI)" button per language. Designation and Department share one
+  `SuggestStaffReferenceTranslationJob` (parameterized by model class) the same way
+  `StaffReferenceController` already shares one controller for both types.
+  `TranslationService::saveMany()`'s type widened to admit the four new hosts. Tests
+  (`tests/Feature/Admin/MultilingualAnnouncementAndStaffContentTest.php`).
+
+### Fixed
+- `php artisan test` reported a failed assertion in
+  `test_notices_block_date_shows_bengali_month_name_and_native_digits` once the `created_by` errors
+  above stopped masking it: expected `'৩০ জুলাই ২০২৬'` (full month name) but the notices block
+  renders dates via `LocalizedDate::format($n->publish_at, 'd M Y')` — the SHORT month token
+  (`M`, not `F`), consistently across all three notice-date call sites (sidebar, home, notices
+  block). Carbon's `bn` locale (`vendor/nesbot/carbon/src/Carbon/Lang/bn.php`) keeps `months`
+  (full: "জুলাই") and `months_short` (abbreviated: "জুল") as genuinely different arrays — the test's
+  expected string was wrong, not the code (the header's own date test, which DOES use the full
+  month token `F`, was already asserting the correct `'৩১ জুলাই ২০২৬'` and needed no change).
+  Corrected the assertion to `'৩০ জুল ২০২৬'`.
+- `php artisan test` reported 4 errors in `MultilingualBlockContentTest.php`: `SQLSTATE[23000]...
+  NOT NULL constraint failed: announcements.created_by`. Four pre-existing test methods (not part
+  of this session's own additions to the file) called `Announcement::create()` without
+  `created_by`, which the `announcements` migration declares NOT NULL with no default — this was
+  latent since whichever earlier phase wrote those tests, only surfacing now that the file was
+  actually executed rather than just read/edited. Added a `private User $author` created once in
+  `setUp()` (`created_by` is a plain FK here — none of these tests act as this user, no role
+  needed) and passed `'created_by' => $this->author->id` into all four `Announcement::create()`
+  calls.
+- `vendor/bin/phpstan analyse` reported 9 fresh errors, all from this session's multilingual work
+  never having been checked against the (level 5, Larastan) analyser before now:
+  - 8 were `property.notFound` on plain-Eloquent-attribute reads (`$lang->code`, `$translation->value`/
+    `->key`, `$layout->locale`, `$announcement->title`/`->body`, `$staff->name`,
+    `$designation->name`) — the exact same shape of error already baselined for dozens of other
+    call sites across the app (this codebase has no `@property` PHPDoc convention on any model;
+    every one of these goes through `phpstan-baseline.neon` instead). Added matching baseline
+    entries for the 8 new call sites (`PageController.php`, `SuggestUiTranslationsJob.php`,
+    `Page.php`, `PublicPortalService.php`) rather than introducing a one-off annotation convention
+    nowhere else in the app uses.
+  - The 9th, in `LocalizedDate::NATIVE_DIGITS`, was a real (if harmless) type-annotation bug, fixed
+    directly instead of baselined: `'0' => '০'` etc. — PHP silently casts a canonical-decimal-string
+    array key like `'0'` to an actual `int` key at runtime, so the inner map is really
+    `array<int, string>`, not the `array<string, string>` the `@var` claimed. `strtr()` behaves
+    identically either way (it stringifies array keys itself when matching), so this was never a
+    runtime bug — just a docblock that didn't describe what PHP actually stores. Corrected to
+    `array<string, array<int, string>>`.
+- Reported: "header mobile number link will be in English but the shown content should be in
+  translation" — the header's `tel:` phone link (and the contact/contact_info block's plain-text
+  phone display) showed raw ASCII digits like every other number on the site used to. Localized
+  the visible link/text with `LocalizedDate::digits()` while leaving the `tel:` `href` itself
+  alone — a click-to-call link has to stay dialable, so native-digit glyphs there would break it
+  on most devices/apps. Test:
+  `test_header_phone_link_text_uses_native_digits_but_href_stays_dialable`
+  (`tests/Feature/Public/MultilingualBlockContentTest.php`).
+- Reported: "stats block number is in English even in bn" and "contact block isn't receiving
+  translated content" — two separate gaps in `public/blocks/render.blade.php` (contact's sidebar
+  twin in `public/sidebar/render.blade.php` too):
+  - The stats block's `number_format()` output is always ASCII 0-9 — unlike every other number on
+    the site (dates, footer year), nothing swapped it to native digits. Wrapped both counts and any
+    admin-set custom stat item value in `LocalizedDate::digits()`. Also rendered the stats block's
+    own `heading`, which the block accepted as data but never actually displayed.
+  - The contact/contact_info block's address fallback (used whenever the block itself doesn't set
+    its own `$d['address']`, which is exactly what the seeded demo Contact page does) came from a
+    plain `School::find()` in `PageRenderService::resolveBlockData()`, read directly off the model
+    (`$school->address`) instead of `$school->transOr('address')` — the one address-shaped output
+    on the public site that ignored the language switcher even though `School::address` is a
+    `HasTranslations` field. Switched both call sites to `transOr()`.
+  Tests: `test_stats_block_numbers_use_native_bengali_digits`,
+  `test_contact_block_address_follows_the_visitors_locale`
+  (`tests/Feature/Public/MultilingualBlockContentTest.php`).
+- Reported: "missing translation for online admission form" — `public/blocks/admission_form.blade.php`
+  had a cluster of bare literal English strings never wrapped in `__()`, unlike the rest of the
+  form: the Gender/Religion/Guardian-type select options (Boy/Girl/Islam/Hinduism/.../Father/
+  Mother), the "— Select class —"/"— Select year —" placeholder options, the photo-upload help
+  text, and the Father's/Mother's name/phone/NID labels — plus the admin-configurable field
+  defaults (Last name, Blood group, Student phone, Student photo, Permanent address, Notes) shown
+  whenever a school hasn't customized that field's label. Where a select option's `value` attribute
+  is also the stored/validated enum (religion, guardian type), only the visible option TEXT was
+  wrapped — the `value` stays the canonical English word so `StoreAdmissionApplicationRequest`'s
+  `in:` validation and any downstream report/export keep working unchanged. Hand-written Bengali
+  values for every new key added directly to the shipped
+  `database/seeders/data/translations/bn.json` pack (same "seed data is hand-written, not run
+  through AI-suggest" convention as the rest of this session's seed work), so a fresh install shows
+  translated form fields immediately. An already-deployed school needs `php artisan
+  translations:scan` (registers the new keys) — the bn values are already filled in by the updated
+  pack once `TranslationSeeder` re-runs, or can be typed in by hand/AI-suggest under Settings →
+  Languages → Translations (bn) in the meantime.
+- Reported: "header date hasn't changed" — the public header's "today" date
+  (`public/partials/header.blade.php`) pinned to `$school->locale` (the school's configured
+  home-language column, `en` by default) instead of the visitor's browsing locale, making it the
+  one date on the site that silently ignored the language switcher (footer copyright year,
+  notices, and sidebar dates all already followed `app()->getLocale()`). Dropped the
+  school-locale override so `LocalizedDate::format()` defaults to the visitor's locale like every
+  other call site. Test:
+  `test_header_today_date_follows_the_visitors_locale_not_the_schools_own_locale`
+  (`tests/Feature/Public/MultilingualBlockContentTest.php`).
+- Reported: the public footer's "© 2026 &lt;school name&gt;. All rights reserved." only translated
+  the school name — "All rights reserved." was a bare literal string, never wrapped in `__()`,
+  unlike every other string in `public/layout.blade.php`'s footer. Also fixed the same bug in the
+  footer's institution-code fallback label ("Code"). Wrapping in `__()` alone isn't a complete fix
+  for an already-deployed school: run `php artisan translations:scan` to register the new key, then
+  fill in its Bengali value under Settings → Languages → Translations (bn) — e.g. "সর্বস্বত্ব
+  সংরক্ষিত।" for "All rights reserved."
+- Reported: clicking "Suggest translation (AI)" on Announcement/Staff/Designation/Department closed
+  the edit modal (a plain form POST+redirect), forcing the admin to reopen Edit just to see what
+  the AI filled in. Fixed by having the button fetch() the same endpoint with
+  `X-Requested-With: XMLHttpRequest` instead of submitting the hidden form normally; the three
+  controllers now return the resolved field values as JSON for an ajax request instead of
+  redirecting, and a new shared script
+  (`admin/partials/translation-suggest-script.blade.php`) fills the matching input/textarea in
+  place — only if it's still empty, so it can never overwrite text the admin already typed. A real
+  (non-ajax) form submit still redirects exactly as before.
+- Reported: the newly-added Announcement/Staff translations weren't showing up on the public
+  website — the "notices" and "staff" blocks (and the header's notice ticker) kept showing the
+  default-locale English text no matter which language a visitor was browsing in. Root cause: those
+  blocks' content is *live-resolved* from Announcement/Staff on every render
+  (`PageRenderService::resolveBlockData()` → `PublicPortalService::notices()`/`staffList()`), a
+  completely separate path from `BlockTranslator` (which only ever translates a page's stored
+  `layout_json` — a block's own static `heading` field, never live-resolved data) — the visitor's
+  locale was simply never passed down to `PublicPortalService` at all, anywhere in the chain. Fixed
+  by threading a required `string $locale` parameter through the full render pipeline
+  (`renderPage()`/`buildView()`/`buildViewFromBlocks()`/`resolveBlockData()`/
+  `resolveNestedBlocks()`/`staffFor()`) down to `notices()`/`staffList()`, which now apply
+  `transOr()` per item (skipped for the default locale as a fast path). `listVisible()`'s
+  Announcement collection is cache-aside; both methods clone each item before overwriting its
+  translatable attributes so a locale's translated text can never leak into another locale's cache
+  hit. Also wired into the admin page-builder's live-preview endpoints so the iframe reflects
+  whichever language tab is actually being edited. Tests
+  (`tests/Feature/Public/MultilingualBlockContentTest.php`).
+- Reported: saving the Menu editor for a locale after using "Build from default language (AI)"
+  left the tree corrupted — some top-level items duplicated, the Gallery dropdown split into two
+  separate single-child dropdowns instead of one with both children, and later items (Notices,
+  Contact) missing entirely, despite the page showing a clean, correct tree right up until "Save
+  Menu" was clicked — and it reproduced identically on every attempt, growing worse each time a
+  save was repeated (confirmed via direct DB dumps: the same specific items were left behind every
+  single time, never a random subset — the signature of a deterministic bug, not a timing race).
+  Root cause: `menu_items.parent_id` is a self-referencing foreign key with `cascadeOnDelete()` (a
+  dropdown's children are auto-deleted when their parent row is), and `MenuService::replaceItems()`
+  deleted via `$menu->allItems()->delete()`, whose relation carries `orderBy('sort_order')`. A
+  child's own `sort_order` is independently 0-based per parent, so it routinely ties with unrelated
+  top-level items' `sort_order` values — and when that ordering caused the delete statement to
+  remove a dropdown's parent row before its own scan reached that parent's children, the cascade
+  silently removed those children out from under the statement, while rows the cascade never raced
+  were left behind untouched — then the fresh insert landed on top of whatever survived. Fixed by
+  deleting children (no children of their own — one level of nesting only) before parents, with no
+  ordering involved either time, so the cascade can never race the delete statement's own scan.
+  Also closed a related, smaller gap while investigating: `replaceItems()` had no protection against
+  two overlapping saves against the same menu racing each other (unlike `replaceItemsIfEmpty()`,
+  used by the AI-suggest flow, which already locks the row) — it now takes the same row lock first.
+  The Save Menu button is also disabled (with a spinner) the instant it's clicked, closing off the
+  easiest way to fire two overlapping saves at the source.
+
+### Changed
+- Removed the Menu editor's "Copy from default language to start translating" button (and its
+  `POST /admin/menus/copy-locale` route/controller action) — it duplicated "Build from default
+  language (AI)" (Phase 5) for no real benefit once that shipped, and having both on screen was
+  more confusing than useful. The Page editor keeps its own Copy button, which still offers
+  something AI-suggest there doesn't (labels stay in the source language rather than
+  auto-translated, useful when a school wants to translate by hand).
+
+### Added
+- Multilingual content foundation (`docs/modules/30-multilingual-content-plan.md` Phase 1):
+  `page_layouts` gains `locale` + per-locale SEO meta columns, `menus` gains `locale`, and a new
+  `content_translations` table + `HasTranslations` trait (wired onto `School` and `SiteSetting`)
+  provide per-field translations for scalar singleton-row models. Purely additive — no rendered
+  output changes yet. This is the first phase of fixing a reported gap: the public language
+  switcher only ever changed static `__()` UI strings, never a school's own page/menu/site
+  content, because none of it had a locale column to switch between.
+- Multilingual page/block content (`docs/modules/30-multilingual-content-plan.md` Phase 2): each
+  page's block layout, title, and SEO meta can now vary per language — every locale owns its own
+  independently draft/published `PageLayout` revision (`pages.*` stays the default-locale seed),
+  publishing one language never touches another's, and an untranslated locale silently falls back
+  to the default language instead of rendering blank. Admin page builder gains a language tab
+  switcher (marks untranslated locales) and a "Copy from default language" starter action; History
+  now tracks "Latest"/"Current" per locale, not globally. Demo site seed fixed to set an explicit
+  locale on its seeded page revisions (an oversight that would otherwise have made every seeded
+  page invisible under the new locale-scoped public render query).
+- Multilingual navigation menus (`docs/modules/30-multilingual-content-plan.md` Phase 3): each
+  language now owns its own full menu tree (`menus.locale`), so the public nav actually changes
+  when a visitor switches language instead of always showing whatever was built first. The admin
+  menu editor gains the same language-tab switcher pattern as the Phase 2 page builder (marks
+  untranslated languages, plain-GET reload), and the public header composer resolves the
+  visitor's locale via a new `Menu::published()` (falls back to the default language's menu when
+  the visitor's language has no nav built yet, same fallback used everywhere else in this
+  feature). Extracted the locale-resolution logic that Phase 2's `PageController` had local to
+  itself into a shared `Language::resolve()`, now used by both controllers. Demo site seeder
+  fixed to seed its "Main menu" with an explicit locale (the same class of bug Phase 2 hit with
+  `PageLayout`, caught here before it shipped).
+- Multilingual school identity & SEO text (`docs/modules/30-multilingual-content-plan.md` Phase
+  4): School name/address/institution codes and SiteSetting meta title/description can now vary
+  per language. Unlike Pages/Menus (a full duplicate row per locale), these are singleton-per-
+  school rows, so they reuse Phase 1's generic `content_translations` table directly — new
+  `TranslationService::saveMany()` bulk-saves every active language's overrides from one admin
+  form submit. School settings gains a collapsed "Translations" panel per active language; a
+  blank submitted field clears back to the fallback rather than saving a literal blank override
+  (guards against a freshly-added language's untouched panel silently blanking the whole public
+  site). Public site (header, footer, homepage, page `<title>`) now reads these via `transOr()`
+  instead of the raw column, with the same silent default-language fallback used throughout this
+  feature.
+- AI-assisted draft translation (`docs/modules/30-multilingual-content-plan.md` Phase 5): a
+  "Suggest translation (AI)" button on School settings, the page builder, and the menu editor,
+  backed by the free MyMemory Translation API — no API key, no billing, available to every
+  school (revised from the original plan to reuse the LMS module's paid Anthropic key, since
+  translation drafts aren't an LMS-specific feature). Each of the three content shapes gets its
+  own safety rule: School/SiteSetting fills only currently-empty fields, never overwriting a
+  hand-translated one; Pages always create a brand-new draft revision (never destructive, since
+  `PageLayout` is append-only) and translate every text field inside the block tree via a new
+  schema-driven `BlockTranslator` (structural values — urls, colors, icons — are never sent
+  through translation); Menus only build a translated tree when the target language currently has
+  zero items, since a menu save is a full-tree replace that could otherwise destroy a hand-built
+  nav. One field failing (a rate limit mid-batch) never discards the rest of a suggestion — it's
+  just left in the source language for the admin to finish by hand. Tests exercise the real
+  end-to-end flow via `Http::fake()`, never a real network call.
+
+### Fixed
+- Phase 5 follow-ups reported after the above shipped:
+  - The page editor's Update/Publish button starts disabled and only re-enables once the form
+    differs from what was just loaded — but Copy from default language / Suggest translation (AI)
+    / Restore all create a brand-new unpublished `PageLayout` revision and reload straight into it,
+    so nothing "differs" and the button stayed stuck disabled even on an already-published page,
+    with no way to publish the new draft short of a throwaway edit. `PageController::edit()` now
+    computes a `needsPublish` flag (page published overall, but the locale's loaded revision isn't
+    itself the published one) that keeps Update usable in that case.
+  - `SuggestSchoolTranslationJob`/`SuggestPageTranslationJob`/`SuggestMenuTranslationJob` now run
+    via `dispatchSync()` instead of a queued `dispatch()` — under this app's normal
+    `QUEUE_CONNECTION=redis`, a queued dispatch returns before Horizon ever runs the job, so the
+    "Suggest translation" actions could redirect back showing stale content with no real signal
+    translation was still in flight ("sometimes delayed"). Running inline keeps them exactly as
+    best-effort/`tries=1` as before, just synchronous, and drops the Horizon dependency for these
+    specific actions entirely.
+  - The page editor's Copy/Suggest actions are now fetch()-driven: they splice the resulting
+    blocks/fields/History/language-switcher state straight into the live editor instead of doing a
+    full form-post navigation, with a progress bar covering the real (multi-second, sequential
+    per-field MyMemory calls) wait and a toast surfacing the result — addresses "get the
+    translation without refreshing the page."
+  - Fixed a misaligned dismiss icon on the page editor's own "Page Saved" toast: `.alert-dismissible`
+    reserves padding and absolutely-positions `.btn-close` for the *default* `.alert` box size, which
+    didn't match this toast's smaller `py-2`/`px-3` override (and `.btn-close-sm`, also used there,
+    isn't a real Bootstrap class — it did nothing to compensate). Switched to a plain flex row, which
+    sizes and centers the close button correctly regardless of the alert's own padding.
+- Public site and backend (admin/staff/portal) language were unintentionally coupled: both areas
+  shared a single `app_locale` session key and one `/language/{code}` switcher (Language module,
+  #26), so an admin switching their own backend working language also changed what a public
+  visitor saw, and vice versa. `SetLocale` now reads/writes one of two independent session keys
+  depending on the request path — `app_locale` for the public site, `backend_locale` for
+  `/admin`, `/staff`, `/portal` — with a separate, auth-gated `/backend/language/{code}` route for
+  the latter (the only thing `partials/language-switcher.blade.php`, shared by the admin/staff/
+  portal headers, links to). An admin can now run the backend in one language while the public
+  site serves visitors in a completely different one.
+- Follow-up to the above: that path match was originally `admin*`/`staff*`/`portal*`
+  (`Request::is()` wildcards match on raw string prefix, not path segment boundaries), so a
+  **public** page whose slug merely started with those letters — e.g. a school's own
+  `/administration` page, same slug `WebsitePagesSeeder`'s demo content uses — was wrongly
+  classified as backend and silently read the unset `backend_locale` instead of the public
+  `app_locale` a visitor had actually chosen (reported: the language switcher "reverts back to
+  English" on that page specifically). Now matches `admin`/`admin/*` (an exact segment boundary)
+  instead.
+- The above backend-locale split exposed a real, previously-latent crash: any admin page fatals
+  (`htmlspecialchars(): Argument #1 ($string) must be of type string, array given`) rendering
+  `components/sidebar.blade.php` under `backend_locale=bn`, because nothing had ever rendered the
+  admin panel in a non-English locale independently of the public site before. Root cause: a no-dot
+  `__()` key not found in the flat English-as-key JSON cache falls through to Laravel's group-based
+  translation lookup, treating the *entire key* as a group name — `__('SMS')` (used as the nav
+  label, command palette entry, and page title/breadcrumbs across the SMS module) collided with
+  the real `resources/lang/{locale}/sms.php` group file, and since the key has no item segment,
+  `Arr::get()` returned the file's *whole array* instead of a string. Renamed that lang file to
+  `sms_templates.php` (no visible UI text changed — only the internal `sms.due_reminder` key,
+  updated at its one call site in `SendSmsBatchJob`) to remove the collision, and added a defensive
+  string coercion in `sidebar.blade.php`'s label output so a future label/lang-group name clash
+  degrades to a blank label instead of a 500.
+
 ## [1.3.4] — 2026-07-31
 
 ### Added

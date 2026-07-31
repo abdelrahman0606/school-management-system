@@ -7,6 +7,7 @@ use App\Modules\Language\Models\Translation;
 use Closure;
 use Illuminate\Contracts\Translation\Translator;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\View;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
@@ -15,6 +16,20 @@ use Throwable;
  * Resolves the active locale (session choice → default language) and feeds the
  * DB-stored translations for that locale into the translator. English is the
  * source language (English-as-key), so 'en' needs no lines.
+ *
+ * Two INDEPENDENT locale choices live in two separate session keys, not one:
+ * 'app_locale' for the public site (guest-facing pages, anything outside
+ * /admin, /staff, /portal) and 'backend_locale' for the admin/staff/portal
+ * areas an authenticated user works in. Before this split there was only
+ * ever 'app_locale', shared by every area via the same /language/{code}
+ * switcher — so a Bengali-speaking admin who switched the ADMIN UI to
+ * Bengali also flipped the PUBLIC site to Bengali for the next visitor (and
+ * vice versa: previewing the public site in Bengali silently changed the
+ * admin's own working language too). An admin's own backend language
+ * preference and the language a public visitor happens to be browsing in
+ * are unrelated facts and must never overwrite each other. See
+ * routes/web.php's 'language.switch' (public) vs 'language.switch.backend'
+ * (admin/staff/portal) for the write side of this same split.
  */
 class SetLocale
 {
@@ -28,12 +43,32 @@ class SetLocale
             return $next($request);
         }
 
-        $chosen = (string) $request->session()->get('app_locale', $default);
+        // NOT 'admin*'/'staff*'/'portal*' — Request::is() wildcards match on
+        // raw string prefix, not path segment boundaries, so a PUBLIC page
+        // whose slug merely starts with those letters (e.g. a school's own
+        // "/administration" page) would wrongly match 'admin*' and get
+        // treated as backend, silently losing whatever the public switcher
+        // had set (reported: a public "Administration" page always reverted
+        // to English). 'admin'/'admin/*' only matches the literal /admin
+        // path or something genuinely underneath it.
+        $sessionKey = $request->is('admin', 'admin/*', 'staff', 'staff/*', 'portal', 'portal/*')
+            ? 'backend_locale' : 'app_locale';
+        $chosen = (string) $request->session()->get($sessionKey, $default);
         if (! $languages->contains(fn ($l) => $l->code === $chosen)) {
             $chosen = $default;
         }
 
         app()->setLocale($chosen);
+
+        // Carbon bundles its own month/day-name translations for every
+        // Symfony Translation locale (including bn) — this is offline data
+        // shipped in vendor/nesbot/carbon, never a network/API call. Setting
+        // it here means every ->translatedFormat() call downstream
+        // (App\Support\LocalizedDate, or a raw Carbon call) picks up the
+        // visitor's locale automatically without passing it explicitly. An
+        // explicit ->locale(...) on a specific instance (e.g. the header's
+        // school-configured-locale date) still overrides this default.
+        Carbon::setLocale($chosen);
 
         if ($chosen !== 'en') {
             $lines = Translation::linesFor($chosen);

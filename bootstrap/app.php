@@ -3,6 +3,7 @@
 use App\Console\Commands\VersionVerifyCommand;
 use App\Http\Controllers\Admin\Auth\LoginController;
 use App\Http\Middleware\CheckModuleEnabled;
+use App\Http\Middleware\PreventBackendCaching;
 use App\Http\Middleware\ResolveSchool;
 use App\Http\Middleware\SetCurrentSchoolFromSession;
 use App\Http\Middleware\SetLocale;
@@ -31,6 +32,13 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Locale resolution + DB-stored translations on every web request.
         $middleware->appendToGroup('web', SetLocale::class);
+
+        // No browser/bfcache caching of admin/staff/portal responses — see
+        // PreventBackendCaching's own docblock (reported: deleted menu
+        // items reappearing after Save, most likely explained by the
+        // browser restoring a cached page snapshot rather than the server
+        // ever re-serving stale data).
+        $middleware->appendToGroup('web', PreventBackendCaching::class);
 
         // Gateways POST cross-site with no session CSRF token: SSLCommerz's
         // browser return and the Stripe/PayPal server-to-server webhooks.

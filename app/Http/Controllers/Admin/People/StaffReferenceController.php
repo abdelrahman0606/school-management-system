@@ -2,12 +2,16 @@
 
 namespace App\Http\Controllers\Admin\People;
 
+use App\Modules\Language\Jobs\SuggestStaffReferenceTranslationJob;
+use App\Modules\Language\Models\Language;
+use App\Modules\Language\Services\TranslationService;
 use App\Modules\Staff\Models\Department;
 use App\Modules\Staff\Models\Designation;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Arr;
 use Illuminate\View\View;
 
 /**
@@ -19,11 +23,16 @@ use Illuminate\View\View;
  */
 class StaffReferenceController extends Controller
 {
-    /** @var array<string, array{model: class-string<Model>, table: string, label: string, singular: string}> */
+    /** @var array<string, array{model: class-string<Designation|Department>, table: string, label: string, singular: string}> */
     private const TYPES = [
         'designations' => ['model' => Designation::class, 'table' => 'designations', 'label' => 'Designations', 'singular' => 'Designation'],
         'departments' => ['model' => Department::class,  'table' => 'departments',  'label' => 'Departments',  'singular' => 'Department'],
     ];
+
+    /** Both Designation and Department only ever have 'name' to translate. */
+    private const TRANSLATABLE_FIELDS = ['name'];
+
+    public function __construct(private readonly TranslationService $translations) {}
 
     public function index(Request $request): View
     {
@@ -38,6 +47,10 @@ class StaffReferenceController extends Controller
             'label' => $meta['label'],
             'singular' => $meta['singular'],
             'items' => $items,
+            // docs/modules/30-multilingual-content-plan.md Phase 4/5 — same
+            // "active languages minus the default" list School's own editor
+            // uses for its translation panels.
+            'contentLanguages' => Language::activeCached()->reject(fn (Language $l) => $l->code === Language::defaultCode())->values(),
         ]);
     }
 
@@ -55,9 +68,53 @@ class StaffReferenceController extends Controller
         $meta = $this->meta($request);
         $schoolId = app('current_school_id');
         $item = $meta['model']::where('school_id', $schoolId)->findOrFail($id);
-        $item->update($this->validated($request, $meta['table'], $schoolId, $id));
+        $data = $this->validated($request, $meta['table'], $schoolId, $id);
+        $item->update(Arr::except($data, 'translations'));
+
+        // TYPES' 'model' is typed class-string<Designation|Department>, so
+        // $item is already narrowed for TranslationService::saveMany() —
+        // no runtime assert needed.
+        $this->translations->saveMany($item, $this->translationsPayload($data));
 
         return back()->with('status', "{$meta['singular']} updated.");
+    }
+
+    /**
+     * "Suggest translation (AI)" — docs/modules/30-multilingual-content-plan.md
+     * Phase 5. Fills only the currently-empty name translation for one
+     * locale; never overwrites a field the admin (or a previous run)
+     * already translated.
+     *
+     * Designation/Department are edited in a modal (not a dedicated page),
+     * so a plain form POST+redirect here would close the modal — see
+     * AnnouncementController::suggestTranslation()'s own comment for the
+     * full reasoning. The button's JS fetch()es this with
+     * X-Requested-With (ajax()) and fills the field in place from the JSON
+     * response; a real form submit still falls back to the old redirect.
+     */
+    public function suggestTranslation(Request $request, int $id): RedirectResponse|JsonResponse
+    {
+        $meta = $this->meta($request);
+        $schoolId = app('current_school_id');
+        $item = $meta['model']::where('school_id', $schoolId)->findOrFail($id);
+        $locale = Language::resolve($request->input('locale'));
+
+        if ($locale === Language::defaultCode()) {
+            $message = __('Nothing to translate — that is the default language.');
+
+            return $request->ajax() ? response()->json(['message' => $message], 422) : back()->with('status', $message);
+        }
+
+        // dispatchSync() — see SchoolController::suggestTranslation()'s own
+        // comment: queued dispatch() returns before Horizon actually runs
+        // the job under this app's normal QUEUE_CONNECTION=redis.
+        SuggestStaffReferenceTranslationJob::dispatchSync($meta['model'], $item->id, $locale);
+
+        if ($request->ajax()) {
+            return response()->json(['fields' => ['name' => $item->trans('name', $locale)]]);
+        }
+
+        return back()->with('status', __('Translation suggestions filled in below — review before saving.'));
     }
 
     public function destroy(Request $request, int $id): RedirectResponse
@@ -75,7 +132,7 @@ class StaffReferenceController extends Controller
     }
 
     /**
-     * @return array{model: class-string<Model>, table: string, label: string, singular: string}
+     * @return array{model: class-string<Designation|Department>, table: string, label: string, singular: string}
      */
     private function meta(Request $request): array
     {
@@ -94,6 +151,32 @@ class StaffReferenceController extends Controller
 
         return $request->validate([
             'name' => ['required', 'string', 'max:100', "unique:{$table},name,{$ignore},id,school_id,{$schoolId}"],
+            'translations' => ['nullable', 'array'],
+            'translations.*' => ['array'],
+            'translations.*.*' => ['nullable', 'string', 'max:200'],
         ]);
+    }
+
+    /**
+     * Whitelists the submitted translations payload against the currently
+     * active, non-default locales and against TRANSLATABLE_FIELDS — never
+     * trusts an arbitrary locale/field key straight from the request, same
+     * defensive pattern as SchoolController::update().
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, array<string, mixed>>
+     */
+    private function translationsPayload(array $data): array
+    {
+        $activeLocales = Language::activeCached()->pluck('code')->reject(fn ($code) => $code === Language::defaultCode());
+        $submitted = (array) ($data['translations'] ?? []);
+        $out = [];
+
+        foreach ($activeLocales as $locale) {
+            $fields = is_array($submitted[$locale] ?? null) ? $submitted[$locale] : [];
+            $out[$locale] = array_intersect_key($fields, array_flip(self::TRANSLATABLE_FIELDS));
+        }
+
+        return $out;
     }
 }

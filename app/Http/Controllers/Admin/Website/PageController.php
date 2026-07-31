@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Admin\Website;
 
+use App\Modules\Language\Jobs\SuggestPageTranslationJob;
+use App\Modules\Language\Models\Language;
 use App\Modules\School\Models\School;
 use App\Modules\Website\Models\Page;
 use App\Modules\Website\Models\PageTemplate;
@@ -36,7 +38,15 @@ class PageController extends Controller
         $schoolId = app('current_school_id');
 
         return view('admin.website.pages.index', [
-            'pages' => Page::forSchool($schoolId)->withCount('layouts')->orderByDesc('is_homepage')->orderBy('title')->get(),
+            'pages' => Page::forSchool($schoolId)->withCount('layouts')
+                // publishedLayout eager-loaded so Page::hasPublishedTranslation()
+                // (translation-status columns below) is an in-memory check per
+                // row/language instead of a query per row per language.
+                ->with('publishedLayout:id,page_id,locale')
+                ->orderByDesc('is_homepage')->orderBy('title')->get(),
+            // Same "active languages minus the default" list every other
+            // admin list screen's translation-status columns use.
+            'contentLanguages' => Language::activeCached()->reject(fn (Language $l) => $l->code === Language::defaultCode())->values(),
         ]);
     }
 
@@ -87,7 +97,10 @@ class PageController extends Controller
             $starter?->layout_json ?? [],
         );
 
-        $this->pages->saveLayout($page, $layout, $request->user());
+        // A new page always starts in the default language — translations
+        // are added afterward via the editor's language tabs (docs/modules/
+        // 30-multilingual-content-plan.md Phase 2).
+        $this->pages->saveLayout($page, $layout, $request->user(), Language::defaultCode());
 
         return redirect()->route('admin.pages.edit', $page->id)->with('status', __('Page Created — Add Your Content.'));
     }
@@ -114,13 +127,23 @@ class PageController extends Controller
         return back()->with('status', __('Saved as a reusable template — pick it from "Start from" the next time you create a page.'));
     }
 
-    public function edit(int $id): View
+    public function edit(Request $request, int $id): View
     {
         $schoolId = app('current_school_id');
         // .createdBy eager-loaded for the editor's in-sidebar History panel
         // (see history()/restore() below) — avoids an N+1 there.
         $page = Page::forSchool($schoolId)->with('layouts.createdBy')->findOrFail($id);
-        $layout = $page->layouts->first();  // latest revision
+
+        // docs/modules/30-multilingual-content-plan.md Phase 2 — which
+        // language's content this editor session is showing. ?locale= on a
+        // plain GET (no AJAX/JS state) so switching the language tab is
+        // just a normal link/reload, matching every other round-trip in
+        // this editor (save, preview, restore are all plain form posts too).
+        $languages = Language::activeCached();
+        $defaultLocale = Language::defaultCode();
+        $locale = Language::resolve($request->query('locale'));
+
+        $layout = $page->layoutsForLocale($locale)->first();  // latest revision FOR THIS LOCALE
 
         return view('admin.website.pages.edit', [
             'page' => $page,
@@ -132,14 +155,118 @@ class PageController extends Controller
             // revision actually is BY THE TIME the save arrives, to detect
             // a second admin having saved in between.
             'knownLayoutId' => $layout?->id,
+            // The editor's Update/Publish button normally starts disabled
+            // and only enables once the form differs from what was just
+            // loaded (see edit.blade.php's updateSaveButtonState()). That
+            // breaks right after Copy-from-default-language / Suggest
+            // translation (AI) / Restore: each creates a brand new
+            // is_published=false PageLayout row and redirects back here,
+            // and the editor pre-fills its fields from that SAME row — so
+            // nothing differs from the just-loaded state and the button
+            // stays stuck disabled, even though the page's shared `status`
+            // is already "published" and this locale's freshly generated
+            // content has never actually gone live. True whenever the site
+            // is published overall but the revision on screen right now
+            // isn't the one that's live for this locale — the one case the
+            // plain form-diff check can't see for itself.
+            'needsPublish' => $layout !== null && $page->status === 'published' && ! $layout->is_published,
+            'locale' => $locale,
+            'defaultLocale' => $defaultLocale,
+            'languages' => $languages,
+            // Which locales already have at least one revision — drives the
+            // language-tab dropdown's "(untranslated)" marker and whether
+            // the "Copy from default language" prompt shows for this one.
+            'localesWithContent' => $page->layouts->pluck('locale')->filter()->unique()->all(),
+            // This locale's own title/SEO — falls back to the shared
+            // default-locale $page columns only as an editing convenience
+            // (a first-time translation starts from the English text
+            // instead of a blank field); save() decides where a submitted
+            // value actually gets stored (see its own docblock).
+            'localeTitle' => $locale === $defaultLocale ? $page->title : ($layout->title ?? $page->title),
+            'localeMetaTitle' => $locale === $defaultLocale ? $page->meta_title : ($layout->meta_title ?? $page->meta_title),
+            'localeMetaDesc' => $locale === $defaultLocale ? $page->meta_desc : ($layout->meta_desc ?? $page->meta_desc),
+            'localeOgImage' => $locale === $defaultLocale ? $page->og_image : ($layout->og_image ?? $page->og_image),
         ]);
     }
 
-    /** Save meta + a new layout revision, and publish it when status = published. */
+    /** Copy another locale's latest revision into this locale as a new draft — "Copy from default language". */
+    public function copyLocale(Request $request, int $id): RedirectResponse
+    {
+        $schoolId = app('current_school_id');
+        $page = Page::forSchool($schoolId)->findOrFail($id);
+
+        $data = $request->validate([
+            'from_locale' => ['required', 'string', 'max:10'],
+            'to_locale' => ['required', 'string', 'max:10'],
+        ]);
+        $from = Language::resolve($data['from_locale']);
+        $to = Language::resolve($data['to_locale']);
+
+        $source = $page->layoutsForLocale($from)->first();
+        if (! $source) {
+            return redirect()->route('admin.pages.edit', ['id' => $page->id, 'locale' => $to])
+                ->with('warning', __('Nothing to copy — that language has no content yet.'));
+        }
+
+        $this->pages->copyLayoutToLocale($page, $source, $to, $request->user());
+
+        return redirect()->route('admin.pages.edit', ['id' => $page->id, 'locale' => $to])
+            ->with('status', __('Copied — translate the content below, then Save.'));
+    }
+
+    /**
+     * "Suggest translation (AI)" — docs/modules/30-multilingual-content-plan.md
+     * Phase 5. Always safe to dispatch regardless of what the target locale
+     * already has: SuggestPageTranslationJob only ever creates a brand new
+     * draft revision (PageLayout is append-only), so it can never overwrite
+     * an existing hand-translated draft or the published page.
+     */
+    public function suggestTranslation(Request $request, int $id): RedirectResponse
+    {
+        $schoolId = app('current_school_id');
+        $page = Page::forSchool($schoolId)->findOrFail($id);
+        $locale = Language::resolve($request->input('locale'));
+
+        if ($locale === Language::defaultCode()) {
+            return redirect()->route('admin.pages.edit', ['id' => $page->id, 'locale' => $locale])
+                ->with('warning', __('Nothing to translate — that is the default language.'));
+        }
+
+        // dispatchSync(), not dispatch(): under this app's normal
+        // QUEUE_CONNECTION=redis, a queued dispatch returns before Horizon
+        // ever picks the job up, so the redirect below used to land back on
+        // the editor with the OLD content still showing and no indication
+        // translation was even still in progress — "refresh in a few
+        // seconds and check History" was papering over that gap. Running it
+        // inline keeps this a synchronous, best-effort, tries=1 call (same
+        // as before) — the request just waits for MyMemory instead of a
+        // background worker doing so, and the result is guaranteed to be
+        // there the moment this redirect resolves.
+        SuggestPageTranslationJob::dispatchSync($page->id, $locale);
+
+        return redirect()->route('admin.pages.edit', ['id' => $page->id, 'locale' => $locale])
+            ->with('status', __('Translated draft created — review it below or in History before publishing.'));
+    }
+
+    /**
+     * Save meta + a new layout revision for ONE locale, and publish it when
+     * status = published. docs/modules/30-multilingual-content-plan.md
+     * Phase 2 — `slug`/`status` are site structure, shared across every
+     * locale regardless of which language tab submitted the form; `title`/
+     * `meta_title`/`meta_desc`/`og_image` are content, so they only update
+     * the shared `pages` row (the default-locale seed) when editing the
+     * default locale — otherwise they're this locale's own translated SEO,
+     * stored on the new PageLayout row instead. Every locale's own
+     * PageLayout row always gets its own copy of these four regardless
+     * (see PageService::saveLayout()), so a fallback-rendered default-locale
+     * page and a real default-locale edit always carry consistent meta.
+     */
     public function save(Request $request, int $id): RedirectResponse
     {
         $schoolId = app('current_school_id');
         $page = Page::forSchool($schoolId)->findOrFail($id);
+        $defaultLocale = Language::defaultCode();
+        $locale = Language::resolve($request->input('locale'));
 
         $data = $request->validate([
             'title' => ['required', 'string', 'max:150'],
@@ -154,14 +281,17 @@ class PageController extends Controller
             'known_layout_id' => ['nullable', 'integer'],
         ]);
 
-        $this->pages->update($page, [
-            'title' => $data['title'],
+        $pageUpdate = [
             'slug' => $data['slug'] ?? $page->slug,
             'status' => $data['status'],
-            'meta_title' => $data['meta_title'] ?? null,
-            'meta_desc' => $data['meta_desc'] ?? null,
-            'og_image' => $data['og_image'] ?? null,
-        ]);
+        ];
+        if ($locale === $defaultLocale) {
+            $pageUpdate['title'] = $data['title'];
+            $pageUpdate['meta_title'] = $data['meta_title'] ?? null;
+            $pageUpdate['meta_desc'] = $data['meta_desc'] ?? null;
+            $pageUpdate['og_image'] = $data['og_image'] ?? null;
+        }
+        $this->pages->update($page, $pageUpdate);
 
         $layout = [
             'template' => $data['template'],
@@ -170,33 +300,41 @@ class PageController extends Controller
                 ? $this->normalizeBlocks($request->input('sidebar', []), PageRenderService::SIDEBAR_BLOCKS)
                 : [],
         ];
+        $meta = [
+            'title' => $data['title'],
+            'meta_title' => $data['meta_title'] ?? null,
+            'meta_desc' => $data['meta_desc'] ?? null,
+            'og_image' => $data['og_image'] ?? null,
+        ];
 
         // Optimistic concurrency check: has someone ELSE saved a newer
-        // revision since this editor session loaded (edit()'s
-        // $knownLayoutId, round-tripped through a hidden field)? Layouts are
-        // already append-only/versioned (see PageService/CLAUDE.md) — the
-        // safest response to a real conflict is never to block or discard
-        // either admin's work, just to keep BOTH revisions and let a human
-        // sort it out in History, rather than risk silently overwriting one
-        // admin's edits with the other's.
-        $priorLatest = $page->layouts()->first();
+        // revision of THIS LOCALE since this editor session loaded (edit()'s
+        // $knownLayoutId, round-tripped through a hidden field)? Scoped to
+        // the locale being saved — two admins translating two different
+        // languages of the same page never conflict with each other.
+        // Layouts are already append-only/versioned (see PageService/
+        // CLAUDE.md) — the safest response to a real conflict is never to
+        // block or discard either admin's work, just to keep BOTH revisions
+        // and let a human sort it out in History, rather than risk silently
+        // overwriting one admin's edits with the other's.
+        $priorLatest = $page->layoutsForLocale($locale)->first();
         $conflict = $request->filled('known_layout_id')
             && $priorLatest
             && (int) $data['known_layout_id'] !== $priorLatest->id;
 
-        $revision = $this->pages->saveLayout($page->fresh(), $layout, $request->user());
+        $revision = $this->pages->saveLayout($page->fresh(), $layout, $request->user(), $locale, $meta);
 
         if ($data['status'] === 'published' && ! $conflict) {
-            $this->pages->publish($page->fresh(), $revision->id);
+            $this->pages->publish($page->fresh(), $revision->id, $locale);
         }
 
         if ($conflict) {
-            return redirect()->route('admin.pages.edit', $page->id)->with('warning', __(
+            return redirect()->route('admin.pages.edit', ['id' => $page->id, 'locale' => $locale])->with('warning', __(
                 'Someone else saved changes to this page while you were editing. Your changes were saved as a new draft (not published) — open History to compare revisions and publish the right one.'
             ));
         }
 
-        return redirect()->route('admin.pages.edit', $page->id)->with('status', __('Page Saved.'));
+        return redirect()->route('admin.pages.edit', ['id' => $page->id, 'locale' => $locale])->with('status', __('Page Saved.'));
     }
 
     /**
@@ -219,10 +357,16 @@ class PageController extends Controller
         $sidebar = $template === 'sidebar'
             ? $this->normalizeBlocks($request->input('sidebar', []), PageRenderService::SIDEBAR_BLOCKS)
             : [];
+        // #page-form always carries a hidden 'locale' input for whichever
+        // language tab is open (edit.blade.php) — runPreview()'s
+        // `new FormData(form)` includes it automatically, so the notices/
+        // staff blocks preview in the language actually being edited
+        // instead of always the default locale.
+        $locale = Language::resolve($request->input('locale'));
 
         return view('public.page', [
             'page' => $page,
-            'view' => $this->render->buildViewFromBlocks($schoolId, $template, $blocks, $sidebar),
+            'view' => $this->render->buildViewFromBlocks($schoolId, $template, $blocks, $sidebar, $locale),
             'settings' => SiteSetting::forSchool($schoolId),
             'school' => School::current(),
         ]);
@@ -251,10 +395,14 @@ class PageController extends Controller
             return response('', 204);
         }
         $block = $blocks[0];
+        // See preview()'s own comment — runBlockPreview() explicitly appends
+        // #page-form's 'locale' field (edit.blade.php) since blockFormData()
+        // otherwise only collects the single block card's own fields.
+        $locale = Language::resolve($request->input('locale'));
 
         $html = view($group === 'sidebar' ? 'public.sidebar.render' : 'public.blocks.render', [
             'type' => $block['type'],
-            'd' => $this->render->resolveBlockData($schoolId, $block),
+            'd' => $this->render->resolveBlockData($schoolId, $block, $locale),
             'style' => $block['style'],
             'layout' => $block['layout'],
             'contained' => $request->boolean('contained'),
@@ -272,7 +420,7 @@ class PageController extends Controller
         return back()->with('status', "“{$page->title}” is now the homepage.");
     }
 
-    /** List every saved revision of this page — every save is a kept row, never overwritten. */
+    /** List every saved revision of this page (every locale — history is a full audit trail, not scoped to one). */
     public function history(int $id): View
     {
         $schoolId = app('current_school_id');
@@ -281,7 +429,7 @@ class PageController extends Controller
         return view('admin.website.pages.history', ['page' => $page]);
     }
 
-    /** Copy an old revision's layout into a brand-new (draft) row — history is never rewound or destroyed. */
+    /** Copy an old revision's layout into a brand-new (draft) row of the SAME locale — history is never rewound or destroyed. */
     public function restore(Request $request, int $id, int $layoutId): RedirectResponse
     {
         $schoolId = app('current_school_id');
@@ -290,7 +438,7 @@ class PageController extends Controller
 
         $this->pages->restore($page, $revision, $request->user());
 
-        return redirect()->route('admin.pages.edit', $page->id)
+        return redirect()->route('admin.pages.edit', ['id' => $page->id, 'locale' => $revision->locale ?? Language::defaultCode()])
             ->with('status', __('Revision restored as a new draft — review and Save to publish it.'));
     }
 

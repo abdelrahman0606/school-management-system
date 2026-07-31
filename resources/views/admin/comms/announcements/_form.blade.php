@@ -34,7 +34,63 @@
           <div class="form-check"><input class="form-check-input" type="checkbox" name="publish_now" value="1" id="pubnow" checked><label class="form-check-label" for="pubnow">{{ __('Publish Immediately') }}</label></div>
         @endunless
       </div>
+
+      {{-- Translations — docs/modules/30-multilingual-content-plan.md Phase
+           4/5. Only offered once the announcement exists (create has no id
+           yet to attach translation rows to) — same collapsible-panel-per-
+           language convention as School settings, just nested inside this
+           row's own edit modal instead of a full page. --}}
+      @if ($isEdit && isset($contentLanguages) && $contentLanguages->isNotEmpty())
+        <div class="col-12">
+          <hr class="my-2">
+          <p class="fw-semibold small mb-2">{{ __('Translations') }}</p>
+          <p class="text-muted small mb-3">{{ __('Leave a field blank to fall back to the default-language content above.') }}</p>
+          @foreach ($contentLanguages as $lang)
+            @php
+              $t = old('translations.'.$lang->code, [
+                  'title' => $a->trans('title', $lang->code),
+                  'body' => $a->trans('body', $lang->code),
+              ]);
+            @endphp
+            <details class="card mb-2">
+              <summary class="card-header py-1" style="cursor:pointer;">
+                @if ($lang->flag){{ $lang->flag }} @endif {{ $lang->native_name }}
+              </summary>
+              <div class="card-body">
+                <button type="button" class="btn btn-sm btn-outline-secondary mb-2 js-suggest-translation"
+                        data-form="ai-suggest-announcement-{{ $a->id }}-{{ $lang->code }}">
+                  <i class="bi bi-magic"></i> {{ __('Suggest translations (AI)') }}
+                </button>
+                <p class="form-text mt-0 mb-3">{{ __('Fills only the empty fields below using a free machine-translation service — always review a suggestion before saving.') }}</p>
+                <div class="row g-3">
+                  <div class="col-12"><label class="form-label">{{ __('Title') }}</label>
+                    <input name="translations[{{ $lang->code }}][title]" class="form-control"
+                        value="{{ $t['title'] }}" placeholder="{{ $a->title }}">
+                  </div>
+                  <div class="col-12"><label class="form-label">{{ __('Body') }}</label>
+                    <textarea name="translations[{{ $lang->code }}][body]" rows="3" class="form-control"
+                        placeholder="{{ $a->body }}">{{ $t['body'] }}</textarea>
+                  </div>
+                </div>
+              </div>
+            </details>
+          @endforeach
+        </div>
+      @endif
     </div>
     <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{{ __('Cancel') }}</button><button class="btn btn-primary">{{ __('Save') }}</button></div>
   </form>
 </div></div></div>
+
+{{-- One tiny standalone form per language, submitted via JS from the
+     "Suggest translations (AI)" button inside each language panel above —
+     kept OUTSIDE this row's own <form> since HTML forms can't nest.
+     docs/modules/30-multilingual-content-plan.md Phase 5. --}}
+@if ($isEdit && isset($contentLanguages))
+  @foreach ($contentLanguages as $lang)
+    <form method="POST" action="{{ route('admin.announcements.translations.suggest', $a->id) }}" id="ai-suggest-announcement-{{ $a->id }}-{{ $lang->code }}" class="d-none">
+      @csrf
+      <input type="hidden" name="locale" value="{{ $lang->code }}">
+    </form>
+  @endforeach
+@endif

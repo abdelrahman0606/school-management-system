@@ -244,16 +244,26 @@
          except the concurrent-edit warning (needs a deliberate read). --}}
     @if (session('status') || session('warning'))
       <div class="position-fixed top-0 start-50 translate-middle-x mt-2" style="z-index:2000;max-width:90vw;">
+        {{-- No .alert-dismissible here on purpose: it reserves a fixed
+             padding-right and absolutely-positions .btn-close with padding
+             calibrated for the default (larger) .alert box — against this
+             compact py-2/px-3 toast that pushed the close icon out of visual
+             alignment (and .btn-close-sm isn't a real Bootstrap class, so it
+             did nothing to compensate). A plain flex row sizes and centers
+             the close button naturally instead, same approach as the
+             AI-translation banner further down this file. data-bs-dismiss
+             still works without .alert-dismissible — that class only ever
+             controlled layout, not the dismiss behavior itself. --}}
         @if (session('status'))
-          <div class="alert alert-success alert-dismissible shadow-sm py-2 px-3 mb-2" id="flash-status" role="alert">
-            {{ session('status') }}
-            <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="alert" aria-label="{{ __('Close') }}"></button>
+          <div class="alert alert-success shadow-sm py-2 px-3 mb-2 d-flex align-items-center justify-content-between gap-2" id="flash-status" role="alert">
+            <span>{{ session('status') }}</span>
+            <button type="button" class="btn-close flex-shrink-0" data-bs-dismiss="alert" aria-label="{{ __('Close') }}"></button>
           </div>
         @endif
         @if (session('warning'))
-          <div class="alert alert-warning alert-dismissible shadow-sm py-2 px-3 mb-2" role="alert">
-            <i class="bi bi-exclamation-triangle"></i> {{ session('warning') }}
-            <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="alert" aria-label="{{ __('Close') }}"></button>
+          <div class="alert alert-warning shadow-sm py-2 px-3 mb-2 d-flex align-items-center justify-content-between gap-2" id="flash-warning" role="alert">
+            <span><i class="bi bi-exclamation-triangle"></i> {{ session('warning') }}</span>
+            <button type="button" class="btn-close flex-shrink-0" data-bs-dismiss="alert" aria-label="{{ __('Close') }}"></button>
           </div>
         @endif
       </div>
@@ -288,6 +298,21 @@
       {{-- Section 2: page identity + viewport --}}
       <div class="d-flex align-items-center gap-2">
         <span class="fw-semibold small text-truncate" id="topbar-page-name" style="max-width:240px;">{{ $page->title }}</span>
+        {{-- Language tab switcher — docs/modules/30-multilingual-content-plan.md
+             Phase 2. A plain GET reload (?locale=xx), matching every other
+             round-trip in this editor (save/preview/restore are all form
+             posts too, nothing here is AJAX-driven). Hidden entirely when
+             there's only one active language — nothing to switch between. --}}
+        @if ($languages->count() > 1)
+          <select id="lang-switcher" class="form-select form-select-sm" style="width:auto;" aria-label="{{ __('Editing language') }}"
+                  onchange="if (this.value) window.location.href = this.value;">
+            @foreach ($languages as $lang)
+              <option value="{{ route('admin.pages.edit', ['id' => $page->id, 'locale' => $lang->code]) }}" @selected($lang->code === $locale)>
+                @if ($lang->flag){{ $lang->flag }} @endif{{ $lang->native_name }}@if (! in_array($lang->code, $localesWithContent, true)) — {{ __('untranslated') }}@endif
+              </option>
+            @endforeach
+          </select>
+        @endif
         <div class="btn-group btn-group-sm" role="group" aria-label="{{ __('Preview Viewport') }}" id="viewport-toolbar">
           <button type="button" class="btn btn-outline-secondary active" data-viewport="desktop" title="{{ __('Desktop') }}" aria-label="{{ __('Desktop') }}"><i class="bi bi-display" aria-hidden="true"></i></button>
           <button type="button" class="btn btn-outline-secondary" data-viewport="laptop" title="{{ __('Laptop') }}" aria-label="{{ __('Laptop') }}"><i class="bi bi-laptop" aria-hidden="true"></i></button>
@@ -306,7 +331,7 @@
              history section below) enables it the moment the form actually
              differs from the state the editor loaded with, and disables it
              again if you undo back to that same state. --}}
-        <button type="submit" form="page-form" class="btn btn-primary btn-sm" id="btn-save" disabled>
+        <button type="submit" form="page-form" class="btn btn-primary btn-sm" id="btn-save" disabled data-needs-publish="{{ $needsPublish ? '1' : '0' }}">
           <i class="bi bi-cloud-upload"></i> {{ $page->status === 'published' ? __('Update') : __('Publish') }}
         </button>
       </div>
@@ -320,6 +345,59 @@
          announcements. See docs/modules/28-elementor-block-editor-plan.md §7u. --}}
     <div id="a11y-status" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
 
+    {{-- "Copy from default language" / "Suggest translation (AI)" —
+         docs/modules/30-multilingual-content-plan.md Phases 2 + 5. Shown for
+         any non-default language tab; "Copy" only when this locale has no
+         revision of its own yet (an untranslated starting point), "Suggest"
+         always (SuggestPageTranslationJob only ever ADDS a new draft
+         revision — safe to run again even if this locale already has
+         content, e.g. after the default-language text changed).
+
+         Submitted via fetch(), not a plain form POST+redirect: both actions
+         now run synchronously server-side (dispatchSync(), see
+         PageController's own comment on that), but MyMemory is a real
+         sequential per-field network call and can take several seconds on a
+         content-heavy page — a plain form post would sit on a blank
+         mid-navigation browser tab for that whole stretch with zero
+         feedback, which is what actually prompted this. The fetch reuses
+         this exact GET edit route's own response (server redirects to it
+         the same as before) and splices the relevant fragments into the
+         live DOM instead of navigating there — see runTranslationAction()
+         below. id="translation-banner" is the whole swap unit (its own
+         markup changes shape once $hasContent flips true, e.g. the Copy
+         button disappearing). --}}
+    @if ($locale !== $defaultLocale)
+      @php $hasContent = in_array($locale, $localesWithContent, true); @endphp
+      <div id="translation-banner">
+        <div class="alert alert-info d-flex align-items-center justify-content-between gap-3 rounded-0 mb-0 py-2 px-3 flex-wrap" role="alert">
+          <span><i class="bi bi-translate"></i>
+            {{ $hasContent ? __('AI translation creates a new draft revision — review it in History before publishing.') : __('This page has no content in this language yet.') }}
+          </span>
+          <div class="d-flex align-items-center gap-2">
+            @unless ($hasContent)
+              <form method="POST" action="{{ route('admin.pages.copy-locale', $page->id) }}" class="js-translation-form d-flex align-items-center">
+                @csrf
+                <input type="hidden" name="from_locale" value="{{ $defaultLocale }}">
+                <input type="hidden" name="to_locale" value="{{ $locale }}">
+                <button type="submit" class="btn btn-outline-primary btn-sm">{{ __('Copy from default language to start translating') }}</button>
+              </form>
+            @endunless
+            <form method="POST" action="{{ route('admin.pages.suggest-translation', $page->id) }}" class="js-translation-form d-flex align-items-center">
+              @csrf
+              <input type="hidden" name="locale" value="{{ $locale }}">
+              <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="bi bi-magic"></i> {{ __('Suggest translation (AI)') }}</button>
+            </form>
+          </div>
+        </div>
+        {{-- Indeterminate — MyMemory is a real per-field network call with no
+             way to know a true percentage, so this only promises "still
+             working," not "X of Y done." Hidden by default. --}}
+        <div class="progress rounded-0" style="height:3px;display:none;" id="translation-progress">
+          <div class="progress-bar progress-bar-striped progress-bar-animated" style="width:100%"></div>
+        </div>
+      </div>
+    @endif
+
     <div class="editor-body">
       <div class="editor-sidebar" id="editor-sidebar">
         <div class="sidebar-resize-handle" id="sidebar-resize-handle"></div>
@@ -331,7 +409,9 @@
                latest revision actually is by the time the save arrives, to
                detect a second admin having saved in between (see §7m in
                docs/modules/28-elementor-block-editor-plan.md). --}}
-          <input type="hidden" name="known_layout_id" value="{{ $knownLayoutId }}">
+          <input type="hidden" name="known_layout_id" id="known-layout-id" value="{{ $knownLayoutId }}">
+          {{-- Which language this save applies to (docs/modules/30-multilingual-content-plan.md Phase 2). --}}
+          <input type="hidden" name="locale" value="{{ $locale }}">
 
           {{-- Panel: block layers --}}
           <div class="sidebar-panel" data-panel="blocks">
@@ -404,9 +484,18 @@
           {{-- Panel: page settings (Title / Slug / Status / Template) --}}
           <div class="sidebar-panel" data-panel="settings">
             <h6 class="small text-muted text-uppercase mb-3">{{ __('Page Settings') }}</h6>
+            @if ($locale !== $defaultLocale)
+              {{-- docs/modules/30-multilingual-content-plan.md Phase 2 —
+                   Title/Meta below are THIS language's own translated copy
+                   (stored on this locale's own layout revision); Slug/Status
+                   stay shared across every language regardless of which tab
+                   you're on, since they're site structure (one URL, one
+                   publish state), not content. --}}
+              <div class="alert alert-light border small py-2 px-2 mb-3">{{ __('Title and SEO fields below are this language\'s own translation. Slug and Status apply to the whole page in every language.') }}</div>
+            @endif
             <div class="mb-3">
               <label class="form-label small">{{ __('Title') }} <span class="text-danger">*</span></label>
-              <input name="title" class="form-control form-control-sm" value="{{ old('title', $page->title) }}" required>
+              <input name="title" class="form-control form-control-sm" value="{{ old('title', $localeTitle) }}" required>
             </div>
             <div class="mb-3">
               <label class="form-label small">{{ __('Slug') }}</label>
@@ -434,17 +523,17 @@
             <h6 class="small text-muted text-uppercase mb-3">{{ __('SEO') }}</h6>
             <div class="mb-3">
               <label class="form-label small">{{ __('Meta Title') }}</label>
-              <input name="meta_title" class="form-control form-control-sm" maxlength="255" value="{{ old('meta_title', $page->meta_title) }}" placeholder="{{ $page->title }}">
+              <input name="meta_title" class="form-control form-control-sm" maxlength="255" value="{{ old('meta_title', $localeMetaTitle) }}" placeholder="{{ $localeTitle }}">
               <div class="form-text small">{{ __('Falls back to the page title when left blank.') }}</div>
             </div>
             <div class="mb-3">
               <label class="form-label small">{{ __('Meta Description') }}</label>
-              <textarea name="meta_desc" rows="3" class="form-control form-control-sm" maxlength="500">{{ old('meta_desc', $page->meta_desc) }}</textarea>
+              <textarea name="meta_desc" rows="3" class="form-control form-control-sm" maxlength="500">{{ old('meta_desc', $localeMetaDesc) }}</textarea>
             </div>
             <div class="mb-3">
               <label class="form-label small">{{ __('Social Share Image (og:image)') }}</label>
               <div class="input-group input-group-sm">
-                <input type="text" name="og_image" class="form-control form-control-sm media-field-input" value="{{ old('og_image', $page->og_image) }}" placeholder="https://…">
+                <input type="text" name="og_image" class="form-control form-control-sm media-field-input" value="{{ old('og_image', $localeOgImage) }}" placeholder="https://…">
                 <button type="button" class="btn btn-outline-secondary btn-sm" onclick="openMediaPicker(this)">{{ __('Browse') }}</button>
               </div>
             </div>
@@ -474,16 +563,29 @@
              $page->layouts, eager-loaded with createdBy by PageController::edit(). --}}
         <div class="sidebar-panel" data-panel="history">
           <h6 class="small text-muted text-uppercase mb-3">{{ __('History') }}</h6>
-          <div class="list-group list-group-flush small">
+          {{-- docs/modules/30-multilingual-content-plan.md Phase 2 — every
+               language's revisions now live in one combined history, so
+               "Latest" is tracked PER LOCALE (the first row this loop sees
+               for a given locale), not globally first — otherwise a recent
+               edit in one language would wrongly hide the "Latest" badge
+               (and the Restore button) on every other language's own most
+               recent revision. --}}
+          @php $seenLocales = []; @endphp
+          <div class="list-group list-group-flush small" id="history-list">
             @forelse ($page->layouts as $rev)
+              @php
+                $isLatestForLocale = ! in_array($rev->locale, $seenLocales, true);
+                $seenLocales[] = $rev->locale;
+              @endphp
               <div class="list-group-item px-0 py-2">
                 <div class="fw-semibold">{{ $rev->created_at?->format('M j, Y g:i A') }}</div>
                 <div class="text-muted mb-1">{{ $rev->createdBy?->name ?? __('Unknown') }}</div>
                 <div class="mb-1">
-                  @if($loop->first)<span class="badge bg-secondary">{{ __('Latest') }}</span>@endif
+                  @if($rev->locale)<span class="badge bg-light text-dark border">{{ strtoupper($rev->locale) }}</span>@endif
+                  @if($isLatestForLocale)<span class="badge bg-secondary">{{ __('Latest') }}</span>@endif
                   @if($rev->is_published)<span class="badge bg-success">{{ __('Published') }}</span>@endif
                 </div>
-                @unless($loop->first)
+                @unless($isLatestForLocale)
                   <form method="POST" action="{{ route('admin.pages.restore', [$page->id, $rev->id]) }}" onsubmit="return confirm('{{ __('Restore this revision as a new draft?') }}')">
                     @csrf
                     <button type="submit" class="btn btn-outline-secondary btn-sm w-100">{{ __('Restore') }}</button>
@@ -1090,10 +1192,21 @@
       // HISTORY_LIMIT eventually shifts history_[0] out on a long editing
       // session, but "the state Update should be disabled at" never changes.
       var initialSnapshotJson = null;
+      // True when the page is published overall but the revision this
+      // editor just loaded for the current locale isn't itself the live
+      // one yet — e.g. right after Copy from default language / Suggest
+      // translation (AI) / Restore, all of which create a new unpublished
+      // draft and reload straight into it. In that case the form matching
+      // its own just-loaded state is expected and must NOT keep Update
+      // disabled, or there's no way to actually publish what was just
+      // generated without making a throwaway edit first. See
+      // PageController::edit()'s own comment on 'needsPublish'.
+      var needsPublish = @json($needsPublish);
       function updateSaveButtonState() {
         var saveBtn = document.getElementById('btn-save');
         if (!saveBtn || initialSnapshotJson === null) return;
-        saveBtn.disabled = JSON.stringify(snapshotState()) === initialSnapshotJson;
+        var unchanged = JSON.stringify(snapshotState()) === initialSnapshotJson;
+        saveBtn.disabled = unchanged && !needsPublish;
       }
 
       // Structure-aware capture/restore (§7g in
@@ -1567,6 +1680,11 @@
 
           var fd = blockFormData(card);
           fd.append('group', group);
+          // blockFormData() only collects this card's own fields — the
+          // notices/staff blocks need the page-level 'locale' field too
+          // (see PageController::previewBlock()'s own comment).
+          var localeInput = form.querySelector('[name="locale"]');
+          if (localeInput) fd.append('locale', localeInput.value);
           // A nested child (path.length > 1) is ALWAYS rendered inside its
           // parent's own wrapper (see the container/grid @case in
           // public/blocks/render.blade.php, which always passes
@@ -1886,6 +2004,171 @@
             }, Promise.resolve());
           });
         }
+      })();
+
+      // ── AI translation actions (Copy from default language / Suggest
+      // translation (AI)) ─────────────────────────────────────────────────
+      // fetch()-driven in-place update instead of a full form-post
+      // navigation. Both server actions now run synchronously
+      // (dispatchSync(), see PageController's own comment on that) so by
+      // the time this fetch resolves the translation is guaranteed to be
+      // done — no more "refresh in a few seconds and check History." The
+      // progress bar below covers the real wait: MyMemory is a sequential
+      // per-field network call and can take several seconds on a
+      // content-heavy page.
+      (function () {
+        var banner = document.getElementById('translation-banner');
+        if (!banner) return; // default-locale tab has no banner — nothing to wire up
+        var progress = document.getElementById('translation-progress');
+
+        function setBusy(busy) {
+          banner.querySelectorAll('button[type="submit"]').forEach(function (b) { b.disabled = busy; });
+          if (progress) progress.style.display = busy ? '' : 'none';
+        }
+
+        // A plain form post would have shown the redirect target's flash
+        // message (e.g. "Translated draft created — review it below…") in
+        // the usual top banner; the AJAX path applies its DOM fragments
+        // silently instead, so sighted users need an equivalent visible
+        // confirmation of their own — announce() alone only reaches screen
+        // readers. Auto-dismisses; a click also dismisses it early.
+        function showToast(message, variant) {
+          var el = document.createElement('div');
+          el.className = 'alert alert-' + variant + ' rounded-0 mb-0 py-2 px-3 small';
+          el.textContent = message;
+          el.addEventListener('click', function () { el.remove(); });
+          banner.insertBefore(el, banner.firstChild);
+          setTimeout(function () { el.remove(); }, 6000);
+        }
+
+        // Splices the fetched edit page's relevant fragments into the live
+        // DOM — blocks, sidebar blocks, title/slug/status/template/meta,
+        // known_layout_id (the optimistic-concurrency check's own value —
+        // MUST be refreshed or the next real Save would wrongly report a
+        // conflict), the language switcher's "untranslated" marker,
+        // History, and this banner's own next state (e.g. the Copy button
+        // disappearing once content exists) — without a real browser
+        // navigation. Deliberately narrow: a wholesale innerHTML swap of
+        // chrome like the topbar would silently drop the addEventListener
+        // calls this script already bound to THOSE specific original nodes
+        // (Undo/Redo, panel buttons, …). blocks-list/sidebar-list and the
+        // plain form fields have no such per-node listeners of their own —
+        // every block interaction is event-delegated on `document`, and
+        // Sortable.js stays attached to the *container* element (an
+        // innerHTML replace never removes the container itself) — so
+        // swapping just their innerHTML is safe and needs nothing rebound.
+        function applyFetchedDocument(doc) {
+          var byName = function (name) { return doc.querySelector('[name="' + name + '"]'); };
+
+          var newBlocks = doc.getElementById('blocks-list');
+          var newSidebar = doc.getElementById('sidebar-list');
+          if (newBlocks) document.getElementById('blocks-list').innerHTML = newBlocks.innerHTML;
+          if (newSidebar) document.getElementById('sidebar-list').innerHTML = newSidebar.innerHTML;
+          updateEmptyState(document.getElementById('blocks-list'));
+
+          ['title', 'slug', 'status', 'meta_title', 'meta_desc'].forEach(function (name) {
+            var src = byName(name), dst = document.querySelector('#page-form [name="' + name + '"]');
+            if (src && dst) dst.value = src.value;
+          });
+          var newOg = byName('og_image');
+          var ogInput = document.querySelector('#page-form [name="og_image"]');
+          // Dispatching 'input' here is a no-op today (this field has no
+          // .media-field-preview sibling, see that listener's own comment
+          // further up) — kept anyway so this stays correct automatically
+          // if a preview thumbnail is ever added to this field later.
+          if (newOg && ogInput && ogInput.value !== newOg.value) {
+            ogInput.value = newOg.value;
+            ogInput.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+          var newTpl = byName('template');
+          var tplSelect = document.getElementById('tpl-select');
+          if (newTpl && tplSelect) {
+            tplSelect.value = newTpl.value;
+            var sideCol = document.getElementById('side-col');
+            if (sideCol) sideCol.style.display = newTpl.value === 'sidebar' ? '' : 'none';
+            var addSide = document.getElementById('add-side-section');
+            if (addSide) addSide.style.display = newTpl.value === 'sidebar' ? '' : 'none';
+          }
+
+          var newKnownLayoutId = doc.getElementById('known-layout-id');
+          var knownLayoutId = document.getElementById('known-layout-id');
+          if (newKnownLayoutId && knownLayoutId) knownLayoutId.value = newKnownLayoutId.value;
+
+          var newPageName = doc.getElementById('topbar-page-name');
+          var pageName = document.getElementById('topbar-page-name');
+          if (newPageName && pageName) pageName.textContent = newPageName.textContent;
+
+          var newSwitcher = doc.getElementById('lang-switcher');
+          var switcher = document.getElementById('lang-switcher');
+          if (newSwitcher && switcher) switcher.innerHTML = newSwitcher.innerHTML;
+
+          var newHistoryList = doc.getElementById('history-list');
+          var historyList = document.getElementById('history-list');
+          if (newHistoryList && historyList) historyList.innerHTML = newHistoryList.innerHTML;
+
+          // The flash message a plain form post would otherwise have shown
+          // (e.g. "Translated draft created — review it below…", or a
+          // 'warning' like copyLocale()'s "Nothing to copy — that language
+          // has no content yet.") — surfaced as a toast below since this
+          // path never navigates anywhere to display it.
+          var flashStatus = doc.getElementById('flash-status');
+          var flashWarning = doc.getElementById('flash-warning');
+
+          var newBanner = doc.getElementById('translation-banner');
+          if (newBanner) {
+            banner.innerHTML = newBanner.innerHTML;
+            progress = document.getElementById('translation-progress'); // just replaced — re-resolve
+            wireForms(); // the freshly-injected forms need their own submit listener
+          }
+          if (flashWarning) {
+            showToast(flashWarning.textContent.trim(), 'warning');
+          } else if (flashStatus) {
+            showToast(flashStatus.textContent.trim(), 'success');
+          }
+
+          var newSaveBtn = doc.getElementById('btn-save');
+          var saveBtn = document.getElementById('btn-save');
+          if (newSaveBtn && saveBtn) needsPublish = newSaveBtn.dataset.needsPublish === '1';
+
+          // This is effectively a brand new "loaded" state — reset undo/
+          // redo history the same way DOMContentLoaded's own first
+          // pushHistory() call seeds it, or Undo could otherwise wipe the
+          // just-applied translation back to blank (there is nothing
+          // meaningful to undo INTO from here).
+          history_ = [];
+          historyIndex = -1;
+          initialSnapshotJson = null;
+          initQuillEditors();
+          initNestedSortables();
+          applyAllFieldDependencies();
+          schedulePreview();
+          pushHistory();
+          announce(@json(__('Translation applied.')));
+        }
+
+        function runAction(form) {
+          setBusy(true);
+          fetch(form.action, { method: 'POST', body: new FormData(form) })
+            .then(function (res) {
+              if (!res.ok) throw new Error('HTTP ' + res.status);
+              return res.text();
+            })
+            .then(function (html) { applyFetchedDocument(new DOMParser().parseFromString(html, 'text/html')); })
+            .catch(function () { showToast(@json(__('Something went wrong — please try again.')), 'danger'); })
+            .finally(function () { setBusy(false); });
+        }
+
+        function wireForms() {
+          banner.querySelectorAll('.js-translation-form').forEach(function (form) {
+            if (form.dataset.wired) return;
+            form.dataset.wired = 'true';
+            form.addEventListener('submit', function (e) {
+              e.preventDefault();
+              runAction(form);
+            });
+          });
+        }
+        wireForms();
       })();
     </script>
   @endpush

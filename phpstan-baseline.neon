@@ -283,12 +283,6 @@ parameters:
 			path: app/Http/Controllers/Admin/People/DataImportController.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$staff_count\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Admin/People/StaffReferenceController.php
-
-		-
 			message: '#^Access to an undefined property App\\Modules\\Academic\\Models\\AcademicYear\:\:\$is_current\.$#'
 			identifier: property.notFound
 			count: 1
@@ -299,6 +293,12 @@ parameters:
 			identifier: property.notFound
 			count: 1
 			path: app/Http/Controllers/Admin/Setup/LanguageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Language\\Models\\Language\:\:\$code\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/Setup/SchoolController.php
 
 		-
 			message: '#^Access to an undefined property App\\Modules\\Language\\Models\\Language\:\:\$is_default\.$#'
@@ -369,11 +369,41 @@ parameters:
 		-
 			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\Page\:\:\$title\.$#'
 			identifier: property.notFound
-			count: 1
+			count: 3
+			path: app/Http/Controllers/Admin/Website/PageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\Page\:\:\$meta_title\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Admin/Website/PageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\Page\:\:\$meta_desc\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Http/Controllers/Admin/Website/PageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\Page\:\:\$og_image\.$#'
+			identifier: property.notFound
+			count: 2
 			path: app/Http/Controllers/Admin/Website/PageController.php
 
 		-
 			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\PageLayout\:\:\$layout_json\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/Website/PageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\Page\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/Website/PageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\PageLayout\:\:\$is_published\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Http/Controllers/Admin/Website/PageController.php
@@ -3545,6 +3575,24 @@ parameters:
 			identifier: property.notFound
 			count: 2
 			path: app/Modules/LMS/Services/SubmissionService.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Language\\Models\\ContentTranslation\:\:\$translatable_type\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Modules/Language/Models/ContentTranslation.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Language\\Models\\ContentTranslation\:\:\$translatable_id\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Modules/Language/Models/ContentTranslation.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Language\\Models\\ContentTranslation\:\:\$locale\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Modules/Language/Models/ContentTranslation.php
 
 		-
 			message: '#^Access to an undefined property App\\Modules\\Language\\Models\\Translation\:\:\$key\.$#'
@@ -8965,6 +9013,48 @@ parameters:
 			path: app/Modules/Website/Models/MenuItem.php
 
 		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\MenuItem\:\:\$label\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Language/Jobs/SuggestMenuTranslationJob.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\MenuItem\:\:\$type\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Language/Jobs/SuggestMenuTranslationJob.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\MenuItem\:\:\$page_id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Language/Jobs/SuggestMenuTranslationJob.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\MenuItem\:\:\$url\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Language/Jobs/SuggestMenuTranslationJob.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\MenuItem\:\:\$dynamic_route\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Language/Jobs/SuggestMenuTranslationJob.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\MenuItem\:\:\$icon\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Language/Jobs/SuggestMenuTranslationJob.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\MenuItem\:\:\$target\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Language/Jobs/SuggestMenuTranslationJob.php
+
+		-
 			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\MenuItem\:\:\$url\.$#'
 			identifier: property.notFound
 			count: 1
@@ -9003,11 +9093,17 @@ parameters:
 		-
 			message: '#^Generic type Illuminate\\Database\\Eloquent\\Relations\\HasMany\<App\\Modules\\Website\\Models\\PageLayout\> in PHPDoc tag @return does not specify all template types of class Illuminate\\Database\\Eloquent\\Relations\\HasMany\: TRelatedModel, TDeclaringModel$#'
 			identifier: generics.lessTypes
-			count: 2
+			count: 3
 			path: app/Modules/Website/Models/Page.php
 
 		-
 			message: '#^Method App\\Modules\\Website\\Models\\Page\:\:layouts\(\) should return Illuminate\\Database\\Eloquent\\Relations\\HasMany\<App\\Modules\\Website\\Models\\PageLayout\> but returns Illuminate\\Database\\Eloquent\\Relations\\HasMany\<App\\Modules\\Website\\Models\\PageLayout, \$this\(App\\Modules\\Website\\Models\\Page\)\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Modules/Website/Models/Page.php
+
+		-
+			message: '#^Method App\\Modules\\Website\\Models\\Page\:\:layoutsForLocale\(\) should return Illuminate\\Database\\Eloquent\\Relations\\HasMany\<App\\Modules\\Website\\Models\\PageLayout\> but returns Illuminate\\Database\\Eloquent\\Relations\\HasMany\<App\\Modules\\Website\\Models\\PageLayout, \$this\(App\\Modules\\Website\\Models\\Page\)\>\.$#'
 			identifier: return.type
 			count: 1
 			path: app/Modules/Website/Models/Page.php
@@ -9068,6 +9164,30 @@ parameters:
 
 		-
 			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\PageLayout\:\:\$layout_json\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Website/Services/PageRenderService.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\PageLayout\:\:\$title\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Website/Services/PageRenderService.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\PageLayout\:\:\$meta_title\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Website/Services/PageRenderService.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\PageLayout\:\:\$meta_desc\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Website/Services/PageRenderService.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\PageLayout\:\:\$og_image\.$#'
 			identifier: property.notFound
 			count: 1
 			path: app/Modules/Website/Services/PageRenderService.php
@@ -9141,7 +9261,7 @@ parameters:
 		-
 			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\Page\:\:\$school_id\.$#'
 			identifier: property.notFound
-			count: 9
+			count: 10
 			path: app/Modules/Website/Services/PageService.php
 
 		-
@@ -9165,7 +9285,37 @@ parameters:
 		-
 			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\PageLayout\:\:\$layout_json\.$#'
 			identifier: property.notFound
+			count: 3
+			path: app/Modules/Website/Services/PageService.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\PageLayout\:\:\$locale\.$#'
+			identifier: property.notFound
 			count: 2
+			path: app/Modules/Website/Services/PageService.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\PageLayout\:\:\$title\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Modules/Website/Services/PageService.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\PageLayout\:\:\$meta_title\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Modules/Website/Services/PageService.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\PageLayout\:\:\$meta_desc\.$#'
+			identifier: property.notFound
+			count: 3
+			path: app/Modules/Website/Services/PageService.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\PageLayout\:\:\$og_image\.$#'
+			identifier: property.notFound
+			count: 3
 			path: app/Modules/Website/Services/PageService.php
 
 		-
@@ -9185,6 +9335,36 @@ parameters:
 			identifier: nullsafe.neverNull
 			count: 1
 			path: app/Modules/Website/Services/PageTemplateService.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\PageLayout\:\:\$title\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Language/Jobs/SuggestPageTranslationJob.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\PageLayout\:\:\$meta_title\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Language/Jobs/SuggestPageTranslationJob.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\PageLayout\:\:\$meta_desc\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Language/Jobs/SuggestPageTranslationJob.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\PageLayout\:\:\$og_image\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Language/Jobs/SuggestPageTranslationJob.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\PageLayout\:\:\$layout_json\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Language/Jobs/SuggestPageTranslationJob.php
 
 		-
 			message: '#^Access to an undefined property App\\Modules\\Examination\\Models\\Exam\:\:\$academic_year_id\.$#'
@@ -9443,3 +9623,93 @@ parameters:
 			identifier: property.notFound
 			count: 2
 			path: app/Modules/User/Services/SessionDeviceService.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Language\\Models\\Language\:\:\$code\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/Comms/AnnouncementController.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Language\\Models\\Language\:\:\$code\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/People/StaffController.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Language\\Models\\Language\:\:\$code\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/People/StaffReferenceController.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Announcement\\Models\\Announcement\:\:\$title\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Language/Jobs/SuggestAnnouncementTranslationJob.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Announcement\\Models\\Announcement\:\:\$body\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Language/Jobs/SuggestAnnouncementTranslationJob.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Staff\\Models\\Staff\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Language/Jobs/SuggestStaffTranslationJob.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Staff\\Models\\Department\|App\\Modules\\Staff\\Models\\Designation\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Language/Jobs/SuggestStaffReferenceTranslationJob.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Language\\Models\\Language\:\:\$code\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/Website/PageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Language\\Models\\Translation\:\:\$value\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Language/Jobs/SuggestUiTranslationsJob.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Language\\Models\\Translation\:\:\$key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Language/Jobs/SuggestUiTranslationsJob.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\PageLayout\:\:\$locale\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Website/Models/Page.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Announcement\\Models\\Announcement\:\:\$title\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Website/Services/PublicPortalService.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Announcement\\Models\\Announcement\:\:\$body\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Website/Services/PublicPortalService.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Staff\\Models\\Staff\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Website/Services/PublicPortalService.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Staff\\Models\\Designation\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Website/Services/PublicPortalService.php

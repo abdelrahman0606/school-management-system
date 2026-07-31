@@ -3,6 +3,44 @@
 @section('content')
   @include('admin.partials.page-header', ['title' => __('Navigation menu'), 'crumbs' => [__('Website'), __('Menus')]])
 
+  {{-- Language switcher — docs/modules/30-multilingual-content-plan.md
+       Phase 3. Each language owns its own full menu tree, mirroring the
+       page builder's language tab (Phase 2): a plain ?locale= GET reload,
+       hidden entirely when there's only one active language. --}}
+  @if ($languages->count() > 1)
+    <div class="mb-3 d-flex align-items-center gap-2">
+      <label class="form-label small text-muted mb-0">{{ __('Editing language') }}</label>
+      <select class="form-select form-select-sm" style="width:auto;" aria-label="{{ __('Editing language') }}"
+              onchange="if (this.value) window.location.href = this.value;">
+        @foreach ($languages as $lang)
+          <option value="{{ route('admin.menus.index', ['locale' => $lang->code]) }}" @selected($lang->code === $locale)>
+            @if ($lang->flag){{ $lang->flag }} @endif{{ $lang->native_name }}@if (! in_array($lang->code, $localesWithItems, true)) — {{ __('untranslated') }}@endif
+          </option>
+        @endforeach
+      </select>
+    </div>
+  @endif
+
+  {{-- "Suggest translation (AI)" — docs/modules/30-multilingual-content-plan.md
+       Phase 5. Only offered for an untranslated locale (zero items): a Menu
+       save is a full-tree REPLACE, so running it against a locale that
+       already has items would destroy hand-built/translated work —
+       SuggestMenuTranslationJob refuses to run in that case too (see its
+       own docblock), this is just the same rule reflected in the UI so it
+       isn't in the way. --}}
+  @if ($locale !== $defaultLocale && ! in_array($locale, $localesWithItems, true))
+    <div class="alert alert-info d-flex align-items-center justify-content-between gap-3 py-2 px-3 flex-wrap" role="alert">
+      <span><i class="bi bi-translate"></i> {{ __('This language has no menu yet.') }}</span>
+      <div class="d-flex align-items-center gap-2">
+        <form method="POST" action="{{ route('admin.menus.suggest-translation') }}" class="d-flex align-items-center">
+          @csrf
+          <input type="hidden" name="locale" value="{{ $locale }}">
+          <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="bi bi-magic"></i> {{ __('Build from default language (AI)') }}</button>
+        </form>
+      </div>
+    </div>
+  @endif
+
   @php
     $tree = $menu->items->map(fn ($i) => [
       'label'   => $i->label,
@@ -21,6 +59,8 @@
   <form method="POST" action="{{ route('admin.menus.save') }}" id="menu-form">
     @csrf @method('PUT')
     <input type="hidden" name="items" id="menu-items-json">
+    {{-- Which language this save applies to (docs/modules/30-multilingual-content-plan.md Phase 3). --}}
+    <input type="hidden" name="locale" value="{{ $locale }}">
 
     <div class="row g-4">
       <div class="col-lg-4">
@@ -56,7 +96,7 @@
         <div class="card">
           <div class="card-header d-flex justify-content-between align-items-center">
             <span>{{ __('Menu Structure') }}</span>
-            <button class="btn btn-primary btn-sm" type="submit"><i class="bi bi-save"></i> {{ __('Save Menu') }}</button>
+            <button class="btn btn-primary btn-sm" type="submit" id="menu-save-btn"><i class="bi bi-save"></i> {{ __('Save Menu') }}</button>
           </div>
           <div class="card-body">
             <ul class="menu-list list-unstyled mb-0" id="menu-root"></ul>
@@ -187,8 +227,17 @@
           .filter(function (o) { return o.label; });
       }
 
+      // Disabling the button synchronously (before the browser has even
+      // started the navigation) closes off a double-click/double-tap as a
+      // way to fire two overlapping saves — belt-and-suspenders alongside
+      // the server-side row lock in MenuService::replaceItems(), which is
+      // the actual authoritative guard (this alone wouldn't stop two
+      // separate tabs, or a genuine retry).
       document.getElementById('menu-form').addEventListener('submit', function () {
         document.getElementById('menu-items-json').value = JSON.stringify(serialize(root));
+        var saveBtn = document.getElementById('menu-save-btn');
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm" aria-hidden="true"></span> {{ __('Saving…') }}';
       });
 
       // Initial render

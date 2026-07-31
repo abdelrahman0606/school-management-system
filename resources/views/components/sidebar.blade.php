@@ -12,6 +12,18 @@
 @php
     $sidebarId = 'sidebar-' . uniqid();
 
+    // Defensive: a no-dot __() key not found in the flat English-as-key
+    // JSON cache falls through to Laravel's GROUP-based lookup (the whole
+    // key becomes a group name); if that name matches a real
+    // lang/{locale}/{group}.php file, __() returns the file's ENTIRE array
+    // instead of a string (Arr::get() with a null item returns the whole
+    // array). This is exactly how __('SMS') vs resources/lang/*/sms.php
+    // fatally crashed this view under backend_locale=bn (fixed at the
+    // source by renaming that file to sms_templates.php) — kept here as
+    // cheap insurance so a future label/lang-group name collision degrades
+    // to an empty label instead of a 500.
+    $navLabel = fn ($value) => is_string($value) ? $value : '';
+
     // Build a module tree. Each node is either a direct link
     // (has 'href') or an expandable parent (has 'children').
     $navTree = [];
@@ -138,15 +150,15 @@
                         <a href="{{ $node['href'] }}" class="nav-link {{ ($node['active'] ?? false) ? 'active' : '' }}"
                            aria-current="{{ ($node['active'] ?? false) ? 'page' : 'false' }}">
                             <i class="bi {{ $node['icon'] }} nav-icon" aria-hidden="true"></i>
-                            <span class="nav-label flex-grow-1">{{ $node['label'] }}</span>
+                            <span class="nav-label flex-grow-1">{{ $navLabel($node['label']) }}</span>
                         </a>
                     </li>
                 @else
                     @php $childActive = collect($node['children'])->contains(fn ($c) => $c['active'] ?? false); @endphp
-                    <li class="nav-item nav-parent {{ $childActive ? 'open' : '' }}" data-nav-parent="{{ $node['key'] ?? \Illuminate\Support\Str::slug($node['label']) }}">
+                    <li class="nav-item nav-parent {{ $childActive ? 'open' : '' }}" data-nav-parent="{{ $node['key'] ?? \Illuminate\Support\Str::slug($navLabel($node['label'])) }}">
                         <button type="button" class="nav-link nav-parent-toggle {{ $childActive ? 'has-active' : '' }}" aria-expanded="{{ $childActive ? 'true' : 'false' }}">
                             <i class="bi {{ $node['icon'] }} nav-icon" aria-hidden="true"></i>
-                            <span class="nav-label flex-grow-1">{{ $node['label'] }}</span>
+                            <span class="nav-label flex-grow-1">{{ $navLabel($node['label']) }}</span>
                             <i class="bi bi-chevron-down nav-caret" aria-hidden="true"></i>
                         </button>
                         <ul class="nav-children" role="list">
@@ -154,7 +166,7 @@
                                 <li class="nav-item">
                                     <a href="{{ $child['href'] }}" class="nav-link nav-child {{ ($child['active'] ?? false) ? 'active' : '' }}"
                                        aria-current="{{ ($child['active'] ?? false) ? 'page' : 'false' }}">
-                                        <span class="nav-label flex-grow-1">{{ $child['label'] }}</span>
+                                        <span class="nav-label flex-grow-1">{{ $navLabel($child['label']) }}</span>
                                     </a>
                                 </li>
                             @endforeach

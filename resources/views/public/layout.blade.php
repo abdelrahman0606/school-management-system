@@ -9,7 +9,10 @@
         $primary = $s->primary_color ?? '#1d4ed8';
         $accent = $s->accent_color ?? '#f59e0b';
         $heading = $s->heading_color ?? '#0f172a';
-        $siteName = $s->site_name ?? ($school->name ?? 'Our School');
+        // docs/modules/30-multilingual-content-plan.md Phase 4: site_name
+        // itself isn't a translatable field (Phase 4 scope stops at School
+        // identity + SEO meta), but its fallback to $school->name is.
+        $siteName = $s->site_name ?? ($school?->transOr('name') ?? 'Our School');
 
         // ── Advanced theme (Phase 1 of docs/modules/29-frontend-modernization-proposal.md) ──
         // Every value below falls back to the exact hardcoded default this file
@@ -57,12 +60,12 @@
         // Per-page SEO overrides (page.blade.php's 'meta_description'/'og_image'
         // sections, only defined when the page has its own value set) win over
         // the site-wide defaults from Website > Settings — never both at once.
-        $metaDesc = trim((string) $__env->yieldContent('meta_description', $s->meta_description ?? '')) ?: null;
+        $metaDesc = trim((string) $__env->yieldContent('meta_description', $s?->transOr('meta_description') ?? '')) ?: null;
         $ogUrl = \App\Support\Media::url(trim((string) $__env->yieldContent('og_image', '')) ?: ($s->og_image ?? null));
         // Computed once and reused for <title>/og:title/twitter:title so all three
         // can never drift from each other (yieldContent is idempotent, but a single
         // source of truth is clearer than three identical @yield calls).
-        $pageTitle = trim((string) $__env->yieldContent('title', ($s->meta_title ?? null) ?: $siteName)) ?: $siteName;
+        $pageTitle = trim((string) $__env->yieldContent('title', ($s?->transOr('meta_title')) ?: $siteName)) ?: $siteName;
       @endphp
     <title>{{ $pageTitle }}</title>
     @if ($metaDesc)
@@ -872,7 +875,7 @@
                 <div class="col-md-5">
                     <h5 class="text-white mb-2">{{ $siteName }}</h5>
                     @if ($school?->address ?? false)
-                    <p class="mb-1 small"><i class="bi bi-geo-alt"></i> {{ $school->address }}</p>@endif
+                    <p class="mb-1 small"><i class="bi bi-geo-alt"></i> {{ $school->transOr('address') }}</p>@endif
                     @if ($school?->email ?? false)
                     <p class="mb-1 small"><i class="bi bi-envelope"></i> {{ $school->email }}</p>@endif
                     @php
@@ -881,15 +884,20 @@
                         // Phase 2): reference info a visitor looks up, not
                         // something that needs to sit above the nav on every page.
                         $footerCodes = collect([
-                            ['label' => $school?->institution_code_label, 'value' => $school?->institution_code],
-                            ['label' => $school?->school_code_label, 'value' => $school?->school_code],
-                            ['label' => $school?->technical_branch_code_label, 'value' => $school?->technical_branch_code],
+                            ['label' => $school?->transOr('institution_code_label'), 'value' => $school?->transOr('institution_code')],
+                            ['label' => $school?->transOr('school_code_label'), 'value' => $school?->transOr('school_code')],
+                            ['label' => $school?->transOr('technical_branch_code_label'), 'value' => $school?->transOr('technical_branch_code')],
                         ])->filter(fn ($c) => filled($c['value']));
-                        $footerEstablished = $school?->established ? (optional($school->established)->format('Y') ?? $school->established) : null;
+                        // 'established' is cast to a Carbon date on the model
+                        // ('date' cast) -- always null or a real date, never a
+                        // raw scalar, so LocalizedDate::format() (Y -> native
+                        // digits, no translated month/day needed here) is safe
+                        // with no extra fallback.
+                        $footerEstablished = \App\Support\LocalizedDate::format($school?->established, 'Y');
                     @endphp
                     @if ($footerCodes->isNotEmpty() || $footerEstablished)
                     <p class="mb-0 small text-white-50">
-                        @foreach ($footerCodes as $c){{ $c['label'] ?: 'Code' }}: <strong>{{ $c['value'] }}</strong>@if(!$loop->last)&nbsp;&middot;&nbsp;@endif @endforeach
+                        @foreach ($footerCodes as $c){{ $c['label'] ?: __('Code') }}: <strong>{{ $c['value'] }}</strong>@if(!$loop->last)&nbsp;&middot;&nbsp;@endif @endforeach
                         @if ($footerEstablished)@if($footerCodes->isNotEmpty())&nbsp;&middot;&nbsp;@endif{{ __('Established') }}: <strong>{{ $footerEstablished }}</strong>@endif
                     </p>
                     @endif
@@ -908,7 +916,7 @@
                 </div>
             </div>
             <hr class="border-secondary my-4">
-            <p class="small mb-0 text-center text-white-50">© {{ date('Y') }} {{ $siteName }}. All rights reserved.</p>
+            <p class="small mb-0 text-center text-white-50">© {{ \App\Support\LocalizedDate::digits(date('Y')) }} {{ $siteName }}. {{ __('All rights reserved.') }}</p>
         </div>
     </footer>
 

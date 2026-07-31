@@ -389,8 +389,116 @@
             </div>
         </div>
 
+        {{-- Translations — docs/modules/30-multilingual-content-plan.md Phase
+             4. Unlike the Pages/Menus editors (separate resource per locale,
+             so they use a page-reload language tab), School/SiteSetting are
+             singleton rows — every language's overrides for these ~10 fields
+             save together in this same form submit. One collapsed <details>
+             panel per active non-default language, matching this page's own
+             "Advanced Theme" collapsible convention above. --}}
+        <div class="row g-4 mt-0">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">{{ __('Translations') }}</div>
+                    <div class="card-body">
+                        @if ($contentLanguages->isEmpty())
+                            <p class="text-muted small mb-0">{{ __('Add another active language in Settings > Languages to translate this content.') }}</p>
+                        @else
+                            <p class="text-muted small mb-3">{{ __('Leave a field blank to fall back to the default-language content above.') }}</p>
+                            @foreach ($contentLanguages as $lang)
+                                @php
+                                    $t = old('translations.'.$lang->code, [
+                                        'name' => $school->trans('name', $lang->code),
+                                        'institution_code_label' => $school->trans('institution_code_label', $lang->code),
+                                        'institution_code' => $school->trans('institution_code', $lang->code),
+                                        'school_code_label' => $school->trans('school_code_label', $lang->code),
+                                        'school_code' => $school->trans('school_code', $lang->code),
+                                        'technical_branch_code_label' => $school->trans('technical_branch_code_label', $lang->code),
+                                        'technical_branch_code' => $school->trans('technical_branch_code', $lang->code),
+                                        'address' => $school->trans('address', $lang->code),
+                                        'meta_title' => $settings->trans('meta_title', $lang->code),
+                                        'meta_description' => $settings->trans('meta_description', $lang->code),
+                                    ]);
+                                @endphp
+                                <details class="card mb-3">
+                                    <summary class="card-header" style="cursor:pointer;">
+                                        @if ($lang->flag){{ $lang->flag }} @endif {{ $lang->native_name }}
+                                    </summary>
+                                    <div class="card-body">
+                                        {{-- AI-assisted draft translation (docs/modules/30-multilingual-content-plan.md
+                                             Phase 5) — submits the small standalone form below (outside this page's
+                                             main <form>, since forms can't nest) via id, so this button never
+                                             triggers the whole School Settings save. Free MyMemory API, no key
+                                             needed; only fills fields that are still empty above. --}}
+                                        <button type="button" class="btn btn-sm btn-outline-secondary mb-2"
+                                                onclick="document.getElementById('ai-suggest-{{ $lang->code }}').submit()">
+                                            <i class="bi bi-magic"></i> {{ __('Suggest translations (AI)') }}
+                                        </button>
+                                        <p class="form-text mt-0 mb-3">{{ __('Fills only the empty fields below using a free machine-translation service — always review a suggestion before saving.') }}</p>
+                                        <div class="row g-3">
+                                            <div class="col-md-6"><label class="form-label">{{ __('Name') }}</label>
+                                                <input name="translations[{{ $lang->code }}][name]" class="form-control"
+                                                    value="{{ $t['name'] }}" placeholder="{{ $school->name }}">
+                                            </div>
+                                            <div class="col-md-6"><label class="form-label">{{ __('Address') }}</label>
+                                                <input name="translations[{{ $lang->code }}][address]" class="form-control"
+                                                    value="{{ $t['address'] }}" placeholder="{{ $school->address }}">
+                                            </div>
+                                            <div class="col-md-4"><label class="form-label">{{ __('Field 1 Label') }}</label>
+                                                <input name="translations[{{ $lang->code }}][institution_code_label]" class="form-control"
+                                                    value="{{ $t['institution_code_label'] }}" placeholder="{{ $school->institution_code_label }}">
+                                            </div>
+                                            <div class="col-md-8"><label class="form-label">{{ __('Field 1 Code') }}</label>
+                                                <input name="translations[{{ $lang->code }}][institution_code]" class="form-control"
+                                                    value="{{ $t['institution_code'] }}" placeholder="{{ $school->institution_code }}">
+                                            </div>
+                                            <div class="col-md-4"><label class="form-label">{{ __('Field 2 Label') }}</label>
+                                                <input name="translations[{{ $lang->code }}][school_code_label]" class="form-control"
+                                                    value="{{ $t['school_code_label'] }}" placeholder="{{ $school->school_code_label }}">
+                                            </div>
+                                            <div class="col-md-8"><label class="form-label">{{ __('Field 2 Code') }}</label>
+                                                <input name="translations[{{ $lang->code }}][school_code]" class="form-control"
+                                                    value="{{ $t['school_code'] }}" placeholder="{{ $school->school_code }}">
+                                            </div>
+                                            <div class="col-md-4"><label class="form-label">{{ __('Field 3 Label') }}</label>
+                                                <input name="translations[{{ $lang->code }}][technical_branch_code_label]" class="form-control"
+                                                    value="{{ $t['technical_branch_code_label'] }}" placeholder="{{ $school->technical_branch_code_label }}">
+                                            </div>
+                                            <div class="col-md-8"><label class="form-label">{{ __('Field 3 Code') }}</label>
+                                                <input name="translations[{{ $lang->code }}][technical_branch_code]" class="form-control"
+                                                    value="{{ $t['technical_branch_code'] }}" placeholder="{{ $school->technical_branch_code }}">
+                                            </div>
+                                            <div class="col-md-6"><label class="form-label">{{ __('Meta Title') }}</label>
+                                                <input name="translations[{{ $lang->code }}][meta_title]" class="form-control"
+                                                    value="{{ $t['meta_title'] }}" placeholder="{{ $settings->meta_title }}">
+                                            </div>
+                                            <div class="col-md-6"><label class="form-label">{{ __('Meta Description') }}</label>
+                                                <textarea name="translations[{{ $lang->code }}][meta_description]" rows="2" class="form-control"
+                                                    placeholder="{{ $settings->meta_description }}">{{ $t['meta_description'] }}</textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </details>
+                            @endforeach
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="mt-4"><button class="btn btn-primary"><i class="bi bi-save"></i> {{ __('Save Settings') }}</button></div>
     </form>
+
+    {{-- One tiny standalone form per language, submitted via JS from the
+         "Suggest translations (AI)" button inside each language panel above
+         — kept OUTSIDE the main settings <form> since HTML forms can't
+         nest. docs/modules/30-multilingual-content-plan.md Phase 5. --}}
+    @foreach ($contentLanguages as $lang)
+        <form method="POST" action="{{ route('admin.school.translations.suggest') }}" id="ai-suggest-{{ $lang->code }}" class="d-none">
+            @csrf
+            <input type="hidden" name="locale" value="{{ $lang->code }}">
+        </form>
+    @endforeach
 
     <form method="POST" action="{{ route('admin.modules.update') }}" class="mt-4">
         @csrf @method('PUT')

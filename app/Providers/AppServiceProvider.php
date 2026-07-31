@@ -31,6 +31,8 @@ use App\Modules\IdCard\Models\IdCardTemplate;
 use App\Modules\IdCard\Observers\IdCardBatchFileObserver;
 use App\Modules\IdCard\Observers\IdCardBatchObserver;
 use App\Modules\IdCard\Observers\IdCardTemplateObserver;
+use App\Modules\Language\Gateways\MyMemoryTranslator;
+use App\Modules\Language\Gateways\TranslationGatewayContract;
 use App\Modules\Leave\Models\LeaveType;
 use App\Modules\Leave\Models\StaffLeaveRequest;
 use App\Modules\Leave\Models\StudentLeaveRequest;
@@ -126,6 +128,15 @@ class AppServiceProvider extends ServiceProvider
         // unlike Sms's stub gateway). Swap this binding for a different provider
         // by implementing AiCheckerContract; nothing else in the module changes.
         $this->app->bind(AiCheckerContract::class, AnthropicAiChecker::class);
+
+        // Multilingual content AI-assisted draft translation (docs/modules/
+        // 30-multilingual-content-plan.md Phase 5) — free, keyless MyMemory
+        // API rather than LMS's paid Anthropic key, since translation drafts
+        // aren't an LMS-specific feature and every school should get the
+        // "Suggest" button without needing the LMS module enabled. Swap this
+        // binding for a different provider by implementing
+        // TranslationGatewayContract; nothing else in the feature changes.
+        $this->app->bind(TranslationGatewayContract::class, MyMemoryTranslator::class);
     }
 
     public function boot(): void
@@ -227,11 +238,14 @@ class AppServiceProvider extends ServiceProvider
         View::composer('public.partials.header', function ($view): void {
             $school = School::current();
             $view->with('ticker', $school
-                ? app(PublicPortalService::class)->notices($school->id)->take(8)
+                ? app(PublicPortalService::class)->notices($school->id, app()->getLocale())->take(8)
                 : collect());
+            // docs/modules/30-multilingual-content-plan.md Phase 3 — the
+            // current visitor's locale's own menu, falling back to the
+            // default language's menu when this one hasn't been built yet
+            // (Menu::published()), same fallback style as page rendering.
             $view->with('navMenu', $school
-                ? Menu::forSchool($school->id)
-                    ->with(['items.children.page', 'items.page'])->first()
+                ? Menu::published($school->id, app()->getLocale())
                 : null);
         });
 

@@ -141,7 +141,11 @@ $accountRoutes = function (): void {
     Route::post('/account/sessions/revoke-others', [AccountController::class, 'revokeOtherSessions'])->name('account.sessions.revoke-others');
 };
 
-// Language switcher — anyone (guest or logged in) can pick an active language.
+// Language switcher — anyone (guest or logged in) can pick the PUBLIC site's
+// active language. Deliberately writes 'app_locale' only, never
+// 'backend_locale' — switching this one must never change what an
+// admin/staff/portal user sees in their own working UI. See SetLocale's own
+// docblock for the full split.
 Route::get('/language/{code}', function (string $code) {
     if (Language::activeCached()->contains(fn ($l) => $l->code === $code)) {
         session(['app_locale' => $code]);
@@ -149,6 +153,20 @@ Route::get('/language/{code}', function (string $code) {
 
     return back();
 })->name('language.switch');
+
+// Backend-area language switcher (admin/staff/portal headers only — see
+// partials/language-switcher.blade.php, the only thing that links here).
+// Writes the SEPARATE 'backend_locale' key SetLocale reads for those three
+// prefixes, so an admin/staff member's own working language is independent
+// of whatever a public visitor is browsing in. auth-gated: there's no
+// legitimate reason for a logged-out visitor to reach this one.
+Route::middleware('auth')->get('/backend/language/{code}', function (string $code) {
+    if (Language::activeCached()->contains(fn ($l) => $l->code === $code)) {
+        session(['backend_locale' => $code]);
+    }
+
+    return back();
+})->name('language.switch.backend');
 
 // ── Staff / teacher portal ───────────────────────────────────────────────────
 Route::middleware(['auth', 'school', 'role:teacher|accountant|librarian|receptionist'])
@@ -289,6 +307,7 @@ Route::middleware(['auth', 'school'])->prefix('admin')->name('admin.')->group(fu
         Route::get('/school', [SchoolController::class, 'edit'])->name('school.edit');
         Route::put('/school', [SchoolController::class, 'update'])->name('school.update');
         Route::put('/school/hours', [SchoolController::class, 'updateHours'])->name('school.hours');
+        Route::post('/school/translations/suggest', [SchoolController::class, 'suggestTranslation'])->name('school.translations.suggest');
 
         Route::get('/modules', [ModuleController::class, 'index'])->name('modules.index');
         Route::put('/modules', [ModuleController::class, 'update'])->name('modules.update');
@@ -303,6 +322,12 @@ Route::middleware(['auth', 'school'])->prefix('admin')->name('admin.')->group(fu
         Route::post('/languages/scan', [$lc, 'scan'])->name('languages.scan');
         Route::get('/languages/{code}/translations', [$lc, 'translations'])->name('languages.translations');
         Route::put('/languages/{code}/translations', [$lc, 'saveTranslations'])->name('languages.translations.save');
+        // PUT, not POST: the "Suggest translations (AI)" button is a second
+        // submit on the SAME form as Save (via formaction) — that form is
+        // already @method('PUT')-spoofed, and the hidden _method=PUT field
+        // submits regardless of which button was clicked, so this route has
+        // to match PUT too or Laravel's method-override would 404 it.
+        Route::put('/languages/{code}/translations/suggest', [$lc, 'suggestTranslations'])->name('languages.translations.suggest');
 
         // Website page builder
         Route::get('/pages', [WebsitePageController::class, 'index'])->name('pages.index');
@@ -314,6 +339,8 @@ Route::middleware(['auth', 'school'])->prefix('admin')->name('admin.')->group(fu
         Route::post('/pages/{id}/preview-block', [WebsitePageController::class, 'previewBlock'])->whereNumber('id')->name('pages.preview-block');
         Route::post('/pages/{id}/homepage', [WebsitePageController::class, 'setHomepage'])->whereNumber('id')->name('pages.homepage');
         Route::post('/pages/{id}/duplicate', [WebsitePageController::class, 'duplicate'])->whereNumber('id')->name('pages.duplicate');
+        Route::post('/pages/{id}/copy-locale', [WebsitePageController::class, 'copyLocale'])->whereNumber('id')->name('pages.copy-locale');
+        Route::post('/pages/{id}/suggest-translation', [WebsitePageController::class, 'suggestTranslation'])->whereNumber('id')->name('pages.suggest-translation');
         Route::post('/pages/{id}/save-as-template', [WebsitePageController::class, 'saveAsTemplate'])->whereNumber('id')->name('pages.save-as-template');
         Route::get('/pages/{id}/history', [WebsitePageController::class, 'history'])->whereNumber('id')->name('pages.history');
         Route::post('/pages/{id}/restore/{layoutId}', [WebsitePageController::class, 'restore'])->whereNumber(['id', 'layoutId'])->name('pages.restore');
@@ -333,6 +360,7 @@ Route::middleware(['auth', 'school'])->prefix('admin')->name('admin.')->group(fu
         // Navigation menu editor
         Route::get('/menus', [MenuController::class, 'edit'])->name('menus.index');
         Route::put('/menus', [MenuController::class, 'save'])->name('menus.save');
+        Route::post('/menus/suggest-translation', [MenuController::class, 'suggestTranslation'])->name('menus.suggest-translation');
 
         Route::get('/academic-years', [AcademicYearController::class, 'index'])->name('academic-years.index');
         Route::post('/academic-years', [AcademicYearController::class, 'store'])->name('academic-years.store');
@@ -386,12 +414,14 @@ Route::middleware(['auth', 'school'])->prefix('admin')->name('admin.')->group(fu
         Route::post('/staff', [StaffController::class, 'store'])->name('staff.store');
         Route::put('/staff/{id}', [StaffController::class, 'update'])->name('staff.update');
         Route::patch('/staff/{id}/deactivate', [StaffController::class, 'deactivate'])->name('staff.deactivate');
+        Route::post('/staff/{id}/translations/suggest', [StaffController::class, 'suggestTranslation'])->name('staff.translations.suggest');
 
         foreach (['designations', 'departments'] as $type) {
             Route::get("/{$type}", [StaffReferenceController::class, 'index'])->defaults('type', $type)->name("{$type}.index");
             Route::post("/{$type}", [StaffReferenceController::class, 'store'])->defaults('type', $type)->name("{$type}.store");
             Route::put("/{$type}/{id}", [StaffReferenceController::class, 'update'])->defaults('type', $type)->name("{$type}.update");
             Route::delete("/{$type}/{id}", [StaffReferenceController::class, 'destroy'])->defaults('type', $type)->name("{$type}.destroy");
+            Route::post("/{$type}/{id}/translations/suggest", [StaffReferenceController::class, 'suggestTranslation'])->defaults('type', $type)->name("{$type}.translations.suggest");
         }
 
         // Online admission applications
@@ -484,6 +514,7 @@ Route::middleware(['auth', 'school'])->prefix('admin')->name('admin.')->group(fu
         Route::patch('/announcements/{id}/publish', [AnnouncementController::class, 'publish'])->name('announcements.publish');
         Route::patch('/announcements/{id}/expire', [AnnouncementController::class, 'expire'])->name('announcements.expire');
         Route::delete('/announcements/{id}', [AnnouncementController::class, 'destroy'])->name('announcements.destroy');
+        Route::post('/announcements/{id}/translations/suggest', [AnnouncementController::class, 'suggestTranslation'])->name('announcements.translations.suggest');
 
         Route::get('/sms', [SmsController::class, 'index'])->name('sms.index');
         Route::post('/sms', [SmsController::class, 'store'])->name('sms.store');

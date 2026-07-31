@@ -14,6 +14,15 @@ class PageLayout extends Model
     protected $fillable = [
         'school_id',
         'page_id',
+        // locale + the four SEO fields: docs/modules/30-multilingual-content-plan.md
+        // Phase 1 — each revision belongs to one locale, so its SEO meta can vary
+        // per locale too. Null until Phase 2 starts writing them; falls back to
+        // the owning Page's own title/meta_title/meta_desc/og_image until then.
+        'locale',
+        'title',
+        'meta_title',
+        'meta_desc',
+        'og_image',
         'layout_json',
         'is_published',
         'published_at',

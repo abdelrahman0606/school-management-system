@@ -3,6 +3,7 @@
 namespace App\Modules\Staff\Models;
 
 use App\Modules\Academic\Models\Subject;
+use App\Support\Concerns\HasTranslations;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,6 +11,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Staff extends Model
 {
+    use HasTranslations;
+
     protected $table = 'staff';
 
     protected $fillable = [
