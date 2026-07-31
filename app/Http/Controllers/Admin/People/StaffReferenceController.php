@@ -70,10 +70,9 @@ class StaffReferenceController extends Controller
         $data = $this->validated($request, $meta['table'], $schoolId, $id);
         $item->update(Arr::except($data, 'translations'));
 
-        // TYPES only ever maps to Designation|Department (both HasTranslations
-        // hosts) — the assert narrows the type for TranslationService::saveMany(),
-        // which can't be typed any looser than a named union (see its own docblock).
-        assert($item instanceof Designation || $item instanceof Department);
+        // TYPES' 'model' is typed class-string<Designation|Department>, so
+        // $item is already narrowed for TranslationService::saveMany() —
+        // no runtime assert needed.
         $this->translations->saveMany($item, $this->translationsPayload($data));
 
         return back()->with('status', "{$meta['singular']} updated.");
@@ -95,11 +94,6 @@ class StaffReferenceController extends Controller
         if ($locale === Language::defaultCode()) {
             return back()->with('status', __('Nothing to translate — that is the default language.'));
         }
-
-        // Same narrowing as update() — TYPES only ever maps to
-        // Designation|Department, but $meta['model']::findOrFail() alone
-        // isn't enough for PHPStan to carry that through to $item.
-        assert($item instanceof Designation || $item instanceof Department);
 
         // dispatchSync() — see SchoolController::suggestTranslation()'s own
         // comment: queued dispatch() returns before Horizon actually runs

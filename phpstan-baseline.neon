@@ -283,12 +283,6 @@ parameters:
 			path: app/Http/Controllers/Admin/People/DataImportController.php
 
 		-
-			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$staff_count\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Http/Controllers/Admin/People/StaffReferenceController.php
-
-		-
 			message: '#^Access to an undefined property App\\Modules\\Academic\\Models\\AcademicYear\:\:\$is_current\.$#'
 			identifier: property.notFound
 			count: 1
