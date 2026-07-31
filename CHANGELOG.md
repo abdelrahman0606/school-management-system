@@ -52,6 +52,23 @@ follows [Semantic Versioning](https://semver.org/).
   (`tests/Feature/Admin/MultilingualAnnouncementAndStaffContentTest.php`).
 
 ### Fixed
+- Reported: "missing translation for online admission form" — `public/blocks/admission_form.blade.php`
+  had a cluster of bare literal English strings never wrapped in `__()`, unlike the rest of the
+  form: the Gender/Religion/Guardian-type select options (Boy/Girl/Islam/Hinduism/.../Father/
+  Mother), the "— Select class —"/"— Select year —" placeholder options, the photo-upload help
+  text, and the Father's/Mother's name/phone/NID labels — plus the admin-configurable field
+  defaults (Last name, Blood group, Student phone, Student photo, Permanent address, Notes) shown
+  whenever a school hasn't customized that field's label. Where a select option's `value` attribute
+  is also the stored/validated enum (religion, guardian type), only the visible option TEXT was
+  wrapped — the `value` stays the canonical English word so `StoreAdmissionApplicationRequest`'s
+  `in:` validation and any downstream report/export keep working unchanged. Hand-written Bengali
+  values for every new key added directly to the shipped
+  `database/seeders/data/translations/bn.json` pack (same "seed data is hand-written, not run
+  through AI-suggest" convention as the rest of this session's seed work), so a fresh install shows
+  translated form fields immediately. An already-deployed school needs `php artisan
+  translations:scan` (registers the new keys) — the bn values are already filled in by the updated
+  pack once `TranslationSeeder` re-runs, or can be typed in by hand/AI-suggest under Settings →
+  Languages → Translations (bn) in the meantime.
 - Reported: "header date hasn't changed" — the public header's "today" date
   (`public/partials/header.blade.php`) pinned to `$school->locale` (the school's configured
   home-language column, `en` by default) instead of the visitor's browsing locale, making it the
