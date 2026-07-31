@@ -6,6 +6,8 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.3.4] — 2026-07-31
+
 ### Added
 - Public frontend modernization, Phase 1 (`docs/modules/29-frontend-modernization-proposal.md`): wired up
   ~19 `site_settings` theming columns that existed in the schema since the Website module shipped but were
