@@ -205,19 +205,39 @@ easy for the reviewing admin to spot and finish by hand.
    (`tests/Feature/Admin/MultilingualSchoolContentTest.php`). Merged to `dev`.
 5. ✅ **AI-assist**: `TranslationGatewayContract`/`MyMemoryTranslator` (free, keyless MyMemory
    API — revised from the original Anthropic/LMS-gated plan, see "AI-assisted draft translation"
-   above), three queued jobs (`SuggestSchoolTranslationJob`, `SuggestPageTranslationJob`,
-   `SuggestMenuTranslationJob`) each honoring their storage shape's own safety rule (fill-empty-
-   only for School/SiteSetting, always-safe-new-draft for Pages, zero-items-only for Menus), a new
-   `BlockTranslator` walking a page's block tree via a schema-driven per-block-type text field map.
-   "Suggest translation (AI)" buttons wired into School settings, the page builder, and the menu
-   editor — every school gets it, no module gating. Tests
-   (`tests/Unit/Language/MyMemoryTranslatorTest.php`, `tests/Unit/Website/BlockTranslatorTest.php`,
-   `tests/Feature/Admin/AiTranslationSuggestTest.php` — queued jobs run inline under this app's
-   sync queue and are exercised end-to-end via `Http::fake()`, never a real network call).
-   Merged to `dev`.
+   above), three jobs (`SuggestSchoolTranslationJob`, `SuggestPageTranslationJob`,
+   `SuggestMenuTranslationJob`, `dispatchSync()` — see follow-up below) each honoring their
+   storage shape's own safety rule (fill-empty-only for School/SiteSetting, always-safe-new-draft
+   for Pages, zero-items-only for Menus), a new `BlockTranslator` walking a page's block tree via
+   a schema-driven per-block-type text field map. "Suggest translation (AI)" buttons wired into
+   School settings, the page builder, and the menu editor — every school gets it, no module
+   gating. Tests (`tests/Unit/Language/MyMemoryTranslatorTest.php`,
+   `tests/Unit/Website/BlockTranslatorTest.php`, `tests/Feature/Admin/AiTranslationSuggestTest.php`
+   — exercised end-to-end via `Http::fake()`, never a real network call). Merged to `dev`.
+6. ✅ **Phase 5 follow-ups**, reported after the above shipped:
+   - `needsPublish` fix — Copy/Suggest/Restore all create a new unpublished revision and reload
+     straight into it, which used to leave the editor's Update button stuck disabled (nothing
+     differs from what was just loaded) even on an already-published page.
+   - The three Suggest jobs switched from a queued `dispatch()` to `dispatchSync()` — under this
+     app's normal `QUEUE_CONNECTION=redis` a queued dispatch returned before Horizon ever ran the
+     job, so "Suggest translation" could redirect back to stale content ("sometimes delayed").
+     Running inline drops the Horizon dependency for these specific actions and guarantees the
+     result is ready the moment the request resolves.
+   - The page editor's Copy/Suggest actions became fetch()-driven, splicing the result straight
+     into the live DOM instead of a full navigation, with a progress bar for the real (multi-
+     second, sequential per-field MyMemory calls) wait.
+   - **Public vs. backend locale split** (module 26's own `SetLocale`): the public site and the
+     admin/staff/portal areas used to share ONE session key (`app_locale`) and ONE switcher route,
+     so an admin's own backend working-language choice and whatever a public visitor was browsing
+     in could silently overwrite each other. Split into `app_locale` (public, `/language/{code}`)
+     vs. `backend_locale` (`/admin`, `/staff`, `/portal`, new auth-gated
+     `/backend/language/{code}` — the only thing `partials/language-switcher.blade.php` links to)
+     — see module 26's own docs for the full detail. Tests
+     (`tests/Feature/Language/LanguageModuleTest.php`).
 
 Each phase is its own branch off `dev`, its own commit(s), tests green before merge — same
-workflow as modules 20/29.
+workflow as modules 20/29. Small follow-up fixes after a phase's initial merge (like #6 above) go
+directly onto `dev` instead, same convention CLAUDE.md documents for every other module.
 
 ## Non-goals
 

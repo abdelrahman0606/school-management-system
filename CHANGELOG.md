@@ -86,6 +86,15 @@ follows [Semantic Versioning](https://semver.org/).
     didn't match this toast's smaller `py-2`/`px-3` override (and `.btn-close-sm`, also used there,
     isn't a real Bootstrap class — it did nothing to compensate). Switched to a plain flex row, which
     sizes and centers the close button correctly regardless of the alert's own padding.
+- Public site and backend (admin/staff/portal) language were unintentionally coupled: both areas
+  shared a single `app_locale` session key and one `/language/{code}` switcher (Language module,
+  #26), so an admin switching their own backend working language also changed what a public
+  visitor saw, and vice versa. `SetLocale` now reads/writes one of two independent session keys
+  depending on the request path — `app_locale` for the public site, `backend_locale` for
+  `/admin`, `/staff`, `/portal` — with a separate, auth-gated `/backend/language/{code}` route for
+  the latter (the only thing `partials/language-switcher.blade.php`, shared by the admin/staff/
+  portal headers, links to). An admin can now run the backend in one language while the public
+  site serves visitors in a completely different one.
 
 ## [1.3.4] — 2026-07-31
 

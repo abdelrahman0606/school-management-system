@@ -51,6 +51,55 @@ class LanguageModuleTest extends TestCase
         $this->assertNull(session('app_locale'));
     }
 
+    /**
+     * The public switcher and the backend (admin/staff/portal) switcher are
+     * two independent session keys, not one — switching either must never
+     * touch the other. Before this, both areas shared 'app_locale' via one
+     * switcher route, so an admin switching their own working language also
+     * flipped the public site's language for the next visitor, and vice
+     * versa. See SetLocale's own docblock.
+     */
+    public function test_public_and_backend_language_choices_are_independent(): void
+    {
+        $this->actingAs($this->admin);
+
+        $this->get('/language/bn')->assertRedirect();
+        $this->assertSame('bn', session('app_locale'));
+        $this->assertNull(session('backend_locale'));
+
+        // A public page still runs in Bengali...
+        $this->get('/')->assertOk();
+        $this->assertSame('bn', app()->getLocale());
+
+        // ...but the admin area is untouched — still the default, English.
+        $this->get('/admin/languages')->assertOk();
+        $this->assertSame('en', app()->getLocale());
+        $this->assertNull(session('backend_locale'));
+    }
+
+    public function test_backend_switch_route_stores_a_separate_session_key(): void
+    {
+        $this->actingAs($this->admin);
+
+        $this->get('/backend/language/bn')->assertRedirect();
+        $this->assertSame('bn', session('backend_locale'));
+        $this->assertNull(session('app_locale'));
+
+        // The admin area now runs in Bengali...
+        $this->get('/admin/languages')->assertOk();
+        $this->assertSame('bn', app()->getLocale());
+
+        // ...but the public site is untouched — still the default, English.
+        $this->get('/')->assertOk();
+        $this->assertSame('en', app()->getLocale());
+    }
+
+    public function test_backend_switch_route_requires_authentication(): void
+    {
+        $this->get('/backend/language/bn')->assertRedirect('/login');
+        $this->assertNull(session('backend_locale'));
+    }
+
     public function test_db_translation_is_served_for_the_active_locale(): void
     {
         Translation::create(['locale' => 'bn', 'key' => 'Notices', 'value' => 'নোটিশ']);

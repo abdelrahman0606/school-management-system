@@ -141,7 +141,11 @@ $accountRoutes = function (): void {
     Route::post('/account/sessions/revoke-others', [AccountController::class, 'revokeOtherSessions'])->name('account.sessions.revoke-others');
 };
 
-// Language switcher — anyone (guest or logged in) can pick an active language.
+// Language switcher — anyone (guest or logged in) can pick the PUBLIC site's
+// active language. Deliberately writes 'app_locale' only, never
+// 'backend_locale' — switching this one must never change what an
+// admin/staff/portal user sees in their own working UI. See SetLocale's own
+// docblock for the full split.
 Route::get('/language/{code}', function (string $code) {
     if (Language::activeCached()->contains(fn ($l) => $l->code === $code)) {
         session(['app_locale' => $code]);
@@ -149,6 +153,20 @@ Route::get('/language/{code}', function (string $code) {
 
     return back();
 })->name('language.switch');
+
+// Backend-area language switcher (admin/staff/portal headers only — see
+// partials/language-switcher.blade.php, the only thing that links here).
+// Writes the SEPARATE 'backend_locale' key SetLocale reads for those three
+// prefixes, so an admin/staff member's own working language is independent
+// of whatever a public visitor is browsing in. auth-gated: there's no
+// legitimate reason for a logged-out visitor to reach this one.
+Route::middleware('auth')->get('/backend/language/{code}', function (string $code) {
+    if (Language::activeCached()->contains(fn ($l) => $l->code === $code)) {
+        session(['backend_locale' => $code]);
+    }
+
+    return back();
+})->name('language.switch.backend');
 
 // ── Staff / teacher portal ───────────────────────────────────────────────────
 Route::middleware(['auth', 'school', 'role:teacher|accountant|librarian|receptionist'])
