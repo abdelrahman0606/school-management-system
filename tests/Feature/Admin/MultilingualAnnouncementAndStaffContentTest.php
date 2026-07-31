@@ -264,4 +264,70 @@ class MultilingualAnnouncementAndStaffContentTest extends TestCase
         Http::assertNothingSent();
         $this->assertNull($announcement->trans('title', 'en'));
     }
+
+    // ── Translation-status columns (admin list screens) ────────────────────
+    // Each list gets one column per active non-default language (header = the
+    // language's short code, e.g. "BN"), ticked only when every translatable
+    // field for that row is filled in for that language.
+
+    public function test_staff_index_shows_a_bn_column_ticked_only_for_translated_rows(): void
+    {
+        // StaffController::index() orders by name -- "Jane Roe" sorts before
+        // "John Doe", so the untranslated row's cross renders first.
+        Staff::create([
+            'school_id' => $this->school->id, 'employee_id' => 'EMP2',
+            'name' => 'Jane Roe', 'gender' => 'female', 'status' => 'active', 'is_trash' => false,
+        ]);
+        $translated = Staff::create([
+            'school_id' => $this->school->id, 'employee_id' => 'EMP1',
+            'name' => 'John Doe', 'gender' => 'male', 'status' => 'active', 'is_trash' => false,
+        ]);
+        $translated->setTranslation('name', 'bn', 'জন ডো');
+
+        $response = $this->actingAs($this->admin)->get('/admin/staff')->assertOk();
+        $response->assertSee('BN');
+        $response->assertSeeInOrder(['bi-x-lg', 'bi-check-lg']);
+    }
+
+    public function test_designation_index_shows_a_bn_column_ticked_only_for_translated_rows(): void
+    {
+        // StaffReferenceController::index() orders by name -- "Librarian"
+        // sorts before "Principal", so the untranslated row's cross renders first.
+        Designation::create(['school_id' => $this->school->id, 'name' => 'Librarian']);
+        $translated = Designation::create(['school_id' => $this->school->id, 'name' => 'Principal']);
+        $translated->setTranslation('name', 'bn', 'অধ্যক্ষ');
+
+        $response = $this->actingAs($this->admin)->get('/admin/designations')->assertOk();
+        $response->assertSee('BN');
+        $response->assertSeeInOrder(['bi-x-lg', 'bi-check-lg']);
+    }
+
+    public function test_announcement_index_ticks_bn_only_when_both_title_and_body_are_translated(): void
+    {
+        $fullyTranslated = Announcement::create([
+            'school_id' => $this->school->id, 'created_by' => $this->admin->id,
+            'title' => 'Exam Schedule', 'body' => 'Exams start Monday.',
+            'type' => 'exam', 'audience' => 'all', 'priority' => 'normal',
+            'is_pinned' => false, 'is_trash' => false,
+        ]);
+        $fullyTranslated->setTranslation('title', 'bn', 'পরীক্ষার সময়সূচী');
+        $fullyTranslated->setTranslation('body', 'bn', 'পরীক্ষা সোমবার শুরু হবে।');
+
+        // Only the title is translated -- must still show as untranslated
+        // (cross), since isTranslated() requires EVERY field.
+        $partiallyTranslated = Announcement::create([
+            'school_id' => $this->school->id, 'created_by' => $this->admin->id,
+            'title' => 'Sports Day', 'body' => 'Friday on the school ground.',
+            'type' => 'event', 'audience' => 'all', 'priority' => 'normal',
+            'is_pinned' => false, 'is_trash' => false,
+        ]);
+        $partiallyTranslated->setTranslation('title', 'bn', 'ক্রীড়া দিবস');
+
+        $this->assertTrue($fullyTranslated->isTranslated(['title', 'body'], 'bn'));
+        $this->assertFalse($partiallyTranslated->isTranslated(['title', 'body'], 'bn'));
+
+        $this->actingAs($this->admin)->get('/admin/announcements')
+            ->assertOk()
+            ->assertSee('BN');
+    }
 }

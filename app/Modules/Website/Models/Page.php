@@ -87,6 +87,21 @@ class Page extends Model
         return $this->hasMany(PageLayout::class)->where('is_published', true);
     }
 
+    /**
+     * True if this page has a currently-PUBLISHED layout for $locale — what's
+     * actually live on the public site for that language, not merely "a
+     * draft revision exists" (see publishedLayout()'s own docblock: a page
+     * can have one published row per locale simultaneously). Backs the
+     * tick/cross translation-status columns on the admin Pages list.
+     * Expects `publishedLayout` to be eager-loaded (PageController::index()
+     * does this via `with('publishedLayout:id,page_id,locale')`) so this is
+     * an in-memory check, not a query per row per language.
+     */
+    public function hasPublishedTranslation(string $locale): bool
+    {
+        return $this->publishedLayout->contains(fn (PageLayout $l) => $l->locale === $locale);
+    }
+
     /** @param Builder<Page> $query */
     public function scopeForSchool(Builder $query, int $schoolId): Builder
     {

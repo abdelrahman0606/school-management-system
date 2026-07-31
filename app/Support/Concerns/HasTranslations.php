@@ -39,6 +39,25 @@ trait HasTranslations
         return $this->trans($field, $locale) ?? $this->{$field};
     }
 
+    /**
+     * True only if EVERY given field has a non-null translation for $locale —
+     * i.e. this record is fully (not just partially) translated into that
+     * language. Backs the tick/cross translation-status columns on the admin
+     * Staff/Designation/Department/Announcement list screens.
+     *
+     * @param  list<string>  $fields
+     */
+    public function isTranslated(array $fields, ?string $locale = null): bool
+    {
+        foreach ($fields as $field) {
+            if ($this->trans($field, $locale) === null) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     /** Upsert a translation. A null $value clears it back to "untranslated" (falls through to transOr's default) — linesFor() only plucks non-null values. An empty string is stored and treated as a real (blank) translation, not a clear. */
     public function setTranslation(string $field, string $locale, ?string $value): ContentTranslation
     {

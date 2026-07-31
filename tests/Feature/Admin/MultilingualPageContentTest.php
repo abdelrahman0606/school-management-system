@@ -75,6 +75,36 @@ class MultilingualPageContentTest extends TestCase
         $response->assertSee('data-needs-publish=', false);
     }
 
+    /**
+     * Pages admin list — one column per active non-default language, ticked
+     * only when a currently-PUBLISHED PageLayout exists for that language
+     * (Page::hasPublishedTranslation()), not merely "a draft was started".
+     */
+    public function test_pages_index_shows_a_bn_column_ticked_only_once_bengali_is_published(): void
+    {
+        $this->actingAs($this->admin);
+        $this->post('/admin/pages', ['title' => 'About', 'template' => 'full']);
+        $page = Page::first();
+        $this->put("/admin/pages/{$page->id}", [
+            'title' => 'About Us', 'slug' => 'about', 'status' => 'published', 'template' => 'full', 'locale' => 'en',
+            'blocks' => [['type' => 'heading', 'data' => ['text' => 'English Heading']]],
+        ])->assertRedirect();
+
+        // Not yet translated -- the BN column should show a cross.
+        $before = $this->get('/admin/pages')->assertOk();
+        $before->assertSee('BN');
+        $before->assertSeeInOrder(['About', 'bi-x-lg']);
+
+        $this->put("/admin/pages/{$page->id}", [
+            'title' => 'আমাদের সম্পর্কে', 'slug' => 'about', 'status' => 'published', 'template' => 'full', 'locale' => 'bn',
+            'blocks' => [['type' => 'heading', 'data' => ['text' => 'বাংলা শিরোনাম']]],
+        ])->assertRedirect();
+
+        // Now published for bn -- the column should show a tick instead.
+        $after = $this->get('/admin/pages')->assertOk();
+        $after->assertSeeInOrder(['About', 'bi-check-lg']);
+    }
+
     public function test_saving_a_non_default_locale_does_not_touch_the_default_locales_content(): void
     {
         $this->actingAs($this->admin);

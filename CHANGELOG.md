@@ -7,6 +7,24 @@ follows [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- Translation-status columns on the Staff, Designation, Department, Pages, and Announcements admin
+  list screens — one column per active non-default language, header = the language's short code
+  (e.g. "BN"), with a tick (`bi-check-lg`, green) or cross (`bi-x-lg`, muted) per row showing
+  whether that record is translated into that language, at a glance, with no need to open each
+  edit modal/editor to check. New `HasTranslations::isTranslated(array $fields, ?string $locale)`
+  — true only if EVERY given field has a non-null translation for that language (Announcement's
+  title+body must both be filled in to tick, not just one) — backs Staff/Designation/Department/
+  Announcement. Pages don't use `HasTranslations` (per-locale content lives in versioned
+  `PageLayout` rows instead) — new `Page::hasPublishedTranslation(string $locale)` checks for a
+  currently-**published** layout in that language specifically (a draft alone doesn't tick it,
+  since a draft isn't live on the public site yet); `PageController::index()` eager-loads
+  `publishedLayout` so this is an in-memory check, not a query per row per language. Tests:
+  `test_staff_index_shows_a_bn_column_ticked_only_for_translated_rows`,
+  `test_designation_index_shows_a_bn_column_ticked_only_for_translated_rows`,
+  `test_announcement_index_ticks_bn_only_when_both_title_and_body_are_translated`
+  (`tests/Feature/Admin/MultilingualAnnouncementAndStaffContentTest.php`),
+  `test_pages_index_shows_a_bn_column_ticked_only_once_bengali_is_published`
+  (`tests/Feature/Admin/MultilingualPageContentTest.php`).
 - Bilingual (en + bn) seed/demo data: `SchoolSeeder`/`DemoDataSeeder`/`WebsitePagesSeeder` now
   seed hand-written Bangla translations for School/SiteSetting identity fields, Department/
   Designation names, all 12 demo Staff names, all 3 demo Announcements, all 11 public pages'

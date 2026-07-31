@@ -9,12 +9,30 @@
 
   <div class="card"><div class="card-body">
     <table class="table table-hover align-middle w-100 js-dt">
-      <thead><tr><th>{{ __('Name') }}</th><th>{{ __('Staff') }}</th><th class="text-end" data-orderable="false">{{ __('Actions') }}</th></tr></thead>
+      <thead><tr><th>{{ __('Name') }}</th><th>{{ __('Staff') }}</th>
+        {{-- One column per active non-default language, header = short code. --}}
+        @if (isset($contentLanguages))
+          @foreach ($contentLanguages as $lang)
+            <th class="text-center" title="{{ $lang->native_name }}">{{ strtoupper($lang->code) }}</th>
+          @endforeach
+        @endif
+        <th class="text-end" data-orderable="false">{{ __('Actions') }}</th></tr></thead>
       <tbody>
         @foreach ($items as $item)
           <tr>
             <td class="fw-semibold">{{ $item->name }}</td>
             <td><x-badge variant="neutral">{{ $item->staff_count }}</x-badge></td>
+            @if (isset($contentLanguages))
+              @foreach ($contentLanguages as $lang)
+                <td class="text-center">
+                  @if ($item->isTranslated(['name'], $lang->code))
+                    <i class="bi bi-check-lg text-success" aria-label="{{ __('Translated') }}"></i>
+                  @else
+                    <i class="bi bi-x-lg text-muted" aria-label="{{ __('Not Translated') }}"></i>
+                  @endif
+                </td>
+              @endforeach
+            @endif
             <td class="text-end">
               <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editModal{{ $item->id }}">{{ __('Edit') }}</button>
               <form method="POST" action="{{ route('admin.' . $type . '.destroy', $item->id) }}" class="d-inline" onsubmit="return confirm('Delete {{ $item->name }}?')">

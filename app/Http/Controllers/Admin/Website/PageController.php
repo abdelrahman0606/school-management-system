@@ -38,7 +38,15 @@ class PageController extends Controller
         $schoolId = app('current_school_id');
 
         return view('admin.website.pages.index', [
-            'pages' => Page::forSchool($schoolId)->withCount('layouts')->orderByDesc('is_homepage')->orderBy('title')->get(),
+            'pages' => Page::forSchool($schoolId)->withCount('layouts')
+                // publishedLayout eager-loaded so Page::hasPublishedTranslation()
+                // (translation-status columns below) is an in-memory check per
+                // row/language instead of a query per row per language.
+                ->with('publishedLayout:id,page_id,locale')
+                ->orderByDesc('is_homepage')->orderBy('title')->get(),
+            // Same "active languages minus the default" list every other
+            // admin list screen's translation-status columns use.
+            'contentLanguages' => Language::activeCached()->reject(fn (Language $l) => $l->code === Language::defaultCode())->values(),
         ]);
     }
 
