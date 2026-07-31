@@ -19,28 +19,30 @@
     $showTicker = $tickerPos !== 'hidden' && ($ticker ?? collect())->isNotEmpty();
     $headerPhones = $school ? $school->phones->where('show_in_header', true)->values() : collect();
     $logoUrl = \App\Support\Media::url($school?->logo);
-    $established = $school?->established ? (optional($school->established)->format('Y') ?? $school->established) : null;
-    $codes = collect([
-        ['label' => $school?->institution_code_label, 'value' => $school?->institution_code],
-        ['label' => $school?->school_code_label, 'value' => $school?->school_code],
-        ['label' => $school?->technical_branch_code_label, 'value' => $school?->technical_branch_code],
-    ])->filter(fn($c) => filled($c['value']));
 @endphp
 
-{{-- Row 1: top utility bar (primary bg, configurable text colour) --}}
+{{-- Row 1: a slim utility strip — date + phone(s) + language switcher only.
+     Institution codes and the established year moved to the footer (see
+     public/layout.blade.php) — they're reference info, not something a
+     visitor needs before they've even seen the nav. This is the "one header
+     row, not three" change from docs/modules/29-frontend-modernization-proposal.md
+     Phase 2: the old logo/identity row and nav row are merged into a single
+     bar below instead of stacking three rows before any real content. --}}
 <div style="background: {{ $primary }}; color: {{ $topText }};">
     <div class="container">
-        <div class="row align-items-center g-2 py-1 small" style="min-height:30px;">
-            <div class="col-6 text-start text-capitalize">{{ $dateStr }}</div>
-            <div class="col-6 text-end">
+        <div class="d-flex align-items-center justify-content-between gap-2 small py-1" style="min-height:28px;">
+            <span class="text-capitalize d-none d-sm-inline">{{ $dateStr }}</span>
+            <div class="d-flex align-items-center gap-3 ms-auto">
                 @if($headerPhones->isNotEmpty())
-                    <i class="bi bi-telephone-fill"></i>
-                    @foreach($headerPhones as $ph)<a href="tel:{{ preg_replace('/[^0-9+]/', '', $ph->phone) }}"
-                        style="color: {{ $topText }}; text-decoration:none;">{{ $ph->phone }}</a>@if(!$loop->last), @endif
-                    @endforeach
+                    <span>
+                        <i class="bi bi-telephone-fill"></i>
+                        @foreach($headerPhones as $ph)<a href="tel:{{ preg_replace('/[^0-9+]/', '', $ph->phone) }}"
+                            style="color: {{ $topText }}; text-decoration:none;">{{ $ph->phone }}</a>@if(!$loop->last), @endif
+                        @endforeach
+                    </span>
                 @endif
                 @if(($appLanguages ?? collect())->count() > 1)
-                    <span class="ms-3">
+                    <span>
                         @foreach($appLanguages as $lang)
                             <a href="{{ route('language.switch', $lang->code) }}"
                                style="color: {{ $topText }}; text-decoration:{{ $lang->code === app()->getLocale() ? 'underline' : 'none' }};">{{ $lang->native_name }}</a>@if(!$loop->last) <span style="opacity:.5">|</span> @endif
@@ -52,47 +54,25 @@
     </div>
 </div>
 
-{{-- Row 2: logo | name | institution data --}}
-<div class="bg-white border-bottom">
-    <div class="container py-3">
-        <div class="row align-items-center g-3">
-            <div class="col-4 col-md-2 text-center text-md-start">
-                <a href="{{ route('home') }}">
-                    @if($logoUrl)<img src="{{ $logoUrl }}" alt="{{ $siteName }}"
-                        style="max-height:72px;max-width:100%;">
-                    @else<i class="bi bi-mortarboard-fill display-5" style="color: {{ $primary }};"></i>@endif
-                </a>
-            </div>
-            <div class="col-8 col-md-6">
-                <a href="{{ route('home') }}" class="text-decoration-none">
-                    <div class="h4 fw-bold mb-0" style="color: {{ $primary }};">{{ $siteName }}</div>
-                </a>
-                @if($school?->address)
-                <div class="text-muted small">{{ $school->address }}</div>@endif
-            </div>
-            <div class="col-12 col-md-4 small text-muted text-md-end">
-                @foreach($codes as $c)
-                    <div>{{ $c['label'] ?: 'Code' }}: <strong>{{ $c['value'] }}</strong></div>
-                @endforeach
-                @if($established)
-                <div>Established: <strong>{{ $established }}</strong></div>@endif
-            </div>
-        </div>
-    </div>
-</div>
-
-{{-- Notice ticker (above the nav) --}}
+{{-- Notice ticker above the merged bar --}}
 @if($showTicker && $tickerPos === 'above_nav')
     @include('public.partials.ticker')
 @endif
 
-{{-- Row 3: navigation --}}
-<nav class="navbar navbar-expand-lg navbar-dark sticky-top" style="background: {{ $primary }};">
+{{-- Row 2: logo + name + nav + CTA, all one sticky bar. Shrinks slightly
+     once scrolled (see the .pub-mainbar.is-scrolled rules + script in
+     public/layout.blade.php) rather than staying full-height forever. --}}
+<nav class="navbar navbar-expand-lg pub-mainbar sticky-top bg-white border-bottom" data-bs-theme="light" id="pub-mainbar">
     <div class="container">
+        <a class="navbar-brand d-flex align-items-center gap-2 py-1" href="{{ route('home') }}">
+            @if($logoUrl)<img src="{{ $logoUrl }}" alt="{{ $siteName }}" class="pub-logo">
+            @else<i class="bi bi-mortarboard-fill fs-3" style="color: {{ $primary }};"></i>@endif
+            <span class="fw-bold" style="color: {{ $primary }};">{{ $siteName }}</span>
+        </a>
         <button class="navbar-toggler ms-auto" data-bs-toggle="collapse" data-bs-target="#pubnav"><span
                 class="navbar-toggler-icon"></span></button>
         <div class="collapse navbar-collapse" id="pubnav">
-            <ul class="navbar-nav me-auto">
+            <ul class="navbar-nav mx-auto">
                 @if(($navMenu ?? null) && $navMenu->items->isNotEmpty())
                     @foreach($navMenu->items as $item)
                         @if($item->children->isNotEmpty())
@@ -117,13 +97,15 @@
                     <li class="nav-item"><a class="nav-link" href="{{ url('/contact') }}">{{ __('Contact') }}</a></li>
                 @endif
             </ul>
-            <a class="btn btn-light btn-sm px-3" href="{{ route('login') }}"><i class="bi bi-box-arrow-in-right"></i>
-                Login</a>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <a class="btn btn-brand btn-sm px-3" href="{{ url('/online-admission') }}"><i class="bi bi-mortarboard"></i> {{ __('Apply Now') }}</a>
+                <a class="btn btn-outline-secondary btn-sm px-3" href="{{ route('login') }}"><i class="bi bi-box-arrow-in-right"></i> {{ __('Login') }}</a>
+            </div>
         </div>
     </div>
 </nav>
 
-{{-- Notice ticker (below the nav) --}}
+{{-- Notice ticker (below the merged bar) --}}
 @if($showTicker && $tickerPos === 'below_nav')
     @include('public.partials.ticker')
 @endif

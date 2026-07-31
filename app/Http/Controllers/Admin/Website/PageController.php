@@ -327,6 +327,9 @@ class PageController extends Controller
                 if (isset($data['lines']) && is_array($data['lines'])) {
                     $data['lines'] = implode("\n", array_map(fn ($l) => is_array($l) ? (($l['label'] ?? '').'|'.($l['value'] ?? '')) : $l, $data['lines']));
                 }
+                if (isset($data['faq_items']) && is_array($data['faq_items'])) {
+                    $data['faq_items'] = implode("\n", array_map(fn ($it) => is_array($it) ? (($it['question'] ?? '').'|'.($it['answer'] ?? '')) : $it, $data['faq_items']));
+                }
                 if (in_array($b['type'] ?? null, ['container', 'grid'], true)) {
                     $data['blocks'] = $reverse(is_array($data['blocks'] ?? null) ? $data['blocks'] : []);
                 }
@@ -385,6 +388,9 @@ class PageController extends Controller
             }
             if (isset($data['lines'])) {
                 $data['lines'] = $this->pairs($data['lines'], 'label', 'value');
+            }
+            if (isset($data['faq_items'])) {
+                $data['faq_items'] = $this->pairs($data['faq_items'], 'question', 'answer');
             }
 
             $data = array_filter($data, fn ($v) => $v !== null && $v !== '' && $v !== []);

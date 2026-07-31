@@ -224,6 +224,143 @@
                             numbers are set on the Mobile Numbers list above (tick “Header”).</div>
                     </div>
                 </div>
+
+                <details class="card mt-4">
+                    <summary class="card-header" style="cursor:pointer;">{{ __('Advanced Theme (Typography, Buttons, Backgrounds)') }}</summary>
+                    <div class="card-body">
+                        <p class="text-muted small mb-3">{{ __('Everything here is optional — leave a field blank and the site keeps its current look for that value. Nothing below changes anything until you set it.') }}</p>
+
+                        <h6 class="text-uppercase small fw-bold text-muted mb-2">{{ __('Additional Colors') }}</h6>
+                        <div class="row g-3 mb-4">
+                            <div class="col-sm-4"><label class="form-label">{{ __('Secondary Color') }}</label>
+                                <input type="color" name="secondary_color" class="form-control form-control-color w-100"
+                                    value="{{ old('secondary_color', $settings->secondary_color ?: '#0f172a') }}">
+                                <div class="form-text">{{ __('Footer background.') }}</div>
+                            </div>
+                            <div class="col-sm-4"><label class="form-label">{{ __('Page Background') }}</label>
+                                <input type="color" name="background_color" class="form-control form-control-color w-100"
+                                    value="{{ old('background_color', $settings->background_color ?: '#ffffff') }}">
+                                <div class="form-text">{{ __('Overridden by Global Background below if that\'s also set.') }}</div>
+                            </div>
+                            <div class="col-sm-4"><label class="form-label">{{ __('Card / Surface Color') }}</label>
+                                <input type="color" name="surface_color" class="form-control form-control-color w-100"
+                                    value="{{ old('surface_color', $settings->surface_color ?: '#ffffff') }}">
+                            </div>
+                            <div class="col-sm-4"><label class="form-label">{{ __('Body Text Color') }}</label>
+                                <input type="color" name="text_color" class="form-control form-control-color w-100"
+                                    value="{{ old('text_color', $settings->text_color ?: '#1f2937') }}">
+                            </div>
+                            <div class="col-sm-4"><label class="form-label">{{ __('Link Color') }}</label>
+                                <input type="color" name="link_color" class="form-control form-control-color w-100"
+                                    value="{{ old('link_color', $settings->link_color ?: ($settings->primary_color ?: '#1d4ed8')) }}">
+                            </div>
+                            <div class="col-sm-4"><label class="form-label">{{ __('Link Hover Color') }}</label>
+                                <input type="color" name="link_hover_color" class="form-control form-control-color w-100"
+                                    value="{{ old('link_hover_color', $settings->link_hover_color ?: '#0f172a') }}">
+                            </div>
+                            <div class="col-sm-4"><label class="form-label">{{ __('Border Color') }}</label>
+                                <input type="color" name="border_color" class="form-control form-control-color w-100"
+                                    value="{{ old('border_color', $settings->border_color ?: '#e5e7eb') }}">
+                            </div>
+                        </div>
+
+                        <h6 class="text-uppercase small fw-bold text-muted mb-2">{{ __('Typography') }}</h6>
+                        <div class="row g-3 mb-4">
+                            <div class="col-sm-4"><label class="form-label">{{ __('Heading Font') }}</label>
+                                <select name="font_heading" class="form-select">
+                                    <option value="">{{ __('System default') }}</option>
+                                    @foreach (\App\Modules\Website\Models\SiteSetting::FONTS as $font)
+                                        <option value="{{ $font }}" @selected(old('font_heading', $settings->font_heading) === $font)>{{ $font }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-sm-4"><label class="form-label">{{ __('Body Font') }}</label>
+                                <select name="font_body" class="form-select">
+                                    <option value="">{{ __('System default') }}</option>
+                                    @foreach (\App\Modules\Website\Models\SiteSetting::FONTS as $font)
+                                        <option value="{{ $font }}" @selected(old('font_body', $settings->font_body) === $font)>{{ $font }}</option>
+                                    @endforeach
+                                </select>
+                                <div class="form-text">{{ __('Loaded from Google Fonts only when set — no extra request otherwise.') }}</div>
+                            </div>
+                            <div class="col-sm-2"><label class="form-label">{{ __('Base Size (px)') }}</label>
+                                <input type="number" name="base_font_size" class="form-control" min="12" max="24"
+                                    value="{{ old('base_font_size', $settings->base_font_size) }}" placeholder="16">
+                            </div>
+                            <div class="col-sm-2"><label class="form-label">{{ __('Page Width (px)') }}</label>
+                                <input type="number" name="container_width" class="form-control" min="960" max="1600" step="10"
+                                    value="{{ old('container_width', $settings->container_width) }}" placeholder="1140">
+                            </div>
+                        </div>
+
+                        <h6 class="text-uppercase small fw-bold text-muted mb-2">{{ __('Buttons') }}</h6>
+                        <div class="row g-3 mb-4">
+                            <div class="col-sm-3"><label class="form-label">{{ __('Corner Radius (px)') }}</label>
+                                <input type="number" name="btn_radius" class="form-control" min="0" max="50"
+                                    value="{{ old('btn_radius', $settings->btn_radius) }}" placeholder="{{ __('Default') }}">
+                            </div>
+                            <div class="col-sm-3"><label class="form-label">{{ __('Font Weight') }}</label>
+                                <select name="btn_font_weight" class="form-select">
+                                    <option value="">{{ __('Default') }}</option>
+                                    @foreach (\App\Modules\Website\Models\SiteSetting::BTN_FONT_WEIGHTS as $w)
+                                        <option value="{{ $w }}" @selected(old('btn_font_weight', $settings->btn_font_weight) === $w)>{{ $w }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-sm-3"><label class="form-label">{{ __('Hover Transition (ms)') }}</label>
+                                <input type="number" name="btn_transition_ms" class="form-control" min="0" max="1000" step="10"
+                                    value="{{ old('btn_transition_ms', $settings->btn_transition_ms) }}" placeholder="150">
+                            </div>
+                        </div>
+                        <div class="row g-3 mb-2">
+                            <div class="col-sm-3"><label class="form-label small">{{ __('Filled Button Background') }}</label>
+                                <input type="color" name="btn_filled_bg" class="form-control form-control-color w-100"
+                                    value="{{ old('btn_filled_bg', data_get($settings->btn_filled_json, 'bg') ?: ($settings->primary_color ?: '#1d4ed8')) }}">
+                            </div>
+                            <div class="col-sm-3"><label class="form-label small">{{ __('Filled Button Text') }}</label>
+                                <input type="color" name="btn_filled_text" class="form-control form-control-color w-100"
+                                    value="{{ old('btn_filled_text', data_get($settings->btn_filled_json, 'text') ?: '#ffffff') }}">
+                            </div>
+                            <div class="col-sm-3"><label class="form-label small">{{ __('Outline Button Border') }}</label>
+                                <input type="color" name="btn_outline_border" class="form-control form-control-color w-100"
+                                    value="{{ old('btn_outline_border', data_get($settings->btn_outline_json, 'border') ?: ($settings->primary_color ?: '#1d4ed8')) }}">
+                            </div>
+                            <div class="col-sm-3"><label class="form-label small">{{ __('Outline Button Text') }}</label>
+                                <input type="color" name="btn_outline_text" class="form-control form-control-color w-100"
+                                    value="{{ old('btn_outline_text', data_get($settings->btn_outline_json, 'text') ?: ($settings->primary_color ?: '#1d4ed8')) }}">
+                            </div>
+                        </div>
+
+                        <h6 class="text-uppercase small fw-bold text-muted mb-2">{{ __('Global Background') }}</h6>
+                        <p class="text-muted small mb-2">{{ __('Set Type to Image to layer a background image over this color (used as its tint) instead of the plain Page Background above.') }}</p>
+                        <div class="row g-3">
+                            <div class="col-sm-4"><label class="form-label">{{ __('Type') }}</label>
+                                <select name="global_bg_type" class="form-select">
+                                    @foreach (\App\Modules\Website\Models\SiteSetting::GLOBAL_BG_TYPES as $type)
+                                        <option value="{{ $type }}" @selected(old('global_bg_type', $settings->global_bg_type) === $type)>{{ ucfirst($type) }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-sm-4"><label class="form-label">{{ __('Override / Tint Color') }}</label>
+                                <input type="color" name="global_bg_color" class="form-control form-control-color w-100"
+                                    value="{{ old('global_bg_color', $settings->global_bg_color ?: ($settings->background_color ?: '#ffffff')) }}">
+                            </div>
+                            <div class="col-sm-4"><label class="form-label">{{ __('Overlay Darkness') }}</label>
+                                <input type="range" name="global_bg_overlay" class="form-range" min="0" max="1" step="0.05"
+                                    value="{{ old('global_bg_overlay', $settings->global_bg_overlay ?? 0) }}">
+                                <div class="form-text">{{ __('Only applies to a background image.') }}</div>
+                            </div>
+                            <div class="col-12"><label class="form-label">{{ __('Background Image') }}</label>
+                                @php $globalBgImageUrl = \App\Support\Media::url($settings->global_bg_image ?? null); @endphp
+                                @if($globalBgImageUrl)
+                                    <div class="mb-1"><img src="{{ $globalBgImageUrl }}" alt="" class="img-fluid rounded" style="max-height:90px;"></div>
+                                @endif
+                                <input type="file" name="global_bg_image" accept="image/*" class="form-control form-control-sm">
+                                <div class="form-text">{{ __('Only used when Type is set to Image.') }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </details>
             </div>
 
             <div class="col-lg-5">

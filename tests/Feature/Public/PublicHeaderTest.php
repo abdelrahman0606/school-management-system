@@ -11,8 +11,10 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Public three-row header: top bar (welcome/date/phones), brand bar (logo/name/
- * institution data), nav, and the notice ticker.
+ * Public header (docs/modules/29-frontend-modernization-proposal.md Phase 2):
+ * a slim top bar (date/phones/language switcher) plus a single sticky
+ * logo+nav+CTA bar — institution codes and the established year moved to the
+ * footer. Plus the notice ticker.
  */
 class PublicHeaderTest extends TestCase
 {
@@ -41,7 +43,7 @@ class PublicHeaderTest extends TestCase
         SchoolPhone::create(['school_id' => $this->school->id, 'phone' => '01900000000', 'show_in_header' => false]);
     }
 
-    public function test_header_shows_topbar_phones_and_institution_data(): void
+    public function test_header_shows_topbar_phones_and_brand_color(): void
     {
         $this->get('/')
             ->assertOk()
@@ -49,11 +51,21 @@ class PublicHeaderTest extends TestCase
             ->assertSee('01710866871')                    // header phone 2
             ->assertSee('tel:01309115394', false)         // clickable
             ->assertDontSee('01900000000')                // not flagged → hidden
+            ->assertSee('#0a6b2f', false)                 // primary color applied inline
+            ->assertSee('pub-mainbar', false)             // single merged logo+nav bar (Phase 2)
+            ->assertSee(__('Apply Now'));                  // admissions CTA, distinct from Login
+    }
+
+    public function test_footer_shows_institution_codes_and_established_year(): void
+    {
+        // Moved out of the header into the footer as part of the Phase 2
+        // rework — still real content on the page, just not above the nav.
+        $this->get('/')
+            ->assertOk()
             ->assertSee('EIIN:', false)                   // institution label
             ->assertSee('115394')                         // institution code
             ->assertSee('5556')                           // school code
-            ->assertSee('1942')                           // established year
-            ->assertSee('#0a6b2f', false);                // primary color applied inline
+            ->assertSee('1942');                          // established year
     }
 
     public function test_ticker_shows_visible_notices(): void

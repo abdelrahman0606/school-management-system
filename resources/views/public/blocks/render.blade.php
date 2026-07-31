@@ -32,9 +32,18 @@
   // never had an inner container to compensate, so being self-contained
   // just made it render edge-to-edge with no width constraint at all.
   $selfContained = in_array($type, ['hero'], true);
+  // announcement_bar wants to read as a slim strip, not a full section with
+  // the usual py-4/py-lg-5 breathing room — its own inner markup carries
+  // whatever padding it needs (see the announcement_bar switch case below),
+  // and it gets a default brand-colored background (.announcement-bar-section,
+  // public/layout.blade.php) that a Style tab bg_color override still wins
+  // over, same inline-beats-class mechanism every other block's Style tab
+  // already relies on.
+  $slimBlock = $type === 'announcement_bar';
   $wrap = $bp::wrapper($style, $layout);
-  $defaultSpacing = $selfContained ? '' : ($contained ? 'mb-3' : 'py-4 py-lg-5');
-  $wrapClass = trim($wrap['class'].' '.$defaultSpacing);
+  $defaultSpacing = $selfContained || $slimBlock ? '' : ($contained ? 'mb-3' : 'py-4 py-lg-5');
+  $typeClass = $slimBlock ? ' announcement-bar-section' : '';
+  $wrapClass = trim($wrap['class'].' '.$defaultSpacing.$typeClass);
   $wrapStyleAttr = $wrap['style'] !== '' ? ' style="'.$wrap['style'].'"' : '';
 
   $open = $contained || $selfContained ? '' : '<div class="container">';
@@ -397,6 +406,73 @@
           </form>
         </div></div></div>
       </div>
+    {!! $close !!}
+    @break
+
+  @case('announcement_bar')
+    {!! $open !!}
+      @php
+        // Distinct from the notices ticker (a scrolling feed of Announcement
+        // module records) — this is a single, admin-authored, high-intent
+        // message ("Admissions open for 2026-27"), placed like any other
+        // block rather than tied to a live data feed.
+        $abText = trim((string) ($d['text'] ?? ''));
+        $abLinkUrl = trim((string) ($d['link_url'] ?? ''));
+        $abLinkText = trim((string) ($d['link_text'] ?? ''));
+        $abDismissible = ! empty($d['dismissible']);
+        // Keyed off the message text itself (not a random id) — editing the
+        // message to say something new naturally re-shows it to someone who
+        // dismissed the old one, without needing a separate "reset" step.
+        $abKey = substr(md5($abText), 0, 12);
+      @endphp
+      @if ($abText !== '')
+        <div class="announcement-bar d-flex align-items-center justify-content-center flex-wrap gap-2 text-center py-2 px-3"
+             @if($abDismissible) data-announcement-bar="{{ $abKey }}" @endif>
+          <span class="small fw-semibold">{{ $abText }}</span>
+          @if ($abLinkUrl !== '' && $abLinkText !== '')
+            <a href="{{ $abLinkUrl }}" class="announcement-bar-link small">{{ $abLinkText }} <i class="bi bi-arrow-right"></i></a>
+          @endif
+          @if ($abDismissible)
+            <button type="button" class="announcement-bar-dismiss js-announcement-dismiss ms-1" aria-label="{{ __('Dismiss') }}"><i class="bi bi-x-lg"></i></button>
+          @endif
+        </div>
+      @else
+        <div class="d-flex align-items-center justify-content-center text-muted py-2 px-3" aria-hidden="true">
+          <span class="small">{{ __('No announcement text set') }}</span>
+        </div>
+      @endif
+    {!! $close !!}
+    @break
+
+  @case('faq')
+    {!! $open !!}
+      @php
+        $faqId = 'faq-'.uniqid();
+        $faqItems = collect($d['faq_items'] ?? [])
+          ->filter(fn ($it) => is_array($it) && trim((string) ($it['question'] ?? '')) !== '')
+          ->values();
+      @endphp
+      @if (!empty($d['heading']))<h2 class="section-title h3 mb-4">{{ $d['heading'] }}</h2>@endif
+      @if ($faqItems->isNotEmpty())
+        <div class="accordion" id="{{ $faqId }}">
+          @foreach ($faqItems as $i => $item)
+            @php $itemId = $faqId.'-item-'.$i; @endphp
+            <div class="accordion-item">
+              <h3 class="accordion-header">
+                <button class="accordion-button @if($i > 0) collapsed @endif" type="button" data-bs-toggle="collapse"
+                        data-bs-target="#{{ $itemId }}" aria-expanded="{{ $i === 0 ? 'true' : 'false' }}" aria-controls="{{ $itemId }}">
+                  {{ $item['question'] }}
+                </button>
+              </h3>
+              <div id="{{ $itemId }}" class="accordion-collapse collapse @if($i === 0) show @endif" data-bs-parent="#{{ $faqId }}">
+                <div class="accordion-body text-muted">{!! $item['answer'] ?? '' !!}</div>
+              </div>
+            </div>
+          @endforeach
+        </div>
+      @else
+        <p class="text-muted mb-0">{{ __('No FAQs Added Yet.') }}</p>
+      @endif
     {!! $close !!}
     @break
 
