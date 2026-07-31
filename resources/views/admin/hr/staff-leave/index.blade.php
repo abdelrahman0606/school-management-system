@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 @section('title', __('Staff Leave'))
 @section('content')
-  @include('admin.partials.page-header', ['title' => __('Staff leave requests'), 'crumbs' => [__('HR'), __('Staff leave')]])
+  @include('admin.partials.page-header', ['title' => __('Staff leave requests'), 'crumbs' => [__('HR'), __('Staff Leave')]])
 
   <form method="GET" class="card mb-3"><div class="card-body row g-2 align-items-end">
     <div class="col-sm-4"><label class="form-label small text-muted mb-1">{{ __('Status') }}</label>

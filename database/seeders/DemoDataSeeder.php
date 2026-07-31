@@ -116,7 +116,7 @@ class DemoDataSeeder extends Seeder
             'Assistant Head Teacher' => 'সহকারী প্রধান শিক্ষক',
             'Librarian' => 'গ্রন্থাগারিক',
             'Admission Officer' => 'ভর্তি কর্মকর্তা',
-            'Accounts Officer' => 'হিসাব কর্মকর্তা',
+            'Accounts Officer' => 'অ্যাকাউন্ট অফিসার',
             'Teacher' => 'শিক্ষক',
             'Assistant Teacher' => 'সহকারী শিক্ষক',
         ];
@@ -333,21 +333,21 @@ class DemoDataSeeder extends Seeder
                     'title' => 'Admission open for the new academic year',
                     'body' => 'Applications for classes 3 to 8 are now open. Apply online or visit the school office.',
                     'is_pinned' => true,
-                    'title_bn' => 'নতুন শিক্ষাবর্ষের জন্য ভর্তি চলছে',
+                    'title_bn' => 'নতুন শিক্ষাবর্ষের জন্য ভর্তি উন্মুক্ত',
                     'body_bn' => '৩য় থেকে ৮ম শ্রেণির জন্য আবেদন গ্রহণ চলছে। অনলাইনে আবেদন করুন অথবা বিদ্যালয় কার্যালয়ে যোগাযোগ করুন।',
                 ],
                 [
                     'title' => 'Annual sports day on Friday',
                     'body' => 'The annual sports day will be held this Friday on the school ground. All students must attend.',
                     'is_pinned' => false,
-                    'title_bn' => 'শুক্রবার বার্ষিক ক্রীড়া প্রতিযোগিতা',
+                    'title_bn' => 'শুক্রবার বার্ষিক ক্রীড়া দিবস',
                     'body_bn' => 'এই শুক্রবার বিদ্যালয় মাঠে বার্ষিক ক্রীড়া প্রতিযোগিতা অনুষ্ঠিত হবে। সকল শিক্ষার্থীর উপস্থিতি বাধ্যতামূলক।',
                 ],
                 [
                     'title' => 'Half-yearly examination schedule published',
                     'body' => 'The half-yearly examination routine has been published. Collect it from your class teacher.',
                     'is_pinned' => false,
-                    'title_bn' => 'ষাণ্মাসিক পরীক্ষার সময়সূচি প্রকাশিত',
+                    'title_bn' => 'অর্ধ-বার্ষিক পরীক্ষার সময়সূচী প্রকাশিত হয়েছে',
                     'body_bn' => 'ষাণ্মাসিক পরীক্ষার রুটিন প্রকাশিত হয়েছে। আপনার শ্রেণি শিক্ষকের কাছ থেকে সংগ্রহ করুন।',
                 ],
             ] as $nn) {

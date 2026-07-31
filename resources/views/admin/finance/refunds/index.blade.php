@@ -4,7 +4,7 @@
   @include('admin.partials.page-header', [
     'title'  => __('Refunds'),
     'crumbs' => [__('Finance'), __('Refunds')],
-    'action' => ['label' => __('Request refund'), 'modal' => 'requestModal'],
+    'action' => ['label' => __('Request Refund'), 'modal' => 'requestModal'],
   ])
 
   <div class="card"><div class="card-body">

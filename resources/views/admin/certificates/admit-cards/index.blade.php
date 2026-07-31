@@ -2,8 +2,8 @@
 @section('title', __('Admit Cards'))
 @section('content')
   @include('admin.partials.page-header', [
-    'title'  => __('Admit cards'),
-    'crumbs' => [__('Certificates'), __('Admit cards')],
+    'title'  => __('Admit Cards'),
+    'crumbs' => [__('Certificates'), __('Admit Cards')],
     'action' => ['label' => __('Generate'), 'modal' => 'genModal'],
   ])
   @include('admin.certificates._tabs', ['active' => 'admit-cards'])

@@ -2,7 +2,7 @@
 @section('title', __('Payroll — Components'))
 @section('content')
   @include('admin.partials.page-header', [
-    'title'  => __('Salary components'),
+    'title'  => __('Salary Components'),
     'crumbs' => [__('Payroll'), __('Components')],
     'action' => ['label' => __('New component'), 'modal' => 'createModal'],
   ])

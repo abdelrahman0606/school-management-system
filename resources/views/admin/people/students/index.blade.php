@@ -4,7 +4,7 @@
   @include('admin.partials.page-header', [
     'title'  => __('Students'),
     'crumbs' => [__('People'), __('Students')],
-    'action' => ['label' => __('Enrol student'), 'url' => route('admin.students.create')],
+    'action' => ['label' => __('Enrol Student'), 'url' => route('admin.students.create')],
   ])
 
   <form method="GET" class="card mb-3"><div class="card-body row g-2 align-items-end">

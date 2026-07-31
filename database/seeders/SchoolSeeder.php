@@ -98,22 +98,28 @@ class SchoolSeeder extends Seeder
      * site + admin editor actually surface for School/SiteSetting — see
      * docs/modules/30-multilingual-content-plan.md Phase 4. Hand-written,
      * not run through the AI-suggest gateway: seed/demo data should be
-     * correct and stable, not a live network call at seed time. Numeric
-     * codes (institution_code/school_code/technical_branch_code) are left
-     * untranslated on purpose — transOr() already falls back to the raw
-     * value with no translation row needed, and translating a digit string
-     * is meaningless.
+     * correct and stable, not a live network call at seed time.
+     *
+     * institution_code/school_code/technical_branch_code ARE translated
+     * (native Bengali digits ০-৯, mirroring App\Support\LocalizedDate's
+     * NATIVE_DIGITS) — an earlier revision of this comment argued
+     * translating a digit string is meaningless and left them untranslated,
+     * but official BD documents commonly render codes in Bengali numerals,
+     * so a school does want this field populated.
      */
     private function seedBengaliTranslations(School $school): void
     {
-        $school->setTranslation('name', 'bn', 'গ্রীন ভ্যালি মডেল স্কুল');
-        $school->setTranslation('institution_code_label', 'bn', 'EIIN');
+        $school->setTranslation('name', 'bn', 'গ্রিন ভ্যালি মডেল স্কুল');
+        $school->setTranslation('institution_code_label', 'bn', 'ইআইআইএন');
+        $school->setTranslation('institution_code', 'bn', '১১৫৩৯৪');
         $school->setTranslation('school_code_label', 'bn', 'কারিগরি শাখা কোড');
+        $school->setTranslation('school_code', 'bn', '০০০০');
         $school->setTranslation('technical_branch_code_label', 'bn', 'বিদ্যালয় কোড');
+        $school->setTranslation('technical_branch_code', 'bn', '৫৫৫৬');
         $school->setTranslation('address', 'bn', 'নাটুদহ, দামুড়হুদা, চুয়াডাঙ্গা');
 
         $settings = SiteSetting::forSchool($school->id);
-        $settings->setTranslation('meta_title', 'bn', 'গ্রীন ভ্যালি মডেল স্কুল');
+        $settings->setTranslation('meta_title', 'bn', 'গ্রিন ভ্যালি মডেল স্কুল');
         $settings->setTranslation('meta_description', 'bn', '১৯৮৫ সাল থেকে কৌতূহলী মনের লালনকারী একটি ঐতিহ্যবাহী প্রতিষ্ঠান।');
     }
 }

@@ -3,7 +3,7 @@
 @section('content')
   {{-- Keep in sync with data-import/index.blade.php's $badgeMap --}}
   @php $badgeMap = ['queued'=>'neutral','processing'=>'primary','completed'=>'success','failed'=>'danger']; @endphp
-  @include('admin.partials.page-header', ['title' => 'Import #' . $batch->id, 'crumbs' => [__('People'), __('Data import'), 'Batch #' . $batch->id]])
+  @include('admin.partials.page-header', ['title' => 'Import #' . $batch->id, 'crumbs' => [__('People'), __('Data Import'), 'Batch #' . $batch->id]])
 
   <div class="mb-3"><a href="{{ route('admin.data-import.index') }}" class="text-decoration-none small"><i class="bi bi-arrow-left"></i> {{ __('Back To Imports') }}</a></div>
 

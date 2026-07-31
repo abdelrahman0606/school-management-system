@@ -367,7 +367,7 @@ class PageRenderService
      * - Old format: 'hidden' => 'field1,field2,field3' (comma-separated string)
      *
      * @param  array|string|null  $fields
-     * @return array<string, array{enabled: bool, label: string, required: bool}>
+     * @return array<string, array{enabled: bool, label: ?string, required: bool}>
      */
     private function normalizeAdmissionFields($fields): array
     {
@@ -387,8 +387,17 @@ class PageRenderService
             $normalized = [];
             foreach ($defaults as $key => $def) {
                 $normalized[$key] = [
+                    // 'label' stays null when not admin-customized -- NOT
+                    // $def['label'] (a hardcoded English literal). The
+                    // hardcoded default used to always win here, which meant
+                    // admission_form.blade.php's own __()-wrapped fallback
+                    // (via $getLabel($key, __('Last name'))) never actually
+                    // ran: $standard[$key]['label'] was never null, so its
+                    // ?? never reached the translated default. This is what
+                    // kept "Last name"/"Student phone"/"Student photo"/
+                    // "Permanent address"/"Notes" stuck in English under bn.
                     'enabled' => ! in_array($key, $hidden, true),
-                    'label' => $def['label'],
+                    'label' => null,
                     'required' => $def['required'],
                 ];
             }
@@ -403,7 +412,10 @@ class PageRenderService
                 $cfg = $fields[$key] ?? [];
                 $normalized[$key] = [
                     'enabled' => (bool) ($cfg['enabled'] ?? true),
-                    'label' => $cfg['label'] ?? $def['label'],
+                    // Same fix as the string-format branch above -- only an
+                    // admin-typed override belongs here; an untouched field
+                    // stays null so the Blade layer's own __() default wins.
+                    'label' => $cfg['label'] ?? null,
                     'required' => (bool) ($cfg['required'] ?? $def['required']),
                 ];
             }

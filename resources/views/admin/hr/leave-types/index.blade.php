@@ -2,8 +2,8 @@
 @section('title', __('Leave Types'))
 @section('content')
   @include('admin.partials.page-header', [
-    'title'  => __('Leave types'),
-    'crumbs' => [__('HR'), __('Leave types')],
+    'title'  => __('Leave Types'),
+    'crumbs' => [__('HR'), __('Leave Types')],
     'action' => ['label' => __('New type'), 'modal' => 'createModal'],
   ])
 

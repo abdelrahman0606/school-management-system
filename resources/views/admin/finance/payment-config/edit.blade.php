@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 @section('title', __('Payment Settings'))
 @section('content')
-  @include('admin.partials.page-header', ['title' => __('Payment settings'), 'crumbs' => [__('Settings'), __('Payment')]])
+  @include('admin.partials.page-header', ['title' => __('Payment Settings'), 'crumbs' => [__('Settings'), __('Payment')]])
 
   <form method="POST" action="{{ route('admin.payment-config.update') }}" autocomplete="off">
     @csrf @method('PUT')
@@ -95,7 +95,7 @@
             <input name="invoice_prefix" class="form-control" value="{{ old('invoice_prefix', $config->invoice_prefix) }}" placeholder="e.g. INV-"></div>
           <div class="col-md-6"><label class="form-label">{{ __('Receipt Prefix') }}</label>
             <input name="receipt_prefix" class="form-control" value="{{ old('receipt_prefix', $config->receipt_prefix) }}" placeholder="e.g. RCP-"></div>
-          <div class="col-12"><div class="alert alert-light border py-2 mb-0 small text-muted">{{ __('Current sequences') }} — {{ __('invoices') }}: {{ $config->invoice_last_seq }}, {{ __('receipts') }}: {{ $config->receipt_last_seq }}.</div></div>
+          <div class="col-12"><div class="alert alert-light border py-2 mb-0 small text-muted">{{ __('Current sequences') }} — {{ __('Invoices') }}: {{ $config->invoice_last_seq }}, {{ __('receipts') }}: {{ $config->receipt_last_seq }}.</div></div>
         </div></div>
       </div>
       <div class="col-lg-6">

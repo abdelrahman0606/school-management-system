@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 @section('title', __('Navigation Menu'))
 @section('content')
-  @include('admin.partials.page-header', ['title' => __('Navigation menu'), 'crumbs' => [__('Website'), __('Menus')]])
+  @include('admin.partials.page-header', ['title' => __('Navigation Menu'), 'crumbs' => [__('Website'), __('Menus')]])
 
   {{-- Language switcher — docs/modules/30-multilingual-content-plan.md
        Phase 3. Each language owns its own full menu tree, mirroring the
@@ -134,7 +134,7 @@
               '<input class="mi-label form-control form-control-sm" style="max-width:200px" value="' + esc(item.label) + '">' +
               '<select class="mi-type form-select form-select-sm" style="max-width:130px">' +
                 '<option value="page">{{ __('Page') }}</option>' +
-                '<option value="external">{{ __('Custom link') }}</option>' +
+                '<option value="external">{{ __('Custom Link') }}</option>' +
                 '<option value="dropdown">{{ __('Dropdown') }}</option>' +
               '</select>' +
               '<select class="mi-page form-select form-select-sm" style="max-width:180px">' + pageSelect(item.page_id) + '</select>' +

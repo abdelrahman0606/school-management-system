@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 @section('title', __('Student Ledger Report'))
 @section('content')
-  @include('admin.partials.page-header', ['title' => __('Student ledger'), 'crumbs' => [__('Reports'), __('Student ledger')]])
+  @include('admin.partials.page-header', ['title' => __('Student Ledger'), 'crumbs' => [__('Reports'), __('Student Ledger')]])
 
   <ul class="nav nav-pills mb-3">
     <li class="nav-item"><a class="nav-link" href="{{ route('admin.reports.fee-collection') }}">{{ __('Fee Collection') }}</a></li>

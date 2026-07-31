@@ -3,7 +3,7 @@
 @section('content')
   @include('admin.partials.page-header', [
     'title'  => $hall->name . ' — seat map',
-    'crumbs' => [__('Academics'), __('Exam halls'), $hall->name],
+    'crumbs' => [__('Academics'), __('Exam Halls'), $hall->name],
   ])
 
   <div class="mb-3"><a href="{{ route('admin.exam-halls.index') }}" class="text-decoration-none small"><i class="bi bi-arrow-left"></i> {{ __('Back To Halls') }}</a></div>

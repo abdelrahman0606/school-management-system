@@ -4,12 +4,14 @@ namespace Tests\Feature\Public;
 
 use App\Modules\Academic\Models\AcademicYear;
 use App\Modules\Academic\Models\SchoolClass;
+use App\Modules\Language\Models\Translation;
 use App\Modules\OnlineAdmission\Models\AdmissionApplication;
 use App\Modules\School\Models\School;
 use App\Modules\Website\Models\Page;
 use App\Modules\Website\Models\PageLayout;
 use App\Modules\Website\Models\SiteSetting;
 use App\Modules\Website\Services\PageRenderService;
+use Database\Seeders\LanguageSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -164,6 +166,55 @@ class AdmissionFormTest extends TestCase
             ->assertDontSee('name="blood_group"', false)
             ->assertDontSee('name="student_phone"', false)
             ->assertSee('name="birth_certificate_no"', false); // required field still there
+    }
+
+    /**
+     * Reported: "online admission form still not fully translated" — Last
+     * name, Blood group, Student phone, Student photo, Permanent address,
+     * Notes. Root cause was upstream of the __()-wrapped fallback labels in
+     * admission_form.blade.php: PageRenderService::normalizeAdmissionFields()
+     * always baked in a hardcoded English default label (e.g. 'Last name')
+     * even when the admin never customized the field, so
+     * $standard[$key]['label'] was never null and the Blade layer's own
+     * $getLabel($key, __('Last name')) fallback never actually ran. Fixed by
+     * leaving 'label' null there when the admin hasn't set one, letting the
+     * Blade default win.
+     */
+    public function test_standard_field_labels_translate_under_bn_when_admin_hasnt_customized_them(): void
+    {
+        $this->seed(LanguageSeeder::class); // en (default) + bn, both active
+        foreach ([
+            'Last name' => 'শেষ নাম',
+            'Blood group' => 'রক্তের গ্রুপ',
+            'Student phone' => 'শিক্ষার্থীর ফোন',
+            'Student photo' => 'শিক্ষার্থীর ছবি',
+            'Permanent address' => 'স্থায়ী ঠিকানা',
+            'Notes' => 'নোট',
+        ] as $key => $value) {
+            Translation::create(['locale' => 'bn', 'key' => $key, 'value' => $value]);
+        }
+
+        $this->withSession(['app_locale' => 'bn'])->get('/online-admission')
+            ->assertOk()
+            ->assertSee('শেষ নাম')
+            ->assertSee('রক্তের গ্রুপ')
+            ->assertSee('শিক্ষার্থীর ফোন')
+            ->assertSee('শিক্ষার্থীর ছবি')
+            ->assertSee('স্থায়ী ঠিকানা')
+            ->assertSee('নোট');
+    }
+
+    /** An admin-typed custom label is data, not a UI string -- it must never be swapped for the __() default. */
+    public function test_an_admin_customized_field_label_is_never_overridden_by_the_translated_default(): void
+    {
+        $this->seed(LanguageSeeder::class);
+        Translation::create(['locale' => 'bn', 'key' => 'Last name', 'value' => 'শেষ নাম']);
+        $this->publishAdmissionPage(['fields' => ['last_name' => ['label' => 'Surname']]]);
+
+        $this->withSession(['app_locale' => 'bn'])->get('/online-admission')
+            ->assertOk()
+            ->assertSee('Surname')
+            ->assertDontSee('শেষ নাম');
     }
 
     public function test_photo_upload_is_stored(): void

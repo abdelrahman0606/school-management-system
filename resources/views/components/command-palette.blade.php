@@ -230,9 +230,9 @@
         { id: 'staff-loans', label: {!! json_encode(__('Staff Loans')) !!}, description: {!! json_encode(__('Staff loan requests')) !!}, section: {!! json_encode(__('HR')) !!}, icon: 'bi-cash-stack', url: routes['staff-loans'], keywords: 'advances', shortcut: 'h n' },
 
         // Reports
-        { id: 'reports-fee', label: {!! json_encode(__('Fee Collection')) !!}, description: {!! json_encode(__('Fee collection report')) !!}, section: {!! json_encode(__('Reports')) !!}, icon: 'bi-file-earmark-bar-graph', url: routes['reports-fee'], keywords: 'revenue', shortcut: 'r f' },
-        { id: 'reports-dues', label: {!! json_encode(__('Outstanding Dues')) !!}, description: {!! json_encode(__('Outstanding dues report')) !!}, section: {!! json_encode(__('Reports')) !!}, icon: 'bi-file-earmark-bar-graph', url: routes['reports-dues'], keywords: 'arrears', shortcut: 'r o' },
-        { id: 'reports-ledger', label: {!! json_encode(__('Student Ledger')) !!}, description: {!! json_encode(__('Student ledger report')) !!}, section: {!! json_encode(__('Reports')) !!}, icon: 'bi-file-earmark-bar-graph', url: routes['reports-ledger'], keywords: 'ledger statement', shortcut: 'r l' },
+        { id: 'reports-fee', label: {!! json_encode(__('Fee Collection')) !!}, description: {!! json_encode(__('Fee Collection Report')) !!}, section: {!! json_encode(__('Reports')) !!}, icon: 'bi-file-earmark-bar-graph', url: routes['reports-fee'], keywords: 'revenue', shortcut: 'r f' },
+        { id: 'reports-dues', label: {!! json_encode(__('Outstanding Dues')) !!}, description: {!! json_encode(__('Outstanding Dues Report')) !!}, section: {!! json_encode(__('Reports')) !!}, icon: 'bi-file-earmark-bar-graph', url: routes['reports-dues'], keywords: 'arrears', shortcut: 'r o' },
+        { id: 'reports-ledger', label: {!! json_encode(__('Student Ledger')) !!}, description: {!! json_encode(__('Student Ledger Report')) !!}, section: {!! json_encode(__('Reports')) !!}, icon: 'bi-file-earmark-bar-graph', url: routes['reports-ledger'], keywords: 'ledger statement', shortcut: 'r l' },
 
         // Optional Modules
         { id: 'library', label: {!! json_encode(__('Library')) !!}, description: {!! json_encode(__('Manage library')) !!}, section: {!! json_encode(__('Optional')) !!}, icon: 'bi-book-half', url: routes['library.books'], keywords: 'books borrow return', condition: 'library', shortcut: 'o l' },
