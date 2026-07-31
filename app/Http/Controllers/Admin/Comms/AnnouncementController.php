@@ -7,6 +7,7 @@ use App\Modules\Announcement\Services\AnnouncementService;
 use App\Modules\Language\Jobs\SuggestAnnouncementTranslationJob;
 use App\Modules\Language\Models\Language;
 use App\Modules\Language\Services\TranslationService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -82,20 +83,40 @@ class AnnouncementController extends Controller
      * Phase 5. Fills only the currently-empty title/body translation for one
      * locale; never overwrites a field the admin (or a previous run)
      * already translated.
+     *
+     * Announcement is edited in a modal (not a dedicated page like School's
+     * settings editor), so a plain form POST+redirect here would close the
+     * modal — the admin would have to reopen Edit just to see what the AI
+     * filled in. The button's own JS instead fetch()es this endpoint with
+     * X-Requested-With (ajax()), and this returns the resolved field values
+     * as JSON so the panel can be updated in place with no navigation at
+     * all. A real (non-ajax) form submit still works exactly as before —
+     * kept as a plain fallback, not because anything still relies on it.
      */
-    public function suggestTranslation(Request $request, int $id): RedirectResponse
+    public function suggestTranslation(Request $request, int $id): RedirectResponse|JsonResponse
     {
         $announcement = $this->find($id);
         $locale = Language::resolve($request->input('locale'));
 
         if ($locale === Language::defaultCode()) {
-            return back()->with('status', __('Nothing to translate — that is the default language.'));
+            $message = __('Nothing to translate — that is the default language.');
+
+            return $request->ajax() ? response()->json(['message' => $message], 422) : back()->with('status', $message);
         }
 
         // dispatchSync() — see SchoolController::suggestTranslation()'s own
         // comment: queued dispatch() returns before Horizon actually runs
         // the job under this app's normal QUEUE_CONNECTION=redis.
         SuggestAnnouncementTranslationJob::dispatchSync($announcement->id, $locale);
+
+        if ($request->ajax()) {
+            return response()->json([
+                'fields' => [
+                    'title' => $announcement->trans('title', $locale),
+                    'body' => $announcement->trans('body', $locale),
+                ],
+            ]);
+        }
 
         return back()->with('status', __('Translation suggestions filled in below — review before saving.'));
     }

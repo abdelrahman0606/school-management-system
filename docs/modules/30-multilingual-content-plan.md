@@ -281,6 +281,20 @@ easy for the reviewing admin to spot and finish by hand.
    not always the default locale. Tests
    (`tests/Feature/Public/MultilingualBlockContentTest.php`). Landed directly on `dev` (small
    follow-up, same convention as #6 above).
+9. ✅ **"Suggest translation (AI)" no longer closes the modal** — Announcement/Staff/Designation/
+   Department (Phase 7) are edited in a modal-per-row, not a dedicated page like School's settings
+   editor. Their "Suggest translation (AI)" button originally just `.submit()`ed the same hidden
+   form School's editor uses, which POSTs and redirects — on a dedicated page that's a harmless
+   full reload of the same editor, but here it closed the modal entirely, forcing the admin to
+   reopen Edit just to see what the AI filled in. Fixed by having the button fetch() the same
+   endpoint with `X-Requested-With: XMLHttpRequest` instead of submitting the form normally; the
+   three controllers now branch on `$request->ajax()` and return the resolved field values as JSON
+   instead of redirecting, and a new shared partial
+   (`admin/partials/translation-suggest-script.blade.php`, one delegated click listener per index
+   page — not one per row) fills the matching input/textarea in place, but only if it's still
+   empty, so it can never clobber text the admin already typed. A real (non-ajax) form submit still
+   redirects exactly as before — kept as a plain fallback. Tests added to
+   `MultilingualAnnouncementAndStaffContentTest.php` covering the JSON response path.
 
 Each phase is its own branch off `dev`, its own commit(s), tests green before merge — same
 workflow as modules 20/29. Small follow-up fixes after a phase's initial merge (like #6 above) go

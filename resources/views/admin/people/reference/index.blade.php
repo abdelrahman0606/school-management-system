@@ -64,8 +64,8 @@
                   @if ($lang->flag){{ $lang->flag }} @endif {{ $lang->native_name }}
                 </summary>
                 <div class="card-body">
-                  <button type="button" class="btn btn-sm btn-outline-secondary mb-2"
-                          onclick="document.getElementById('ai-suggest-{{ $type }}-{{ $item->id }}-{{ $lang->code }}').submit()">
+                  <button type="button" class="btn btn-sm btn-outline-secondary mb-2 js-suggest-translation"
+                          data-form="ai-suggest-{{ $type }}-{{ $item->id }}-{{ $lang->code }}">
                     <i class="bi bi-magic"></i> {{ __('Suggest translations (AI)') }}
                   </button>
                   <p class="form-text mt-0 mb-3">{{ __('Fills only the empty fields below using a free machine-translation service — always review a suggestion before saving.') }}</p>
@@ -97,3 +97,7 @@
     @endforeach
   @endif
 @endsection
+
+@push('scripts')
+  @include('admin.partials.translation-suggest-script')
+@endpush

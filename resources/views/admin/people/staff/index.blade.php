@@ -48,3 +48,7 @@
     @include('admin.people.staff._form', ['mode' => 'edit', 's' => $s])
   @endforeach
 @endsection
+
+@push('scripts')
+  @include('admin.partials.translation-suggest-script')
+@endpush

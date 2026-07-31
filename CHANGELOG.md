@@ -19,6 +19,15 @@ follows [Semantic Versioning](https://semver.org/).
   (`tests/Feature/Admin/MultilingualAnnouncementAndStaffContentTest.php`).
 
 ### Fixed
+- Reported: clicking "Suggest translation (AI)" on Announcement/Staff/Designation/Department closed
+  the edit modal (a plain form POST+redirect), forcing the admin to reopen Edit just to see what
+  the AI filled in. Fixed by having the button fetch() the same endpoint with
+  `X-Requested-With: XMLHttpRequest` instead of submitting the hidden form normally; the three
+  controllers now return the resolved field values as JSON for an ajax request instead of
+  redirecting, and a new shared script
+  (`admin/partials/translation-suggest-script.blade.php`) fills the matching input/textarea in
+  place — only if it's still empty, so it can never overwrite text the admin already typed. A real
+  (non-ajax) form submit still redirects exactly as before.
 - Reported: the newly-added Announcement/Staff translations weren't showing up on the public
   website — the "notices" and "staff" blocks (and the header's notice ticker) kept showing the
   default-locale English text no matter which language a visitor was browsing in. Root cause: those

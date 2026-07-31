@@ -7,6 +7,7 @@ use App\Modules\Language\Models\Language;
 use App\Modules\Language\Services\TranslationService;
 use App\Modules\Staff\Models\Department;
 use App\Modules\Staff\Models\Designation;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -83,8 +84,15 @@ class StaffReferenceController extends Controller
      * Phase 5. Fills only the currently-empty name translation for one
      * locale; never overwrites a field the admin (or a previous run)
      * already translated.
+     *
+     * Designation/Department are edited in a modal (not a dedicated page),
+     * so a plain form POST+redirect here would close the modal — see
+     * AnnouncementController::suggestTranslation()'s own comment for the
+     * full reasoning. The button's JS fetch()es this with
+     * X-Requested-With (ajax()) and fills the field in place from the JSON
+     * response; a real form submit still falls back to the old redirect.
      */
-    public function suggestTranslation(Request $request, int $id): RedirectResponse
+    public function suggestTranslation(Request $request, int $id): RedirectResponse|JsonResponse
     {
         $meta = $this->meta($request);
         $schoolId = app('current_school_id');
@@ -92,13 +100,19 @@ class StaffReferenceController extends Controller
         $locale = Language::resolve($request->input('locale'));
 
         if ($locale === Language::defaultCode()) {
-            return back()->with('status', __('Nothing to translate — that is the default language.'));
+            $message = __('Nothing to translate — that is the default language.');
+
+            return $request->ajax() ? response()->json(['message' => $message], 422) : back()->with('status', $message);
         }
 
         // dispatchSync() — see SchoolController::suggestTranslation()'s own
         // comment: queued dispatch() returns before Horizon actually runs
         // the job under this app's normal QUEUE_CONNECTION=redis.
         SuggestStaffReferenceTranslationJob::dispatchSync($meta['model'], $item->id, $locale);
+
+        if ($request->ajax()) {
+            return response()->json(['fields' => ['name' => $item->trans('name', $locale)]]);
+        }
 
         return back()->with('status', __('Translation suggestions filled in below — review before saving.'));
     }

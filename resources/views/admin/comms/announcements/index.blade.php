@@ -48,3 +48,7 @@
     @include('admin.comms.announcements._form', ['mode' => 'edit', 'a' => $a])
   @endforeach
 @endsection
+
+@push('scripts')
+  @include('admin.partials.translation-suggest-script')
+@endpush

@@ -112,6 +112,33 @@ class MultilingualAnnouncementAndStaffContentTest extends TestCase
         $this->assertSame('অনুবাদিত', $announcement->trans('body', 'bn'));
     }
 
+    /**
+     * Announcement is edited in a modal, not a dedicated page — a plain
+     * form POST+redirect would close it, forcing the admin to reopen Edit
+     * just to see what the AI filled in. The button's JS instead fetch()es
+     * with X-Requested-With so the field can be filled in place with no
+     * navigation at all (see admin/partials/translation-suggest-script.blade.php).
+     */
+    public function test_ai_suggestion_returns_json_instead_of_redirecting_for_an_ajax_request(): void
+    {
+        $announcement = Announcement::create([
+            'school_id' => $this->school->id, 'created_by' => $this->admin->id,
+            'title' => 'Exam Schedule', 'body' => 'Exams start Monday.',
+            'type' => 'exam', 'audience' => 'all', 'priority' => 'normal',
+            'is_pinned' => false, 'is_trash' => false,
+        ]);
+        $this->fakeMyMemory();
+
+        $this->actingAs($this->admin)
+            ->post(
+                "/admin/announcements/{$announcement->id}/translations/suggest",
+                ['locale' => 'bn'],
+                ['X-Requested-With' => 'XMLHttpRequest'],
+            )
+            ->assertOk()
+            ->assertJson(['fields' => ['title' => 'অনুবাদিত', 'body' => 'অনুবাদিত']]);
+    }
+
     // ── Staff ────────────────────────────────────────────────────────────
 
     public function test_admin_can_save_a_bengali_translation_for_a_staff_members_name(): void
@@ -146,6 +173,24 @@ class MultilingualAnnouncementAndStaffContentTest extends TestCase
         $this->assertSame('অনুবাদিত', $staff->trans('name', 'bn'));
     }
 
+    public function test_staff_ai_suggestion_returns_json_instead_of_redirecting_for_an_ajax_request(): void
+    {
+        $staff = Staff::create([
+            'school_id' => $this->school->id, 'employee_id' => 'EMP1',
+            'name' => 'John Doe', 'gender' => 'male', 'status' => 'active', 'is_trash' => false,
+        ]);
+        $this->fakeMyMemory();
+
+        $this->actingAs($this->admin)
+            ->post(
+                "/admin/staff/{$staff->id}/translations/suggest",
+                ['locale' => 'bn'],
+                ['X-Requested-With' => 'XMLHttpRequest'],
+            )
+            ->assertOk()
+            ->assertJson(['fields' => ['name' => 'অনুবাদিত']]);
+    }
+
     // ── Designation / Department ────────────────────────────────────────
 
     public function test_admin_can_save_a_bengali_translation_for_a_designation(): void
@@ -172,6 +217,21 @@ class MultilingualAnnouncementAndStaffContentTest extends TestCase
             ->assertRedirect();
 
         $this->assertSame('অনুবাদিত', $department->trans('name', 'bn'));
+    }
+
+    public function test_designation_ai_suggestion_returns_json_instead_of_redirecting_for_an_ajax_request(): void
+    {
+        $designation = Designation::create(['school_id' => $this->school->id, 'name' => 'Principal']);
+        $this->fakeMyMemory();
+
+        $this->actingAs($this->admin)
+            ->post(
+                "/admin/designations/{$designation->id}/translations/suggest",
+                ['locale' => 'bn'],
+                ['X-Requested-With' => 'XMLHttpRequest'],
+            )
+            ->assertOk()
+            ->assertJson(['fields' => ['name' => 'অনুবাদিত']]);
     }
 
     public function test_ai_suggestion_never_overwrites_a_designation_already_translated(): void
