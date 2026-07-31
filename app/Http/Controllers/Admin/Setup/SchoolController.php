@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Admin\Setup;
 
+use App\Modules\Language\Models\Language;
+use App\Modules\Language\Services\TranslationService;
 use App\Modules\School\Models\ModuleSetting;
 use App\Modules\School\Models\School;
 use App\Modules\School\Models\SchoolOpeningHour;
@@ -16,10 +18,20 @@ use Illuminate\View\View;
 
 class SchoolController extends Controller
 {
+    /** School/SiteSetting fields translatable per docs/modules/30-multilingual-content-plan.md Phase 4. */
+    private const SCHOOL_TRANSLATABLE_FIELDS = [
+        'name', 'institution_code_label', 'institution_code',
+        'school_code_label', 'school_code',
+        'technical_branch_code_label', 'technical_branch_code', 'address',
+    ];
+
+    private const SETTING_TRANSLATABLE_FIELDS = ['meta_title', 'meta_description'];
+
     public function __construct(
         private readonly SchoolService $schools,
         private readonly SiteSettingService $siteSettings,
         private readonly ModuleSettingService $modules,
+        private readonly TranslationService $translations,
     ) {}
 
     public function edit(): View
@@ -42,6 +54,13 @@ class SchoolController extends Controller
                 'jul_jun' => 'July – June',
                 'sep_aug' => 'September – August',
             ],
+            // Content languages (docs/modules/30-multilingual-content-plan.md
+            // Phase 4) -- deliberately a different variable from 'languages'
+            // above, which is config('geo.languages') feeding the school's
+            // OWN default-locale dropdown, not the multilingual-content
+            // language list. The default language's own value already lives
+            // in the plain columns edited above, so it's excluded here.
+            'contentLanguages' => Language::activeCached()->reject(fn (Language $l) => $l->code === Language::defaultCode())->values(),
         ]);
     }
 
@@ -117,6 +136,15 @@ class SchoolController extends Controller
             'favicon' => ['nullable', 'image', 'max:1024'],
             'og_image' => ['nullable', 'image', 'max:2048'],
             'global_bg_image' => ['nullable', 'image', 'max:4096'],
+            // Translations (docs/modules/30-multilingual-content-plan.md
+            // Phase 4) -- translations[{locale}][{field}]. Locale keys are
+            // re-validated against the live active-language list below
+            // (never trusted from the request directly), so a generic
+            // max-length here is enough; the per-field 255/2000 limits above
+            // are for the default-locale columns, not every locale's copy.
+            'translations' => ['nullable', 'array'],
+            'translations.*' => ['array'],
+            'translations.*.*' => ['nullable', 'string', 'max:2000'],
         ]);
 
         // ── School profile ──────────────────────────────────────────────────
@@ -171,7 +199,26 @@ class SchoolController extends Controller
         if ($path = $this->storeImage($request, 'global_bg_image')) {
             $settingData['global_bg_image'] = $path;
         }
-        $this->siteSettings->update($school->id, $settingData);
+        $settings = $this->siteSettings->update($school->id, $settingData);
+
+        // ── Translations (docs/modules/30-multilingual-content-plan.md Phase 4) ──
+        // Only iterate over locales the DB actually knows are active -- an
+        // arbitrary/stale locale key in the submitted payload (deactivated
+        // language, tampered form) is simply ignored rather than stored.
+        $activeLocales = Language::activeCached()
+            ->pluck('code')
+            ->reject(fn ($code) => $code === Language::defaultCode());
+
+        $submitted = (array) ($validated['translations'] ?? []);
+        $schoolTranslations = [];
+        $settingTranslations = [];
+        foreach ($activeLocales as $locale) {
+            $fields = is_array($submitted[$locale] ?? null) ? $submitted[$locale] : [];
+            $schoolTranslations[$locale] = array_intersect_key($fields, array_flip(self::SCHOOL_TRANSLATABLE_FIELDS));
+            $settingTranslations[$locale] = array_intersect_key($fields, array_flip(self::SETTING_TRANSLATABLE_FIELDS));
+        }
+        $this->translations->saveMany($school, $schoolTranslations);
+        $this->translations->saveMany($settings, $settingTranslations);
 
         // ── Phones (dynamic list; each can be flagged to show in the header) ─
         $phones = collect($request->input('phones', []))
