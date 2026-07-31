@@ -4,7 +4,7 @@
   @include('admin.partials.page-header', [
     'title'  => __('Testimonials'),
     'crumbs' => [__('Certificates'), __('Testimonials')],
-    'action' => ['label' => __('Issue testimonial'), 'modal' => 'issueModal'],
+    'action' => ['label' => __('Issue Testimonial'), 'modal' => 'issueModal'],
   ])
   @include('admin.certificates._tabs', ['active' => 'testimonials'])
 

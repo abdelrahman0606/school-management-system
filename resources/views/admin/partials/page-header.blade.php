@@ -2,8 +2,8 @@
   Reusable page header: breadcrumb + title + one or more action buttons.
   Usage (single action, unchanged from before):
     @include('admin.partials.page-header', [
-      'title' => __('Academic years'),
-      'crumbs' => [__('Setup'), __('Academic years')],
+      'title' => __('Academic Years'),
+      'crumbs' => [__('Setup'), __('Academic Years')],
       'action' => ['label' => __('New year'), 'modal' => 'createModal'],  // or 'url' => '...'
     ])
   Usage (multiple actions — 'variant' defaults to 'primary', 'icon' to 'bi-plus-lg'):

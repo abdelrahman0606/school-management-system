@@ -4,7 +4,7 @@
   @include('admin.partials.page-header', [
     'title'  => __('Routes'),
     'crumbs' => [__('Transport'), __('Routes')],
-    'action' => ['label' => __('New route'), 'modal' => 'createModal'],
+    'action' => ['label' => __('New Route'), 'modal' => 'createModal'],
   ])
   @include('admin.modules.transport._tabs', ['active' => 'routes'])
 

@@ -4,7 +4,7 @@
   @include('admin.partials.page-header', [
     'title'  => 'Sections — ' . $class->name,
     'crumbs' => [__('Setup'), __('Classes'), $class->name, __('Sections')],
-    'action' => ['label' => __('New section'), 'modal' => 'createModal'],
+    'action' => ['label' => __('New Section'), 'modal' => 'createModal'],
   ])
 
   <div class="mb-3"><a href="{{ route('admin.classes.index') }}" class="text-decoration-none small"><i class="bi bi-arrow-left"></i> {{ __('Back To Classes') }}</a></div>

@@ -2,9 +2,9 @@
 @section('title', __('Data Import'))
 @section('content')
   @include('admin.partials.page-header', [
-    'title'  => __('Data import'),
-    'crumbs' => [__('People'), __('Data import')],
-    'action' => ['label' => __('Import file'), 'modal' => 'uploadModal'],
+    'title'  => __('Data Import'),
+    'crumbs' => [__('People'), __('Data Import')],
+    'action' => ['label' => __('Import File'), 'modal' => 'uploadModal'],
   ])
 
   {{-- Keep in sync with data-import/show.blade.php's $badgeMap --}}

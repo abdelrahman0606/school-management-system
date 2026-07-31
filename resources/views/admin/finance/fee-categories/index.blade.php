@@ -2,9 +2,9 @@
 @section('title', __('Fee Categories'))
 @section('content')
   @include('admin.partials.page-header', [
-    'title'  => __('Fee categories'),
-    'crumbs' => [__('Finance'), __('Fee categories')],
-    'action' => ['label' => __('New category'), 'modal' => 'createModal'],
+    'title'  => __('Fee Categories'),
+    'crumbs' => [__('Finance'), __('Fee Categories')],
+    'action' => ['label' => __('New Category'), 'modal' => 'createModal'],
   ])
 
   <div class="card"><div class="card-body">

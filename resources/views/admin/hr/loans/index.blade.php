@@ -2,8 +2,8 @@
 @section('title', __('Staff Loans'))
 @section('content')
   @include('admin.partials.page-header', [
-    'title'  => __('Staff loans'),
-    'crumbs' => [__('HR'), __('Staff loans')],
+    'title'  => __('Staff Loans'),
+    'crumbs' => [__('HR'), __('Staff Loans')],
     'action' => ['label' => __('New loan'), 'modal' => 'createModal'],
   ])
 

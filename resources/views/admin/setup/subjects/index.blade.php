@@ -4,7 +4,7 @@
   @include('admin.partials.page-header', [
     'title'  => __('Subjects'),
     'crumbs' => [__('Setup'), __('Subjects')],
-    'action' => ['label' => __('New subject'), 'modal' => 'createModal'],
+    'action' => ['label' => __('New Subject'), 'modal' => 'createModal'],
   ])
 
   <div class="card"><div class="card-body">

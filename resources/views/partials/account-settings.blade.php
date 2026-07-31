@@ -4,7 +4,7 @@
   <div class="col-lg-6">
     {{-- Name --}}
     <div class="card mb-4">
-      <div class="card-header">{{ __('Your name') }}</div>
+      <div class="card-header">{{ __('Your Name') }}</div>
       <div class="card-body">
         <form method="POST" action="{{ route("$portalPrefix.account.update-name") }}">
           @csrf @method('PUT')
@@ -72,7 +72,7 @@
     {{-- Two-factor --}}
     <div class="card mb-4">
       <div class="card-header d-flex justify-content-between align-items-center">
-        <span>{{ __('Two-factor authentication') }}</span>
+        <span>{{ __('Two-Factor Authentication') }}</span>
         @if($accountUser->hasTwoFactorEnabled())
           <span class="badge text-bg-success">{{ __('Enabled') }}</span>
         @else
@@ -108,7 +108,7 @@
           </form>
         @else
           <p class="text-muted small">{{ __('Add an extra layer of security — after your password, you\'ll also need a code from an authenticator app (Google Authenticator, Authy, etc.).') }}</p>
-          <a href="{{ route("$portalPrefix.account.2fa.enable") }}" class="btn btn-primary btn-sm">{{ __('Enable two-factor authentication') }}</a>
+          <a href="{{ route("$portalPrefix.account.2fa.enable") }}" class="btn btn-primary btn-sm">{{ __('Enable Two-Factor Authentication') }}</a>
         @endif
       </div>
     </div>
@@ -141,7 +141,7 @@
             @if($s->session_id !== $currentSessionId)
               <form method="POST" action="{{ route("$portalPrefix.account.sessions.revoke", $s->id) }}">
                 @csrf @method('DELETE')
-                <button class="btn btn-outline-danger btn-sm">{{ __('Sign out') }}</button>
+                <button class="btn btn-outline-danger btn-sm">{{ __('Sign Out') }}</button>
               </form>
             @endif
           </div>

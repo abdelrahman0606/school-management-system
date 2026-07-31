@@ -2,9 +2,9 @@
 @section('title', __('Library — Borrow / Return'))
 @section('content')
   @include('admin.partials.page-header', [
-    'title'  => __('Borrow / return'),
-    'crumbs' => [__('Library'), __('Borrow / return')],
-    'action' => ['label' => __('Issue book'), 'modal' => 'borrowModal'],
+    'title'  => __('Borrow / Return'),
+    'crumbs' => [__('Library'), __('Borrow / Return')],
+    'action' => ['label' => __('Issue Book'), 'modal' => 'borrowModal'],
   ])
 
   @include('admin.modules.library._tabs', ['active' => 'borrow'])

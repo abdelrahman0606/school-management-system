@@ -34,7 +34,7 @@
         $navTree[] = ['label' => __('Students'), 'key' => 'students', 'icon' => 'bi-people-fill', 'children' => [
             ['label' => __('All students'), 'href' => route('admin.students.index'), 'active' => request()->routeIs('admin.students.*')],
             ['label' => __('Admissions'), 'href' => route('admin.admissions.index'), 'active' => request()->routeIs('admin.admissions.*')],
-            ['label' => __('Data import'), 'href' => route('admin.data-import.index'), 'active' => request()->routeIs('admin.data-import.*')],
+            ['label' => __('Data Import'), 'href' => route('admin.data-import.index'), 'active' => request()->routeIs('admin.data-import.*')],
         ]];
         $navTree[] = ['label' => __('Staff'), 'key' => 'staff', 'icon' => 'bi-person-badge', 'children' => [
             ['label' => __('All staff'), 'href' => route('admin.staff.index'), 'active' => request()->routeIs('admin.staff.*')],
@@ -42,32 +42,32 @@
             ['label' => __('Departments'), 'href' => route('admin.departments.index'), 'active' => request()->routeIs('admin.departments.*')],
         ]];
         $navTree[] = ['label' => __('Academic'), 'key' => 'academic', 'icon' => 'bi-mortarboard', 'children' => [
-            ['label' => __('Academic years'), 'href' => route('admin.academic-years.index'), 'active' => request()->routeIs('admin.academic-years.*')],
-            ['label' => __('Classes & sections'), 'href' => route('admin.classes.index'), 'active' => request()->routeIs('admin.classes.*') || request()->routeIs('admin.sections.*')],
+            ['label' => __('Academic Years'), 'href' => route('admin.academic-years.index'), 'active' => request()->routeIs('admin.academic-years.*')],
+            ['label' => __('Classes & Sections'), 'href' => route('admin.classes.index'), 'active' => request()->routeIs('admin.classes.*') || request()->routeIs('admin.sections.*')],
             ['label' => __('Subjects'), 'href' => route('admin.subjects.index'), 'active' => request()->routeIs('admin.subjects.*')],
             ['label' => __('Groups'), 'href' => route('admin.groups.index'), 'active' => request()->routeIs('admin.groups.*')],
             ['label' => __('Versions'), 'href' => route('admin.versions.index'), 'active' => request()->routeIs('admin.versions.*')],
             ['label' => __('Shifts'), 'href' => route('admin.shifts.index'), 'active' => request()->routeIs('admin.shifts.*')],
-            ['label' => __('Class routine'), 'href' => route('admin.routine.index'), 'active' => request()->routeIs('admin.routine.*') || request()->routeIs('admin.routine-setup.*')],
+            ['label' => __('Class Routine'), 'href' => route('admin.routine.index'), 'active' => request()->routeIs('admin.routine.*') || request()->routeIs('admin.routine-setup.*')],
         ]];
         $navTree[] = ['label' => __('Attendance'), 'icon' => 'bi-calendar-check', 'href' => route('admin.attendance.index'), 'active' => request()->routeIs('admin.attendance.*')];
         $navTree[] = ['label' => __('Examinations'), 'key' => 'examinations', 'icon' => 'bi-journal-text', 'children' => [
-            ['label' => __('Exam types'), 'href' => route('admin.exam-types.index'), 'active' => request()->routeIs('admin.exam-types.*')],
+            ['label' => __('Exam Types'), 'href' => route('admin.exam-types.index'), 'active' => request()->routeIs('admin.exam-types.*')],
             ['label' => __('Exams'), 'href' => route('admin.exams.index'), 'active' => request()->routeIs('admin.exams.*') || request()->routeIs('admin.exam-marks.*')],
-            ['label' => __('Mark settings'), 'href' => route('admin.mark-settings.index'), 'active' => request()->routeIs('admin.mark-settings.*')],
-            ['label' => __('Exam halls'), 'href' => route('admin.exam-halls.index'), 'active' => request()->routeIs('admin.exam-halls.*')],
+            ['label' => __('Mark Settings'), 'href' => route('admin.mark-settings.index'), 'active' => request()->routeIs('admin.mark-settings.*')],
+            ['label' => __('Exam Halls'), 'href' => route('admin.exam-halls.index'), 'active' => request()->routeIs('admin.exam-halls.*')],
         ]];
     }
 
     if ($canFinance) {
         $navTree[] = ['label' => __('Finance'), 'key' => 'finance', 'icon' => 'bi-cash-coin', 'children' => [
-            ['label' => __('Fee categories'), 'href' => route('admin.fee-categories.index'), 'active' => request()->routeIs('admin.fee-categories.*')],
-            ['label' => __('Fee items'), 'href' => route('admin.fee-items.index'), 'active' => request()->routeIs('admin.fee-items.*')],
+            ['label' => __('Fee Categories'), 'href' => route('admin.fee-categories.index'), 'active' => request()->routeIs('admin.fee-categories.*')],
+            ['label' => __('Fee Items'), 'href' => route('admin.fee-items.index'), 'active' => request()->routeIs('admin.fee-items.*')],
             ['label' => __('Discounts'), 'href' => route('admin.fee-discounts.index'), 'active' => request()->routeIs('admin.fee-discounts.*')],
             ['label' => __('Invoices'), 'href' => route('admin.invoices.index'), 'active' => request()->routeIs('admin.invoices.*')],
             ['label' => __('Payments'), 'href' => route('admin.payments.index'), 'active' => request()->routeIs('admin.payments.*')],
             ['label' => __('Refunds'), 'href' => route('admin.refunds.index'), 'active' => request()->routeIs('admin.refunds.*')],
-            ['label' => __('Student credit'), 'href' => route('admin.student-credit.index'), 'active' => request()->routeIs('admin.student-credit.*')],
+            ['label' => __('Student Credit'), 'href' => route('admin.student-credit.index'), 'active' => request()->routeIs('admin.student-credit.*')],
         ]];
         $navTree[] = ['label' => __('Reports'), 'icon' => 'bi-graph-up', 'href' => route('admin.reports.fee-collection'), 'active' => request()->routeIs('admin.reports.*')];
     }
@@ -81,10 +81,10 @@
             ['label' => __('Enquiries'), 'href' => route('admin.enquiries.index'), 'active' => request()->routeIs('admin.enquiries.*')],
         ]];
         $navTree[] = ['label' => __('HR & Leave'), 'key' => 'hr-leave', 'icon' => 'bi-person-workspace', 'children' => [
-            ['label' => __('Leave types'), 'href' => route('admin.leave-types.index'), 'active' => request()->routeIs('admin.leave-types.*')],
-            ['label' => __('Student leave'), 'href' => route('admin.student-leave.index'), 'active' => request()->routeIs('admin.student-leave.*')],
-            ['label' => __('Staff leave'), 'href' => route('admin.staff-leave.index'), 'active' => request()->routeIs('admin.staff-leave.*')],
-            ['label' => __('Staff loans'), 'href' => route('admin.staff-loans.index'), 'active' => request()->routeIs('admin.staff-loans.*')],
+            ['label' => __('Leave Types'), 'href' => route('admin.leave-types.index'), 'active' => request()->routeIs('admin.leave-types.*')],
+            ['label' => __('Student Leave'), 'href' => route('admin.student-leave.index'), 'active' => request()->routeIs('admin.student-leave.*')],
+            ['label' => __('Staff Leave'), 'href' => route('admin.staff-leave.index'), 'active' => request()->routeIs('admin.staff-leave.*')],
+            ['label' => __('Staff Loans'), 'href' => route('admin.staff-loans.index'), 'active' => request()->routeIs('admin.staff-loans.*')],
         ]];
         $navTree[] = ['label' => __('Website'), 'key' => 'website', 'icon' => 'bi-window', 'children' => [
             ['label' => __('Pages'), 'href' => route('admin.pages.index'), 'active' => request()->routeIs('admin.pages.*')],
@@ -114,10 +114,10 @@
 
     if ($isAdmin) {
         $navTree[] = ['label' => __('Settings'), 'key' => 'settings', 'icon' => 'bi-gear', 'children' => [
-            ['label' => __('School settings'), 'href' => route('admin.school.edit'), 'active' => request()->routeIs('admin.school.*') || request()->routeIs('admin.modules.*')],
+            ['label' => __('School Settings'), 'href' => route('admin.school.edit'), 'active' => request()->routeIs('admin.school.*') || request()->routeIs('admin.modules.*')],
             ['label' => __('Languages'), 'href' => route('admin.languages.index'), 'active' => request()->routeIs('admin.languages.*')],
-            ['label' => __('Payment settings'), 'href' => route('admin.payment-config.edit'), 'active' => request()->routeIs('admin.payment-config.*')],
-            ['label' => __('Users & roles'), 'href' => route('admin.users.index'), 'active' => request()->routeIs('admin.users.*')],
+            ['label' => __('Payment Settings'), 'href' => route('admin.payment-config.edit'), 'active' => request()->routeIs('admin.payment-config.*')],
+            ['label' => __('Users & Roles'), 'href' => route('admin.users.index'), 'active' => request()->routeIs('admin.users.*')],
         ]];
     }
 @endphp

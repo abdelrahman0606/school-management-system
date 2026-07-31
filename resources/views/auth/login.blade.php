@@ -2,7 +2,7 @@
     $cfg = [
         'admin'  => ['label' => __('Administrator'), 'desc' => __('Management console'), 'icon' => 'bi-shield-lock-fill', 'action' => route('admin.login')],
         'staff'  => ['label' => __('Staff & Teachers'), 'desc' => __('Teaching & staff portal'), 'icon' => 'bi-mortarboard-fill', 'action' => route('staff.login')],
-        'family' => ['label' => __('Student & Guardian'), 'desc' => __('Family portal'), 'icon' => 'bi-people-fill', 'action' => route('login')],
+        'family' => ['label' => __('Student & Guardian'), 'desc' => __('Family Portal'), 'icon' => 'bi-people-fill', 'action' => route('login')],
     ];
     $portal = $portal ?? 'family';
     $current = $cfg[$portal];

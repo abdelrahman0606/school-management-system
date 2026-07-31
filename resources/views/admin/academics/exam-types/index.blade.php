@@ -2,8 +2,8 @@
 @section('title', __('Exam Types'))
 @section('content')
   @include('admin.partials.page-header', [
-    'title'  => __('Exam types'),
-    'crumbs' => [__('Academics'), __('Exam types')],
+    'title'  => __('Exam Types'),
+    'crumbs' => [__('Academics'), __('Exam Types')],
     'action' => ['label' => __('New type'), 'modal' => 'createModal'],
   ])
 

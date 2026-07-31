@@ -1,7 +1,7 @@
 @extends('layouts.admin')
 @section('title', __('School Settings'))
 @section('content')
-    @include('admin.partials.page-header', ['title' => __('School settings'), 'crumbs' => [__('Setup'), __('School settings')]])
+    @include('admin.partials.page-header', ['title' => __('School Settings'), 'crumbs' => [__('Setup'), __('School Settings')]])
 
     <form method="POST" action="{{ route('admin.school.update') }}" enctype="multipart/form-data">
         @csrf @method('PUT')

@@ -3,7 +3,7 @@
 @section('content')
   @include('admin.partials.page-header', [
     'title'  => __('ID card batches'),
-    'crumbs' => [__('Certificates'), __('ID cards')],
+    'crumbs' => [__('Certificates'), __('ID Cards')],
     'action' => ['label' => __('Generate batch'), 'modal' => 'genModal'],
   ])
   @include('admin.certificates._tabs', ['active' => 'id-cards'])

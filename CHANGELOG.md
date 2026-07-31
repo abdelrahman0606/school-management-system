@@ -12,6 +12,11 @@ follows [Semantic Versioning](https://semver.org/).
   Root cause was upstream in `PageRenderService::normalizeAdmissionFields()`, which always baked in
   a hardcoded English label even when the admin hadn't customized the field, so the Blade layer's
   `__()` fallback never actually ran. Fixed by leaving the label `null` until the admin sets one.
+- Merged 61 case-variant duplicate keys in the flat UI-string translation catalog (e.g. `Permanent
+  address` / `Permanent Address`) onto a single Title Case canonical form — `TranslationScanner`
+  never prunes stale keys, so these had accumulated as call sites drifted between casing styles.
+  Repointed 104 `__()` call sites across 53 admin views to the canonical key and removed the 61
+  non-canonical entries from `bn.json`.
 
 ## [1.4.0] — 2026-07-31
 

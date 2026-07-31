@@ -2,8 +2,8 @@
 @section('title', __('Fee Items'))
 @section('content')
   @include('admin.partials.page-header', [
-    'title'  => __('Fee items'),
-    'crumbs' => [__('Finance'), __('Fee items')],
+    'title'  => __('Fee Items'),
+    'crumbs' => [__('Finance'), __('Fee Items')],
     'action' => ['label' => __('New fee item'), 'modal' => 'createModal'],
   ])
 
