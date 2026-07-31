@@ -276,11 +276,18 @@
 
   @case('stats')
     {!! $open !!}
+      @if(!empty($d['heading']))<h2 class="section-title h3 mb-4">{{ $d['heading'] }}</h2>@endif
       <div class="row {{ $bp::columnClasses($layout, ['mobile' => 2, 'tablet' => 4, 'laptop' => 4, 'desktop' => 4]) }} g-3 text-center">
-        <div><div class="p-3 bg-light stat-tile"><div class="stat-num">{{ number_format($d['stats']['active_students'] ?? 0) }}</div><div class="text-muted small mt-1">{{ __('Students') }}</div></div></div>
-        <div><div class="p-3 bg-light stat-tile"><div class="stat-num">{{ number_format($d['stats']['active_staff'] ?? 0) }}</div><div class="text-muted small mt-1">{{ __('Teachers & Staff') }}</div></div></div>
+        {{-- App\Support\LocalizedDate::digits() -- number_format() only ever
+             produces ASCII 0-9, so under bn these tiles rendered "1,234" even
+             though every other number on the site (dates, footer year) was
+             already native-digit. digits() is a no-op strtr() for any locale
+             with no NATIVE_DIGITS entry (i.e. still ASCII under en), so this
+             is safe to apply unconditionally. --}}
+        <div><div class="p-3 bg-light stat-tile"><div class="stat-num">{{ \App\Support\LocalizedDate::digits(number_format($d['stats']['active_students'] ?? 0)) }}</div><div class="text-muted small mt-1">{{ __('Students') }}</div></div></div>
+        <div><div class="p-3 bg-light stat-tile"><div class="stat-num">{{ \App\Support\LocalizedDate::digits(number_format($d['stats']['active_staff'] ?? 0)) }}</div><div class="text-muted small mt-1">{{ __('Teachers & Staff') }}</div></div></div>
         @foreach($d['items'] ?? [] as $it)
-          <div><div class="p-3 bg-light stat-tile"><div class="stat-num">{{ $it['value'] ?? '' }}</div><div class="text-muted small mt-1">{{ $it['label'] ?? '' }}</div></div></div>
+          <div><div class="p-3 bg-light stat-tile"><div class="stat-num">{{ \App\Support\LocalizedDate::digits($it['value'] ?? '') }}</div><div class="text-muted small mt-1">{{ $it['label'] ?? '' }}</div></div></div>
         @endforeach
       </div>
     {!! $close !!}
@@ -380,7 +387,11 @@
         <div class="col-md-6">
           <h2 class="section-title h4 mb-3">{{ $d['heading'] ?? __('Get In Touch') }}</h2>
           <ul class="list-unstyled">
-            @if(($d['address'] ?? null) || ($d['school']->address ?? null))<li class="d-flex align-items-center gap-3 mb-3"><span class="icon-badge d-inline-flex align-items-center justify-content-center"><i class="bi bi-geo-alt"></i></span> {{ $d['address'] ?? $d['school']->address }}</li>@endif
+            {{-- $d['address'] is a per-block admin override (already locale-scoped via the
+                 page's own PageLayout row); the school-level fallback goes through transOr()
+                 since School::address is a HasTranslations field -- a raw ->address here would
+                 always render the school's default-locale address regardless of visitor locale. --}}
+            @if(($d['address'] ?? null) || ($d['school']?->transOr('address') ?? null))<li class="d-flex align-items-center gap-3 mb-3"><span class="icon-badge d-inline-flex align-items-center justify-content-center"><i class="bi bi-geo-alt"></i></span> {{ $d['address'] ?? $d['school']->transOr('address') }}</li>@endif
             @if($d['phone'] ?? null)<li class="d-flex align-items-center gap-3 mb-3"><span class="icon-badge d-inline-flex align-items-center justify-content-center"><i class="bi bi-telephone"></i></span> {{ $d['phone'] }}</li>@endif
             @if(($d['email'] ?? null) || ($d['school']->email ?? null))<li class="d-flex align-items-center gap-3 mb-3"><span class="icon-badge d-inline-flex align-items-center justify-content-center"><i class="bi bi-envelope"></i></span> {{ $d['email'] ?? $d['school']->email }}</li>@endif
           </ul>

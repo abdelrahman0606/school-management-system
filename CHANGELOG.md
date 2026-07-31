@@ -52,6 +52,22 @@ follows [Semantic Versioning](https://semver.org/).
   (`tests/Feature/Admin/MultilingualAnnouncementAndStaffContentTest.php`).
 
 ### Fixed
+- Reported: "stats block number is in English even in bn" and "contact block isn't receiving
+  translated content" — two separate gaps in `public/blocks/render.blade.php` (contact's sidebar
+  twin in `public/sidebar/render.blade.php` too):
+  - The stats block's `number_format()` output is always ASCII 0-9 — unlike every other number on
+    the site (dates, footer year), nothing swapped it to native digits. Wrapped both counts and any
+    admin-set custom stat item value in `LocalizedDate::digits()`. Also rendered the stats block's
+    own `heading`, which the block accepted as data but never actually displayed.
+  - The contact/contact_info block's address fallback (used whenever the block itself doesn't set
+    its own `$d['address']`, which is exactly what the seeded demo Contact page does) came from a
+    plain `School::find()` in `PageRenderService::resolveBlockData()`, read directly off the model
+    (`$school->address`) instead of `$school->transOr('address')` — the one address-shaped output
+    on the public site that ignored the language switcher even though `School::address` is a
+    `HasTranslations` field. Switched both call sites to `transOr()`.
+  Tests: `test_stats_block_numbers_use_native_bengali_digits`,
+  `test_contact_block_address_follows_the_visitors_locale`
+  (`tests/Feature/Public/MultilingualBlockContentTest.php`).
 - Reported: "missing translation for online admission form" — `public/blocks/admission_form.blade.php`
   had a cluster of bare literal English strings never wrapped in `__()`, unlike the rest of the
   form: the Gender/Religion/Guardian-type select options (Boy/Girl/Islam/Hinduism/.../Father/

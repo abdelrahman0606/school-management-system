@@ -6,6 +6,7 @@ use App\Modules\Announcement\Models\Announcement;
 use App\Modules\School\Models\School;
 use App\Modules\Staff\Models\Designation;
 use App\Modules\Staff\Models\Staff;
+use App\Modules\Student\Models\Student;
 use App\Modules\Website\Models\Page;
 use App\Modules\Website\Models\PageLayout;
 use App\Modules\Website\Models\SiteSetting;
@@ -212,5 +213,58 @@ class MultilingualBlockContentTest extends TestCase
             ->assertSee('৩১ জুলাই ২০২৬');
 
         Carbon::setTestNow();
+    }
+
+    /**
+     * Reported: "stats block number is in English even in bn". number_format()
+     * only ever produces ASCII 0-9 -- LocalizedDate::digits() has to be applied
+     * explicitly on top of it, same as the footer copyright year already does.
+     */
+    public function test_stats_block_numbers_use_native_bengali_digits(): void
+    {
+        for ($i = 0; $i < 15; $i++) {
+            Student::create([
+                'school_id' => $this->school->id, 'admission_number' => "ADM-{$i}",
+                'name' => "Student {$i}", 'gender' => 'male', 'status' => 'active',
+            ]);
+        }
+
+        $this->publishPage('stats-digits', [
+            'template' => 'full',
+            'blocks' => [['type' => 'stats', 'data' => ['heading' => 'At a glance']]],
+        ]);
+
+        // Not asserting assertDontSee('15') here -- too generic a substring
+        // (asset version strings, hidden tokens, etc.) to safely rule out
+        // elsewhere on the page; the Bengali digit assertion alone proves the
+        // fix.
+        $this->withSession(['app_locale' => 'bn'])->get('/stats-digits')
+            ->assertOk()
+            ->assertSee('১৫');
+    }
+
+    /**
+     * Reported: "contact block isn't receiving translated content". The contact
+     * block's fallback address (used whenever the block itself doesn't set its
+     * own $d['address'] override, i.e. the seeded demo contact page) came from a
+     * plain School::find() in PageRenderService::resolveBlockData() and was read
+     * off the model directly ($school->address) instead of transOr('address') --
+     * the one address-shaped output on the public site that ignored the
+     * language switcher even though School::address is a HasTranslations field.
+     */
+    public function test_contact_block_address_follows_the_visitors_locale(): void
+    {
+        $this->school->update(['address' => 'Natipota, Damurhuda, Chuadanga']);
+        $this->school->setTranslation('address', 'bn', 'নাটুদহ, দামুড়হুদা, চুয়াডাঙ্গা');
+
+        $this->publishPage('contact-address', [
+            'template' => 'full',
+            'blocks' => [['type' => 'contact', 'data' => ['heading' => 'Get in touch']]],
+        ]);
+
+        $this->withSession(['app_locale' => 'bn'])->get('/contact-address')
+            ->assertOk()
+            ->assertSee('নাটুদহ, দামুড়হুদা, চুয়াডাঙ্গা')
+            ->assertDontSee('Natipota, Damurhuda, Chuadanga');
     }
 }

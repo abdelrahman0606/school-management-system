@@ -44,7 +44,10 @@
     <div class="card"><div class="card-body">
       <h3 class="h6 section-title mb-3">{{ $d['heading'] ?? __('Contact') }}</h3>
       <ul class="list-unstyled small mb-0">
-        @if(($d['address'] ?? null) || ($d['school']->address ?? null))<li class="d-flex align-items-center gap-2 mb-2"><span class="icon-badge d-inline-flex align-items-center justify-content-center" style="width:1.75rem;height:1.75rem;font-size:.8rem;"><i class="bi bi-geo-alt"></i></span> {{ $d['address'] ?? $d['school']->address }}</li>@endif
+        {{-- School::address is a HasTranslations field -- transOr() (not a raw ->address)
+             so the sidebar contact card follows the visitor's locale, same fix as the main
+             contact block in public/blocks/render.blade.php. --}}
+        @if(($d['address'] ?? null) || ($d['school']?->transOr('address') ?? null))<li class="d-flex align-items-center gap-2 mb-2"><span class="icon-badge d-inline-flex align-items-center justify-content-center" style="width:1.75rem;height:1.75rem;font-size:.8rem;"><i class="bi bi-geo-alt"></i></span> {{ $d['address'] ?? $d['school']->transOr('address') }}</li>@endif
         @if($d['phone'] ?? null)<li class="d-flex align-items-center gap-2 mb-2"><span class="icon-badge d-inline-flex align-items-center justify-content-center" style="width:1.75rem;height:1.75rem;font-size:.8rem;"><i class="bi bi-telephone"></i></span> {{ $d['phone'] }}</li>@endif
         @if(($d['email'] ?? null) || ($d['school']->email ?? null))<li class="d-flex align-items-center gap-2"><span class="icon-badge d-inline-flex align-items-center justify-content-center" style="width:1.75rem;height:1.75rem;font-size:.8rem;"><i class="bi bi-envelope"></i></span> {{ $d['email'] ?? $d['school']->email }}</li>@endif
       </ul>
