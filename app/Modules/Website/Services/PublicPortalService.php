@@ -31,10 +31,15 @@ class PublicPortalService
 
     public function pageBySlug(int $schoolId, string $slug): ?Page
     {
+        // No eager-loaded 'publishedLayout' here (there used to be one) — a
+        // page can have one published row PER LOCALE now (docs/modules/
+        // 30-multilingual-content-plan.md Phase 2), so "the" published
+        // layout isn't a single relation to preload anymore.
+        // PageRenderService::publishedLayoutFor() runs its own locale-scoped
+        // query instead.
         return Page::forSchool($schoolId)
             ->published()
             ->where('slug', $slug)
-            ->with(['publishedLayout'])
             ->first();
     }
 

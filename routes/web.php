@@ -314,6 +314,7 @@ Route::middleware(['auth', 'school'])->prefix('admin')->name('admin.')->group(fu
         Route::post('/pages/{id}/preview-block', [WebsitePageController::class, 'previewBlock'])->whereNumber('id')->name('pages.preview-block');
         Route::post('/pages/{id}/homepage', [WebsitePageController::class, 'setHomepage'])->whereNumber('id')->name('pages.homepage');
         Route::post('/pages/{id}/duplicate', [WebsitePageController::class, 'duplicate'])->whereNumber('id')->name('pages.duplicate');
+        Route::post('/pages/{id}/copy-locale', [WebsitePageController::class, 'copyLocale'])->whereNumber('id')->name('pages.copy-locale');
         Route::post('/pages/{id}/save-as-template', [WebsitePageController::class, 'saveAsTemplate'])->whereNumber('id')->name('pages.save-as-template');
         Route::get('/pages/{id}/history', [WebsitePageController::class, 'history'])->whereNumber('id')->name('pages.history');
         Route::post('/pages/{id}/restore/{layoutId}', [WebsitePageController::class, 'restore'])->whereNumber(['id', 'layoutId'])->name('pages.restore');

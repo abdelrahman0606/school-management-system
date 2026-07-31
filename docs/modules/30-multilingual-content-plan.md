@@ -138,12 +138,22 @@ Payroll/LMS).
 
 ## Phased implementation
 
-1. **Foundation**: migrations (`page_layouts.locale`+meta columns, `menus.locale`,
-   `content_translations` table), `HasTranslations` trait, `TranslationService`. No UI changes
-   yet — everything defaults to the school's default language, byte-for-byte identical
-   rendering to today.
-2. **Pages & blocks**: `PageService::saveLayout()`/`publishedLayoutFor()`, admin locale-tab UI,
-   public render path locale-aware, "Copy from default language" action. Tests.
+1. ✅ **Foundation**: migrations (`page_layouts.locale`+meta columns, `menus.locale`,
+   `content_translations` table), `HasTranslations` trait (`App\Support\Concerns\HasTranslations`,
+   backed by `App\Modules\Language\Models\ContentTranslation`), wired onto `School`/`SiteSetting`.
+   No UI changes — everything defaulted to the school's default language, byte-for-byte identical
+   rendering to before. Merged to `dev`.
+2. ✅ **Pages & blocks**: `Page::layoutsForLocale()`, `PageService::saveLayout()`/`publish()`/
+   `duplicate()`/`restore()`/`copyLayoutToLocale()` all locale-aware,
+   `PageRenderService::publishedLayoutFor()` (default-locale fallback) + `renderPage()` now also
+   returns each locale's own meta, admin editor gains a language-tab switcher (marks untranslated
+   locales) + "Copy from default language" banner, Title/SEO fields read/write the correct
+   locale's own copy while Slug/Status stay shared, History tracks "Latest"/"Current" per locale.
+   Public `page.blade.php`/`full.blade.php`/`sidebar.blade.php` prefer the resolved layout's own
+   title/meta over the shared `Page` columns. Fixed a real regression this phase would otherwise
+   have caused: `WebsitePagesSeeder` created `PageLayout` rows with no `locale`, which the new
+   locale-scoped queries would never have matched — every demo page would have silently rendered
+   empty. Tests (`tests/Feature/Admin/MultilingualPageContentTest.php`). Merged to `dev`.
 3. **Menus**: locale-scoped `Menu`/`MenuService`, admin locale tab, public header composer
    fallback. Tests.
 4. **School identity + SiteSetting text**: admin Translations panel, public call-site swap to

@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Modules\Language\Models\Language;
 use App\Modules\School\Models\School;
 use App\Modules\Website\Models\Menu;
 use App\Modules\Website\Models\Page;
@@ -203,6 +204,12 @@ class WebsitePagesSeeder extends Seeder
         PageLayout::create([
             'school_id' => $sid,
             'page_id' => $page->id,
+            // docs/modules/30-multilingual-content-plan.md Phase 2 — every
+            // PageLayout row needs a real locale; the public render path
+            // queries by locale explicitly, so a null-locale row here would
+            // silently stop matching and the seeded page would render empty.
+            'locale' => Language::defaultCode(),
+            'title' => $title,
             'layout_json' => ['template' => $template, 'blocks' => $blocks, 'sidebar' => $sidebar],
             'is_published' => true,
             'published_at' => now(),

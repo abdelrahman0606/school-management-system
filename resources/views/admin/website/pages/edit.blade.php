@@ -288,6 +288,21 @@
       {{-- Section 2: page identity + viewport --}}
       <div class="d-flex align-items-center gap-2">
         <span class="fw-semibold small text-truncate" id="topbar-page-name" style="max-width:240px;">{{ $page->title }}</span>
+        {{-- Language tab switcher — docs/modules/30-multilingual-content-plan.md
+             Phase 2. A plain GET reload (?locale=xx), matching every other
+             round-trip in this editor (save/preview/restore are all form
+             posts too, nothing here is AJAX-driven). Hidden entirely when
+             there's only one active language — nothing to switch between. --}}
+        @if ($languages->count() > 1)
+          <select class="form-select form-select-sm" style="width:auto;" aria-label="{{ __('Editing language') }}"
+                  onchange="if (this.value) window.location.href = this.value;">
+            @foreach ($languages as $lang)
+              <option value="{{ route('admin.pages.edit', ['id' => $page->id, 'locale' => $lang->code]) }}" @selected($lang->code === $locale)>
+                @if ($lang->flag){{ $lang->flag }} @endif{{ $lang->native_name }}@if (! in_array($lang->code, $localesWithContent, true)) — {{ __('untranslated') }}@endif
+              </option>
+            @endforeach
+          </select>
+        @endif
         <div class="btn-group btn-group-sm" role="group" aria-label="{{ __('Preview Viewport') }}" id="viewport-toolbar">
           <button type="button" class="btn btn-outline-secondary active" data-viewport="desktop" title="{{ __('Desktop') }}" aria-label="{{ __('Desktop') }}"><i class="bi bi-display" aria-hidden="true"></i></button>
           <button type="button" class="btn btn-outline-secondary" data-viewport="laptop" title="{{ __('Laptop') }}" aria-label="{{ __('Laptop') }}"><i class="bi bi-laptop" aria-hidden="true"></i></button>
@@ -320,6 +335,22 @@
          announcements. See docs/modules/28-elementor-block-editor-plan.md §7u. --}}
     <div id="a11y-status" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
 
+    {{-- "Copy from default language" — docs/modules/30-multilingual-content-plan.md
+         Phase 2. Only when viewing a non-default language tab that has no
+         revision of its own yet; a plain form post (copyLocale()), same
+         round-trip style as the rest of this editor. --}}
+    @if ($locale !== $defaultLocale && ! in_array($locale, $localesWithContent, true))
+      <div class="alert alert-info d-flex align-items-center justify-content-between gap-3 rounded-0 mb-0 py-2 px-3" role="alert">
+        <span><i class="bi bi-translate"></i> {{ __('This page has no content in this language yet.') }}</span>
+        <form method="POST" action="{{ route('admin.pages.copy-locale', $page->id) }}" class="d-flex align-items-center">
+          @csrf
+          <input type="hidden" name="from_locale" value="{{ $defaultLocale }}">
+          <input type="hidden" name="to_locale" value="{{ $locale }}">
+          <button type="submit" class="btn btn-outline-primary btn-sm">{{ __('Copy from default language to start translating') }}</button>
+        </form>
+      </div>
+    @endif
+
     <div class="editor-body">
       <div class="editor-sidebar" id="editor-sidebar">
         <div class="sidebar-resize-handle" id="sidebar-resize-handle"></div>
@@ -332,6 +363,8 @@
                detect a second admin having saved in between (see §7m in
                docs/modules/28-elementor-block-editor-plan.md). --}}
           <input type="hidden" name="known_layout_id" value="{{ $knownLayoutId }}">
+          {{-- Which language this save applies to (docs/modules/30-multilingual-content-plan.md Phase 2). --}}
+          <input type="hidden" name="locale" value="{{ $locale }}">
 
           {{-- Panel: block layers --}}
           <div class="sidebar-panel" data-panel="blocks">
@@ -404,9 +437,18 @@
           {{-- Panel: page settings (Title / Slug / Status / Template) --}}
           <div class="sidebar-panel" data-panel="settings">
             <h6 class="small text-muted text-uppercase mb-3">{{ __('Page Settings') }}</h6>
+            @if ($locale !== $defaultLocale)
+              {{-- docs/modules/30-multilingual-content-plan.md Phase 2 —
+                   Title/Meta below are THIS language's own translated copy
+                   (stored on this locale's own layout revision); Slug/Status
+                   stay shared across every language regardless of which tab
+                   you're on, since they're site structure (one URL, one
+                   publish state), not content. --}}
+              <div class="alert alert-light border small py-2 px-2 mb-3">{{ __('Title and SEO fields below are this language\'s own translation. Slug and Status apply to the whole page in every language.') }}</div>
+            @endif
             <div class="mb-3">
               <label class="form-label small">{{ __('Title') }} <span class="text-danger">*</span></label>
-              <input name="title" class="form-control form-control-sm" value="{{ old('title', $page->title) }}" required>
+              <input name="title" class="form-control form-control-sm" value="{{ old('title', $localeTitle) }}" required>
             </div>
             <div class="mb-3">
               <label class="form-label small">{{ __('Slug') }}</label>
@@ -434,17 +476,17 @@
             <h6 class="small text-muted text-uppercase mb-3">{{ __('SEO') }}</h6>
             <div class="mb-3">
               <label class="form-label small">{{ __('Meta Title') }}</label>
-              <input name="meta_title" class="form-control form-control-sm" maxlength="255" value="{{ old('meta_title', $page->meta_title) }}" placeholder="{{ $page->title }}">
+              <input name="meta_title" class="form-control form-control-sm" maxlength="255" value="{{ old('meta_title', $localeMetaTitle) }}" placeholder="{{ $localeTitle }}">
               <div class="form-text small">{{ __('Falls back to the page title when left blank.') }}</div>
             </div>
             <div class="mb-3">
               <label class="form-label small">{{ __('Meta Description') }}</label>
-              <textarea name="meta_desc" rows="3" class="form-control form-control-sm" maxlength="500">{{ old('meta_desc', $page->meta_desc) }}</textarea>
+              <textarea name="meta_desc" rows="3" class="form-control form-control-sm" maxlength="500">{{ old('meta_desc', $localeMetaDesc) }}</textarea>
             </div>
             <div class="mb-3">
               <label class="form-label small">{{ __('Social Share Image (og:image)') }}</label>
               <div class="input-group input-group-sm">
-                <input type="text" name="og_image" class="form-control form-control-sm media-field-input" value="{{ old('og_image', $page->og_image) }}" placeholder="https://…">
+                <input type="text" name="og_image" class="form-control form-control-sm media-field-input" value="{{ old('og_image', $localeOgImage) }}" placeholder="https://…">
                 <button type="button" class="btn btn-outline-secondary btn-sm" onclick="openMediaPicker(this)">{{ __('Browse') }}</button>
               </div>
             </div>
@@ -474,16 +516,29 @@
              $page->layouts, eager-loaded with createdBy by PageController::edit(). --}}
         <div class="sidebar-panel" data-panel="history">
           <h6 class="small text-muted text-uppercase mb-3">{{ __('History') }}</h6>
+          {{-- docs/modules/30-multilingual-content-plan.md Phase 2 — every
+               language's revisions now live in one combined history, so
+               "Latest" is tracked PER LOCALE (the first row this loop sees
+               for a given locale), not globally first — otherwise a recent
+               edit in one language would wrongly hide the "Latest" badge
+               (and the Restore button) on every other language's own most
+               recent revision. --}}
+          @php $seenLocales = []; @endphp
           <div class="list-group list-group-flush small">
             @forelse ($page->layouts as $rev)
+              @php
+                $isLatestForLocale = ! in_array($rev->locale, $seenLocales, true);
+                $seenLocales[] = $rev->locale;
+              @endphp
               <div class="list-group-item px-0 py-2">
                 <div class="fw-semibold">{{ $rev->created_at?->format('M j, Y g:i A') }}</div>
                 <div class="text-muted mb-1">{{ $rev->createdBy?->name ?? __('Unknown') }}</div>
                 <div class="mb-1">
-                  @if($loop->first)<span class="badge bg-secondary">{{ __('Latest') }}</span>@endif
+                  @if($rev->locale)<span class="badge bg-light text-dark border">{{ strtoupper($rev->locale) }}</span>@endif
+                  @if($isLatestForLocale)<span class="badge bg-secondary">{{ __('Latest') }}</span>@endif
                   @if($rev->is_published)<span class="badge bg-success">{{ __('Published') }}</span>@endif
                 </div>
-                @unless($loop->first)
+                @unless($isLatestForLocale)
                   <form method="POST" action="{{ route('admin.pages.restore', [$page->id, $rev->id]) }}" onsubmit="return confirm('{{ __('Restore this revision as a new draft?') }}')">
                     @csrf
                     <button type="submit" class="btn btn-outline-secondary btn-sm w-100">{{ __('Restore') }}</button>
