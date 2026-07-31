@@ -378,8 +378,18 @@
 
         /* Uses the school's configured accent color (Website > Settings) —
            previously declared as --brand-accent but never actually rendered
-           anywhere on the public site. */
-        .navbar .nav-link::after {
+           anywhere on the public site. Deliberately ::before, not ::after —
+           Bootstrap's own .dropdown-toggle::after (the small caret triangle
+           on "Gallery"/"About"-style parent nav items) targets the same
+           pseudo-element on the same <a>; a shared ::after doesn't let one
+           ruleset "win", each declares different properties (content/
+           position/background here vs. border-top/margin-left/vertical-align
+           there) that all merge onto the one real pseudo-element, so a
+           dropdown parent showed BOTH the caret's border-drawn triangle
+           (rendered as a stray dark line once this rule's position:absolute
+           applied to it too) and this accent underline at once. ::before is
+           untouched by Bootstrap's dropdown CSS, so the two can never collide. */
+        .navbar .nav-link::before {
             content: '';
             position: absolute;
             left: .5rem;
@@ -392,7 +402,7 @@
             transition: transform var(--transition) var(--ease);
         }
 
-        .navbar .nav-link:hover::after {
+        .navbar .nav-link:hover::before {
             transform: scaleX(1);
         }
 
@@ -803,7 +813,7 @@
             .hero,
             .btn,
             .card,
-            .navbar .nav-link::after {
+            .navbar .nav-link::before {
                 transition: none;
                 animation: none;
             }

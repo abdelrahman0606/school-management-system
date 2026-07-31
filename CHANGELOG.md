@@ -52,6 +52,15 @@ follows [Semantic Versioning](https://semver.org/).
   with a dismissible announcement bar linking to Online Admission; Online Admission ends with a 4-question
   FAQ accordion. `WebsitePagesSeedTest` extended to cover all of it.
 
+### Fixed
+- Public nav's accent-color hover underline (Phase 2 above) and Bootstrap's own dropdown caret both targeted
+  `::after` on the same `<a class="nav-link dropdown-toggle">` — a shared pseudo-element doesn't let one
+  ruleset win, every non-conflicting property from both declarations renders at once, so a parent nav item
+  with a submenu ("Gallery", "About") showed Bootstrap's border-drawn caret triangle (rendered as a stray dark
+  line once the underline rule's `position: absolute` also applied to it) stacked on top of the accent-color
+  underline bar. Moved the underline to `::before`, which nothing else in Bootstrap's dropdown CSS touches, so
+  the two can no longer collide.
+
 ## [1.3.3] — 2026-07-28
 
 ### Changed
