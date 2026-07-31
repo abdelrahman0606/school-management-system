@@ -1161,10 +1161,21 @@
       // HISTORY_LIMIT eventually shifts history_[0] out on a long editing
       // session, but "the state Update should be disabled at" never changes.
       var initialSnapshotJson = null;
+      // True when the page is published overall but the revision this
+      // editor just loaded for the current locale isn't itself the live
+      // one yet — e.g. right after Copy from default language / Suggest
+      // translation (AI) / Restore, all of which create a new unpublished
+      // draft and reload straight into it. In that case the form matching
+      // its own just-loaded state is expected and must NOT keep Update
+      // disabled, or there's no way to actually publish what was just
+      // generated without making a throwaway edit first. See
+      // PageController::edit()'s own comment on 'needsPublish'.
+      var needsPublish = @json($needsPublish);
       function updateSaveButtonState() {
         var saveBtn = document.getElementById('btn-save');
         if (!saveBtn || initialSnapshotJson === null) return;
-        saveBtn.disabled = JSON.stringify(snapshotState()) === initialSnapshotJson;
+        var unchanged = JSON.stringify(snapshotState()) === initialSnapshotJson;
+        saveBtn.disabled = unchanged && !needsPublish;
       }
 
       // Structure-aware capture/restore (§7g in

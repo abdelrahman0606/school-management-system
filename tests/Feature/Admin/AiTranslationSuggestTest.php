@@ -140,6 +140,62 @@ class AiTranslationSuggestTest extends TestCase
         $this->assertSame(2, PageLayout::where('page_id', $page->id)->where('locale', 'bn')->count());
     }
 
+    /**
+     * Regression: the editor's Update/Publish button starts disabled and
+     * only re-enables once the form differs from what was just loaded — but
+     * Suggest translation (AI) reloads the editor pre-filled from the very
+     * draft it just created, so nothing differs and the button used to stay
+     * stuck disabled even though the page is already published overall and
+     * this draft has never gone live. PageController::edit()'s 'needsPublish'
+     * view flag (consumed by edit.blade.php's updateSaveButtonState()) is
+     * what unblocks it — asserted here via the view data rather than reading
+     * disabled-button JS state, which feature tests can't execute.
+     */
+    public function test_editor_flags_needs_publish_after_suggesting_a_translation_for_an_already_published_page(): void
+    {
+        $this->actingAs($this->admin);
+        $this->post('/admin/pages', ['title' => 'About', 'template' => 'full']);
+        $page = Page::first();
+        $this->put("/admin/pages/{$page->id}", [
+            'title' => 'About Us', 'slug' => 'about', 'status' => 'published', 'template' => 'full', 'locale' => 'en',
+            'blocks' => [['type' => 'heading', 'data' => ['text' => 'English Heading']]],
+        ]);
+
+        // The just-published English tab has nothing pending — the loaded
+        // revision IS the live one.
+        $this->get("/admin/pages/{$page->id}/edit?locale=en")->assertViewHas('needsPublish', false);
+
+        $this->fakeMyMemory();
+        $this->post("/admin/pages/{$page->id}/suggest-translation", ['locale' => 'bn'])->assertRedirect();
+
+        // The fresh Bangla draft has never been published, but the page is
+        // already live overall — Update must be usable without a throwaway edit.
+        $this->get("/admin/pages/{$page->id}/edit?locale=bn")->assertViewHas('needsPublish', true);
+
+        // Actually publishing it (exactly what pressing that now-enabled
+        // button does) clears the flag again.
+        $this->put("/admin/pages/{$page->id}", [
+            'title' => 'অনুবাদিত', 'slug' => 'about', 'status' => 'published', 'template' => 'full', 'locale' => 'bn',
+            'blocks' => [['type' => 'heading', 'data' => ['text' => 'অনুবাদিত']]],
+        ])->assertRedirect();
+        $this->get("/admin/pages/{$page->id}/edit?locale=bn")->assertViewHas('needsPublish', false);
+    }
+
+    public function test_editor_does_not_flag_needs_publish_for_a_locale_with_no_content_yet(): void
+    {
+        $this->actingAs($this->admin);
+        $this->post('/admin/pages', ['title' => 'About', 'template' => 'full']);
+        $page = Page::first();
+        $this->put("/admin/pages/{$page->id}", [
+            'title' => 'About Us', 'slug' => 'about', 'status' => 'published', 'template' => 'full', 'locale' => 'en',
+            'blocks' => [['type' => 'heading', 'data' => ['text' => 'English Heading']]],
+        ]);
+
+        // Bangla has no revision at all yet (no Copy/Suggest run) — nothing
+        // to force-publish, the ordinary disabled-until-edited behavior is correct.
+        $this->get("/admin/pages/{$page->id}/edit?locale=bn")->assertViewHas('needsPublish', false);
+    }
+
     // ── Menus ────────────────────────────────────────────────────────────
 
     public function test_admin_can_build_a_menu_for_an_untranslated_locale_from_ai_translated_labels(): void

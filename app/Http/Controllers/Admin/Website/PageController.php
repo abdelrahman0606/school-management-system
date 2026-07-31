@@ -147,6 +147,21 @@ class PageController extends Controller
             // revision actually is BY THE TIME the save arrives, to detect
             // a second admin having saved in between.
             'knownLayoutId' => $layout?->id,
+            // The editor's Update/Publish button normally starts disabled
+            // and only enables once the form differs from what was just
+            // loaded (see edit.blade.php's updateSaveButtonState()). That
+            // breaks right after Copy-from-default-language / Suggest
+            // translation (AI) / Restore: each creates a brand new
+            // is_published=false PageLayout row and redirects back here,
+            // and the editor pre-fills its fields from that SAME row — so
+            // nothing differs from the just-loaded state and the button
+            // stays stuck disabled, even though the page's shared `status`
+            // is already "published" and this locale's freshly generated
+            // content has never actually gone live. True whenever the site
+            // is published overall but the revision on screen right now
+            // isn't the one that's live for this locale — the one case the
+            // plain form-diff check can't see for itself.
+            'needsPublish' => $page->status === 'published' && ! ($layout?->is_published ?? false),
             'locale' => $locale,
             'defaultLocale' => $defaultLocale,
             'languages' => $languages,

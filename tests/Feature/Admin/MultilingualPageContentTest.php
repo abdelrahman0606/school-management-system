@@ -148,6 +148,15 @@ class MultilingualPageContentTest extends TestCase
         // Saves with status=published.
         $this->assertFalse((bool) $bnLayout->is_published);
         $this->assertDatabaseMissing('page_layouts', ['id' => $bnLayout->id, 'is_published' => true]);
+
+        // Regression: the page is already published overall, and this
+        // fresh copy pre-fills the editor exactly as loaded — the Update
+        // button's form-diff check alone can't tell there's anything to
+        // publish, so PageController::edit() has to flag it explicitly (see
+        // 'needsPublish', consumed by edit.blade.php's
+        // updateSaveButtonState()) or the admin has no way to publish the
+        // copy without making a throwaway edit first.
+        $this->get("/admin/pages/{$page->id}/edit?locale=bn")->assertViewHas('needsPublish', true);
     }
 
     public function test_optimistic_concurrency_check_is_scoped_per_locale(): void

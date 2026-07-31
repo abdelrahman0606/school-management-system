@@ -403,6 +403,18 @@ parameters:
 			path: app/Http/Controllers/Admin/Website/PageController.php
 
 		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\Page\:\:\$status\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/Website/PageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\PageLayout\:\:\$is_published\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/Website/PageController.php
+
+		-
 			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\PageTemplate\:\:\$layout_json\.$#'
 			identifier: property.notFound
 			count: 1
