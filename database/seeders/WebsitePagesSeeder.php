@@ -161,7 +161,15 @@ class WebsitePagesSeeder extends Seeder
             'label' => $label, 'type' => 'page', 'page_id' => $ids[$slug] ?? null, 'target' => '_self',
         ];
 
-        $menu = Menu::forSchool($sid)->firstOrCreate(['school_id' => $sid], ['name' => 'Main menu']);
+        // locale: docs/modules/30-multilingual-content-plan.md Phase 3 — Menu is
+        // now per-locale (mirrors PageLayout below); an unscoped firstOrCreate()
+        // here would seed a locale=null row invisible to Menu::published()'s
+        // where('locale', $locale) lookup, exactly like the PageLayout bug this
+        // seeder already had to fix for Phase 2.
+        $menu = Menu::forSchool($sid)->firstOrCreate(
+            ['school_id' => $sid, 'locale' => Language::defaultCode()],
+            ['name' => 'Main menu'],
+        );
 
         app(MenuService::class)->replaceItems($menu, [
             $page('home', 'Home'),

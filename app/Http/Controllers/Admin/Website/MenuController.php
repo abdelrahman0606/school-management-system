@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\Website;
 
+use App\Modules\Language\Models\Language;
 use App\Modules\Website\Models\Menu;
 use App\Modules\Website\Models\MenuItem;
 use App\Modules\Website\Models\Page;
@@ -16,36 +17,59 @@ use Illuminate\View\View;
  * drag under a dropdown to nest (one level, matching the schema). The client
  * serialises the whole tree to JSON and this saves it via MenuService's
  * full-tree replace.
+ *
+ * docs/modules/30-multilingual-content-plan.md Phase 3 — a school builds one
+ * full tree PER LOCALE now, mirroring how Phase 2 made a page's layout
+ * per-locale: ?locale= on the GET, a hidden field on the PUT, both resolved
+ * via Language::resolve() (falls back to the default language for a
+ * missing/invalid/deactivated code, same as SetLocale itself).
  */
 class MenuController extends Controller
 {
     public function __construct(private readonly MenuService $menus) {}
 
-    public function edit(): View
+    public function edit(Request $request): View
     {
         $schoolId = app('current_school_id');
-        $menu = Menu::forSchool($schoolId)->firstOrCreate(
-            ['school_id' => $schoolId],
-            ['name' => 'Main menu'],
-        );
+        $locale = Language::resolve($request->query('locale'));
+        $menu = $this->menuFor($schoolId, $locale);
 
         return view('admin.website.menus.edit', [
             'menu' => $menu->load(['items.children.page', 'items.page']),
             'pages' => Page::forSchool($schoolId)->orderBy('title')->get(['id', 'title', 'slug', 'is_homepage']),
+            'locale' => $locale,
+            'defaultLocale' => Language::defaultCode(),
+            'languages' => Language::activeCached(),
+            // Which locales already have at least one menu item — drives the
+            // language-switcher's "(untranslated)" marker. A locale's menu
+            // row can exist (auto-created by menuFor()) yet still be empty,
+            // so "has a row" alone isn't a meaningful signal here.
+            'localesWithItems' => Menu::forSchool($schoolId)->withCount('items')
+                ->get()->filter(fn (Menu $m) => $m->items_count > 0)->pluck('locale')->all(),
         ]);
     }
 
     public function save(Request $request): RedirectResponse
     {
         $schoolId = app('current_school_id');
-        $menu = Menu::forSchool($schoolId)->firstOrCreate(['school_id' => $schoolId], ['name' => 'Main menu']);
+        $locale = Language::resolve($request->input('locale'));
+        $menu = $this->menuFor($schoolId, $locale);
 
         $raw = json_decode((string) $request->input('items', '[]'), true);
         $items = is_array($raw) ? $this->sanitize($raw, $schoolId) : [];
 
         $this->menus->replaceItems($menu, $items);
 
-        return back()->with('status', __('Menu Saved.'));
+        return redirect()->route('admin.menus.index', ['locale' => $locale])->with('status', __('Menu Saved.'));
+    }
+
+    /** Get (or create) this school's menu for one locale — each language owns its own full tree. */
+    private function menuFor(int $schoolId, string $locale): Menu
+    {
+        return Menu::forSchool($schoolId)->firstOrCreate(
+            ['school_id' => $schoolId, 'locale' => $locale],
+            ['name' => $locale === Language::defaultCode() ? 'Main menu' : "Main menu ({$locale})"],
+        );
     }
 
     /**

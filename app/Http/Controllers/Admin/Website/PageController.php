@@ -15,7 +15,6 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 /**
@@ -133,7 +132,7 @@ class PageController extends Controller
         // this editor (save, preview, restore are all plain form posts too).
         $languages = Language::activeCached();
         $defaultLocale = Language::defaultCode();
-        $locale = $this->resolveLocale($request->query('locale'), $languages, $defaultLocale);
+        $locale = Language::resolve($request->query('locale'));
 
         $layout = $page->layoutsForLocale($locale)->first();  // latest revision FOR THIS LOCALE
 
@@ -171,15 +170,13 @@ class PageController extends Controller
     {
         $schoolId = app('current_school_id');
         $page = Page::forSchool($schoolId)->findOrFail($id);
-        $languages = Language::activeCached();
-        $defaultLocale = Language::defaultCode();
 
         $data = $request->validate([
             'from_locale' => ['required', 'string', 'max:10'],
             'to_locale' => ['required', 'string', 'max:10'],
         ]);
-        $from = $this->resolveLocale($data['from_locale'], $languages, $defaultLocale);
-        $to = $this->resolveLocale($data['to_locale'], $languages, $defaultLocale);
+        $from = Language::resolve($data['from_locale']);
+        $to = Language::resolve($data['to_locale']);
 
         $source = $page->layoutsForLocale($from)->first();
         if (! $source) {
@@ -210,9 +207,8 @@ class PageController extends Controller
     {
         $schoolId = app('current_school_id');
         $page = Page::forSchool($schoolId)->findOrFail($id);
-        $languages = Language::activeCached();
         $defaultLocale = Language::defaultCode();
-        $locale = $this->resolveLocale($request->input('locale'), $languages, $defaultLocale);
+        $locale = Language::resolve($request->input('locale'));
 
         $data = $request->validate([
             'title' => ['required', 'string', 'max:150'],
@@ -388,24 +384,6 @@ class PageController extends Controller
     }
 
     // ── Helpers ─────────────────────────────────────────────────────────────
-
-    /**
-     * Resolve a requested locale code against the active language list,
-     * falling back to $default when missing/blank/not an active language —
-     * mirrors SetLocale's own resolution so an invalid/stale ?locale= or
-     * hidden field (e.g. a language later deactivated mid-edit) can never
-     * 500 or silently write into a locale that doesn't exist.
-     *
-     * @param  Collection<int, Language>  $languages
-     */
-    private function resolveLocale(?string $requested, Collection $languages, string $default): string
-    {
-        if ($requested && $languages->contains(fn ($l) => $l->code === $requested)) {
-            return $requested;
-        }
-
-        return $default;
-    }
 
     /** Turn stored array fields back into editable multiline strings for the form. */
     private function layoutForEditor(?array $layout): array
