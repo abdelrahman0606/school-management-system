@@ -361,6 +361,12 @@ parameters:
 			path: app/Http/Controllers/Admin/Website/MediaController.php
 
 		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\Menu\:\:\$items_count\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/Website/MenuController.php
+
+		-
 			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\Page\:\:\$slug\.$#'
 			identifier: property.notFound
 			count: 1
@@ -388,12 +394,6 @@ parameters:
 			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\Page\:\:\$og_image\.$#'
 			identifier: property.notFound
 			count: 2
-			path: app/Http/Controllers/Admin/Website/PageController.php
-
-		-
-			message: '#^Access to an undefined property App\\Modules\\Language\\Models\\Language\:\:\$code\.$#'
-			identifier: property.notFound
-			count: 1
 			path: app/Http/Controllers/Admin/Website/PageController.php
 
 		-
@@ -3587,6 +3587,12 @@ parameters:
 			identifier: property.notFound
 			count: 2
 			path: app/Modules/Language/Models/ContentTranslation.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Language\\Models\\Language\:\:\$code\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Language/Models/Language.php
 
 		-
 			message: '#^Access to an undefined property App\\Modules\\Language\\Models\\Translation\:\:\$key\.$#'

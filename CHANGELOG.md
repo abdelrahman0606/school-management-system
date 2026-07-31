@@ -23,6 +23,17 @@ follows [Semantic Versioning](https://semver.org/).
   now tracks "Latest"/"Current" per locale, not globally. Demo site seed fixed to set an explicit
   locale on its seeded page revisions (an oversight that would otherwise have made every seeded
   page invisible under the new locale-scoped public render query).
+- Multilingual navigation menus (`docs/modules/30-multilingual-content-plan.md` Phase 3): each
+  language now owns its own full menu tree (`menus.locale`), so the public nav actually changes
+  when a visitor switches language instead of always showing whatever was built first. The admin
+  menu editor gains the same language-tab switcher pattern as the Phase 2 page builder (marks
+  untranslated languages, plain-GET reload), and the public header composer resolves the
+  visitor's locale via a new `Menu::published()` (falls back to the default language's menu when
+  the visitor's language has no nav built yet, same fallback used everywhere else in this
+  feature). Extracted the locale-resolution logic that Phase 2's `PageController` had local to
+  itself into a shared `Language::resolve()`, now used by both controllers. Demo site seeder
+  fixed to seed its "Main menu" with an explicit locale (the same class of bug Phase 2 hit with
+  `PageLayout`, caught here before it shipped).
 
 ## [1.3.4] — 2026-07-31
 

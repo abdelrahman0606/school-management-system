@@ -154,8 +154,18 @@ Payroll/LMS).
    have caused: `WebsitePagesSeeder` created `PageLayout` rows with no `locale`, which the new
    locale-scoped queries would never have matched — every demo page would have silently rendered
    empty. Tests (`tests/Feature/Admin/MultilingualPageContentTest.php`). Merged to `dev`.
-3. **Menus**: locale-scoped `Menu`/`MenuService`, admin locale tab, public header composer
-   fallback. Tests.
+3. ✅ **Menus**: `menus.locale` — each language owns its own full tree (`MenuItem`s stay tied to
+   `menu_id`, so locale-scoping `Menu` scopes all its items for free). New `Menu::published()`
+   (default-locale fallback, same pattern as `PageRenderService::publishedLayoutFor()`) feeds the
+   public header composer in `AppServiceProvider`. Admin editor (`MenuController`) gains the same
+   language-tab switcher as Phase 2's page builder, marking untranslated languages via a
+   `withCount('items')` lookup rather than comparing against the single currently-loaded `Menu`.
+   Extracted `Language::resolve()` (requested code → validated against active languages, falling
+   back to default) out of `PageController`'s locally-duplicated version so both controllers share
+   one implementation. Fixed the same class of regression Phase 2 hit: `WebsitePagesSeeder`'s
+   `Menu::firstOrCreate()` had no `locale`, which the new locale-scoped `Menu::published()` query
+   would never have matched — the seeded demo nav would have silently disappeared. Tests
+   (`tests/Feature/Admin/MultilingualMenuTest.php`). Merged to `dev`.
 4. **School identity + SiteSetting text**: admin Translations panel, public call-site swap to
    `transOr()`. Tests.
 5. **AI-assist**: `SuggestTranslationJob`, "Suggest translation" buttons wired into the Phase

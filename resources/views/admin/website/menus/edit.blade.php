@@ -3,6 +3,24 @@
 @section('content')
   @include('admin.partials.page-header', ['title' => __('Navigation menu'), 'crumbs' => [__('Website'), __('Menus')]])
 
+  {{-- Language switcher — docs/modules/30-multilingual-content-plan.md
+       Phase 3. Each language owns its own full menu tree, mirroring the
+       page builder's language tab (Phase 2): a plain ?locale= GET reload,
+       hidden entirely when there's only one active language. --}}
+  @if ($languages->count() > 1)
+    <div class="mb-3 d-flex align-items-center gap-2">
+      <label class="form-label small text-muted mb-0">{{ __('Editing language') }}</label>
+      <select class="form-select form-select-sm" style="width:auto;" aria-label="{{ __('Editing language') }}"
+              onchange="if (this.value) window.location.href = this.value;">
+        @foreach ($languages as $lang)
+          <option value="{{ route('admin.menus.index', ['locale' => $lang->code]) }}" @selected($lang->code === $locale)>
+            @if ($lang->flag){{ $lang->flag }} @endif{{ $lang->native_name }}@if (! in_array($lang->code, $localesWithItems, true)) — {{ __('untranslated') }}@endif
+          </option>
+        @endforeach
+      </select>
+    </div>
+  @endif
+
   @php
     $tree = $menu->items->map(fn ($i) => [
       'label'   => $i->label,
@@ -21,6 +39,8 @@
   <form method="POST" action="{{ route('admin.menus.save') }}" id="menu-form">
     @csrf @method('PUT')
     <input type="hidden" name="items" id="menu-items-json">
+    {{-- Which language this save applies to (docs/modules/30-multilingual-content-plan.md Phase 3). --}}
+    <input type="hidden" name="locale" value="{{ $locale }}">
 
     <div class="row g-4">
       <div class="col-lg-4">
