@@ -181,7 +181,7 @@ class PageRenderTest extends TestCase
             ->assertSee('Apply now')
             ->assertSee('href="/online-admission"', false)
             ->assertSee('data-announcement-bar="', false)
-            ->assertSee('js-announcement-dismiss', false);
+            ->assertSee('announcement-bar-dismiss js-announcement-dismiss', false);
     }
 
     public function test_announcement_bar_without_dismissible_has_no_dismiss_control(): void
@@ -193,15 +193,20 @@ class PageRenderTest extends TestCase
             ],
         ]);
 
-        // Checks for the real HTML attribute ('data-announcement-bar="...'),
-        // not the bare word — the page-wide dismiss script (public/layout.blade.php)
-        // always contains the literal selector '[data-announcement-bar]',
-        // regardless of whether any block on this particular page uses it.
+        // Both checks match the real rendered markup only, not the page-wide
+        // dismiss script (public/layout.blade.php), which always contains the
+        // literal strings '[data-announcement-bar]' and '.js-announcement-dismiss'
+        // regardless of whether any block on this particular page uses them —
+        // a bare assertDontSee('js-announcement-dismiss') would match that
+        // script text and false-fail here even with no dismiss button
+        // rendered. 'announcement-bar-dismiss js-announcement-dismiss' (no
+        // leading dot, exactly as it appears in the button's class="...")
+        // only appears when the button itself is actually rendered.
         $this->get('/no-dismiss')
             ->assertOk()
             ->assertSee('Just a message')
             ->assertDontSee('data-announcement-bar="', false)
-            ->assertDontSee('js-announcement-dismiss', false);
+            ->assertDontSee('announcement-bar-dismiss js-announcement-dismiss', false);
     }
 
     public function test_empty_announcement_bar_shows_a_placeholder(): void
