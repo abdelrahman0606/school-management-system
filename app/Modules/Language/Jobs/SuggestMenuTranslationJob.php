@@ -9,7 +9,6 @@ use App\Modules\Website\Models\MenuItem;
 use App\Modules\Website\Services\MenuService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
@@ -66,12 +65,27 @@ class SuggestMenuTranslationJob implements ShouldQueue
     }
 
     /**
-     * @param  Collection<int, MenuItem>  $items
+     * $items is deliberately untyped beyond `iterable` rather than a
+     * strictly-generic'd Collection<int, MenuItem>: Menu::items()'s and
+     * MenuItem::children()'s own HasMany return-type PHPDocs are already a
+     * known/baselined generics mismatch in this codebase (see
+     * phpstan-baseline.neon's Menu.php/MenuItem.php entries), which widens
+     * what callers see back to a bare Model — a strict Collection<..,
+     * MenuItem> parameter here could never actually be satisfied by them. A
+     * plain foreach + instanceof guard (which phpstan narrows natively)
+     * sidesteps that entirely instead of fighting it.
+     *
      * @return array<int, array<string, mixed>>
      */
-    private function translateItems(Collection $items, string $source, TranslationGatewayContract $gateway): array
+    private function translateItems(iterable $items, string $source, TranslationGatewayContract $gateway): array
     {
-        return $items->map(function (MenuItem $item) use ($source, $gateway) {
+        $out = [];
+
+        foreach ($items as $item) {
+            if (! $item instanceof MenuItem) {
+                continue;
+            }
+
             $row = [
                 'label' => $this->translateField($item->label, $source, $gateway),
                 'type' => $item->type,
@@ -86,8 +100,10 @@ class SuggestMenuTranslationJob implements ShouldQueue
                 $row['children'] = $this->translateItems($item->children, $source, $gateway);
             }
 
-            return $row;
-        })->all();
+            $out[] = $row;
+        }
+
+        return $out;
     }
 
     /**
