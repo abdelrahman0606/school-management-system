@@ -21,6 +21,23 @@
     </div>
   @endif
 
+  {{-- "Suggest translation (AI)" — docs/modules/30-multilingual-content-plan.md
+       Phase 5. Only offered for an untranslated locale (zero items): a Menu
+       save is a full-tree REPLACE, so running this against a locale that
+       already has items would destroy hand-built/translated work —
+       SuggestMenuTranslationJob itself refuses to run in that case too, this
+       is just the same rule reflected in the UI so it isn't in the way. --}}
+  @if ($locale !== $defaultLocale && ! in_array($locale, $localesWithItems, true))
+    <div class="alert alert-info d-flex align-items-center justify-content-between gap-3 py-2 px-3" role="alert">
+      <span><i class="bi bi-translate"></i> {{ __('This language has no menu yet.') }}</span>
+      <form method="POST" action="{{ route('admin.menus.suggest-translation') }}" class="d-flex align-items-center">
+        @csrf
+        <input type="hidden" name="locale" value="{{ $locale }}">
+        <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="bi bi-magic"></i> {{ __('Build from default language (AI)') }}</button>
+      </form>
+    </div>
+  @endif
+
   @php
     $tree = $menu->items->map(fn ($i) => [
       'label'   => $i->label,

@@ -425,6 +425,16 @@
                                         @if ($lang->flag){{ $lang->flag }} @endif {{ $lang->native_name }}
                                     </summary>
                                     <div class="card-body">
+                                        {{-- AI-assisted draft translation (docs/modules/30-multilingual-content-plan.md
+                                             Phase 5) — submits the small standalone form below (outside this page's
+                                             main <form>, since forms can't nest) via id, so this button never
+                                             triggers the whole School Settings save. Free MyMemory API, no key
+                                             needed; only fills fields that are still empty above. --}}
+                                        <button type="button" class="btn btn-sm btn-outline-secondary mb-2"
+                                                onclick="document.getElementById('ai-suggest-{{ $lang->code }}').submit()">
+                                            <i class="bi bi-magic"></i> {{ __('Suggest translations (AI)') }}
+                                        </button>
+                                        <p class="form-text mt-0 mb-3">{{ __('Fills only the empty fields below using a free machine-translation service — always review a suggestion before saving.') }}</p>
                                         <div class="row g-3">
                                             <div class="col-md-6"><label class="form-label">{{ __('Name') }}</label>
                                                 <input name="translations[{{ $lang->code }}][name]" class="form-control"
@@ -478,6 +488,17 @@
 
         <div class="mt-4"><button class="btn btn-primary"><i class="bi bi-save"></i> {{ __('Save Settings') }}</button></div>
     </form>
+
+    {{-- One tiny standalone form per language, submitted via JS from the
+         "Suggest translations (AI)" button inside each language panel above
+         — kept OUTSIDE the main settings <form> since HTML forms can't
+         nest. docs/modules/30-multilingual-content-plan.md Phase 5. --}}
+    @foreach ($contentLanguages as $lang)
+        <form method="POST" action="{{ route('admin.school.translations.suggest') }}" id="ai-suggest-{{ $lang->code }}" class="d-none">
+            @csrf
+            <input type="hidden" name="locale" value="{{ $lang->code }}">
+        </form>
+    @endforeach
 
     <form method="POST" action="{{ route('admin.modules.update') }}" class="mt-4">
         @csrf @method('PUT')

@@ -289,6 +289,7 @@ Route::middleware(['auth', 'school'])->prefix('admin')->name('admin.')->group(fu
         Route::get('/school', [SchoolController::class, 'edit'])->name('school.edit');
         Route::put('/school', [SchoolController::class, 'update'])->name('school.update');
         Route::put('/school/hours', [SchoolController::class, 'updateHours'])->name('school.hours');
+        Route::post('/school/translations/suggest', [SchoolController::class, 'suggestTranslation'])->name('school.translations.suggest');
 
         Route::get('/modules', [ModuleController::class, 'index'])->name('modules.index');
         Route::put('/modules', [ModuleController::class, 'update'])->name('modules.update');
@@ -315,6 +316,7 @@ Route::middleware(['auth', 'school'])->prefix('admin')->name('admin.')->group(fu
         Route::post('/pages/{id}/homepage', [WebsitePageController::class, 'setHomepage'])->whereNumber('id')->name('pages.homepage');
         Route::post('/pages/{id}/duplicate', [WebsitePageController::class, 'duplicate'])->whereNumber('id')->name('pages.duplicate');
         Route::post('/pages/{id}/copy-locale', [WebsitePageController::class, 'copyLocale'])->whereNumber('id')->name('pages.copy-locale');
+        Route::post('/pages/{id}/suggest-translation', [WebsitePageController::class, 'suggestTranslation'])->whereNumber('id')->name('pages.suggest-translation');
         Route::post('/pages/{id}/save-as-template', [WebsitePageController::class, 'saveAsTemplate'])->whereNumber('id')->name('pages.save-as-template');
         Route::get('/pages/{id}/history', [WebsitePageController::class, 'history'])->whereNumber('id')->name('pages.history');
         Route::post('/pages/{id}/restore/{layoutId}', [WebsitePageController::class, 'restore'])->whereNumber(['id', 'layoutId'])->name('pages.restore');
@@ -334,6 +336,7 @@ Route::middleware(['auth', 'school'])->prefix('admin')->name('admin.')->group(fu
         // Navigation menu editor
         Route::get('/menus', [MenuController::class, 'edit'])->name('menus.index');
         Route::put('/menus', [MenuController::class, 'save'])->name('menus.save');
+        Route::post('/menus/suggest-translation', [MenuController::class, 'suggestTranslation'])->name('menus.suggest-translation');
 
         Route::get('/academic-years', [AcademicYearController::class, 'index'])->name('academic-years.index');
         Route::post('/academic-years', [AcademicYearController::class, 'store'])->name('academic-years.store');

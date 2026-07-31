@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\Setup;
 
+use App\Modules\Language\Jobs\SuggestSchoolTranslationJob;
 use App\Modules\Language\Models\Language;
 use App\Modules\Language\Services\TranslationService;
 use App\Modules\School\Models\ModuleSetting;
@@ -269,5 +270,25 @@ class SchoolController extends Controller
         }
 
         return back()->with('status', __('Opening Hours Saved.'));
+    }
+
+    /**
+     * "Suggest translations (AI)" — docs/modules/30-multilingual-content-plan.md
+     * Phase 5. Dispatches SuggestSchoolTranslationJob, which only fills
+     * currently-empty translation fields; it never overwrites anything the
+     * admin already translated by hand.
+     */
+    public function suggestTranslation(Request $request): RedirectResponse
+    {
+        $schoolId = app('current_school_id');
+        $locale = Language::resolve($request->input('locale'));
+
+        if ($locale === Language::defaultCode()) {
+            return back()->with('status', __('Nothing to translate — that is the default language.'));
+        }
+
+        SuggestSchoolTranslationJob::dispatch($schoolId, $locale);
+
+        return back()->with('status', __('Translation suggestions are being generated — refresh in a few seconds to see the drafts.'));
     }
 }

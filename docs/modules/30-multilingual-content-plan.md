@@ -28,8 +28,8 @@ Pages & blocks, menu item labels, page SEO meta, `SiteSetting` text fields, and 
 fields (name/institution codes/address — footer + header). Fallback when a locale has no
 translation yet: **render the default-language content**, same behavior as the existing `__()`
 translator falling back to English. AI-assisted draft translations (button in the admin UI,
-reviewed/edited before saving) are in scope, modeled on the LMS module's existing Anthropic
-integration.
+reviewed/edited before saving) are in scope — see "AI-assisted draft translation" below for the
+provider (revised to the free MyMemory API during Phase 5).
 
 ## Architecture
 
@@ -121,20 +121,42 @@ and the menu lookup encode the layout/menu equivalent.
 
 ## AI-assisted draft translation
 
-Models the LMS module's existing `AnthropicAiChecker` (`app/Modules/Lms/Gateways/`) exactly:
-`Http::withHeaders([...])->timeout(...)->post($apiBase, [...])`, `claude-3-5-haiku-latest`,
-strict-JSON prompt, response parsed via `$response->json('content.0.text')`. Given the LMS
-gotcha already on file (checker throws, a queued job is the layer that catches), the same split
-applies here: a synchronous "Suggest" button feels wrong for a network call inside an admin
-form, so a **queued** `SuggestTranslationJob` (`ShouldQueue`, catches everything, writes a
-draft into the relevant locale row/`content_translations` value) backs the button, with the
-admin UI polling or the page just refreshing to show the draft once ready — draft is never
-auto-published, admin always reviews/edits before the locale row is marked non-empty.
+**Revised during Phase 5** — originally planned to reuse the LMS module's paid Anthropic key
+(`schools.lms_ai_api_key`), gated on `module.enabled:lms`. Switched to the free, keyless
+MyMemory Translation API instead: translation isn't an LMS-specific feature to begin with, so
+tying the "Suggest" button to a paid module a school might never enable was the wrong shape —
+every school gets the button with zero setup instead.
 
-API key: reuses `schools.lms_ai_api_key` if the LMS module is enabled for that school (same key,
-same provider, no reason to force a second key); if LMS isn't enabled, the "Suggest" button is
-simply hidden (matches the existing `module.enabled:{name}` gating pattern already used for
-Payroll/LMS).
+`TranslationGatewayContract` (`app/Modules/Language/Gateways/`) + `MyMemoryTranslator` follow
+the exact same gateway-throws/job-catches split `AiCheckerContract`/`AnthropicAiChecker`
+established for LMS: a synchronous "Suggest" button feels wrong for a network call inside an
+admin form, so a **queued** `Suggest{School,Page,Menu}TranslationJob` (`ShouldQueue`, catches
+everything, never rethrows) backs each button, with the admin refreshing the page to see the
+result once ready — a suggestion is always a draft, never auto-published or auto-saved over
+existing content.
+
+Content-shape-specific safety rules, since "suggest" means something different for each of the
+three storage shapes this plan uses:
+- **School/SiteSetting** (Phase 4's `content_translations`): fills only currently-EMPTY fields
+  for the target locale, via `HasTranslations::trans()`'s own "null means untranslated" contract
+  — never overwrites a field an admin already translated by hand.
+- **Pages** (Phase 2's append-only `PageLayout`): always safe to run, regardless of whether the
+  locale already has content — it only ever creates a brand new draft revision
+  (`PageService::saveLayout()` never updates in place), so a suggestion can never destroy an
+  existing hand-translated draft or the published page. A new `BlockTranslator`
+  (`app/Modules/Website/Services/`) walks the block tree with a schema-driven per-block-type text
+  field map (not a "translate every string" heuristic), so structural values — urls, colors,
+  icon names, alignment — are never sent through translation.
+- **Menus** (Phase 3's full-tree-replace `Menu`): the opposite of Pages — `MenuService::replaceItems()`
+  destroys and rebuilds the whole tree, so this only ever proceeds when the target locale
+  currently has ZERO items (the same "untranslated" signal the admin editor's own language
+  switcher already shows), refusing outright otherwise rather than risk clobbering a hand-built
+  menu.
+
+Every gateway call (School's per-field loop, a page's dozens of block text fields, a menu's
+item labels) is individually try/caught — one field hitting MyMemory's rate limit must not
+discard everything translated before it; that one field is just left in the source language,
+easy for the reviewing admin to spot and finish by hand.
 
 ## Phased implementation
 
@@ -181,9 +203,18 @@ Payroll/LMS).
    description/title, footer address + institution codes), `header.blade.php` (site name
    fallback), `home.blade.php`/`page.blade.php` (title/meta fallbacks). Tests
    (`tests/Feature/Admin/MultilingualSchoolContentTest.php`). Merged to `dev`.
-5. **AI-assist**: `SuggestTranslationJob`, "Suggest translation" buttons wired into the Phase
-   2–4 admin UIs, gated on `module.enabled:lms` + a set `lms_ai_api_key`. Tests (queued-job
-   catches-everything per the sync-queue gotcha, never asserts a real network call).
+5. ✅ **AI-assist**: `TranslationGatewayContract`/`MyMemoryTranslator` (free, keyless MyMemory
+   API — revised from the original Anthropic/LMS-gated plan, see "AI-assisted draft translation"
+   above), three queued jobs (`SuggestSchoolTranslationJob`, `SuggestPageTranslationJob`,
+   `SuggestMenuTranslationJob`) each honoring their storage shape's own safety rule (fill-empty-
+   only for School/SiteSetting, always-safe-new-draft for Pages, zero-items-only for Menus), a new
+   `BlockTranslator` walking a page's block tree via a schema-driven per-block-type text field map.
+   "Suggest translation (AI)" buttons wired into School settings, the page builder, and the menu
+   editor — every school gets it, no module gating. Tests
+   (`tests/Unit/Language/MyMemoryTranslatorTest.php`, `tests/Unit/Website/BlockTranslatorTest.php`,
+   `tests/Feature/Admin/AiTranslationSuggestTest.php` — queued jobs run inline under this app's
+   sync queue and are exercised end-to-end via `Http::fake()`, never a real network call).
+   Merged to `dev`.
 
 Each phase is its own branch off `dev`, its own commit(s), tests green before merge — same
 workflow as modules 20/29.

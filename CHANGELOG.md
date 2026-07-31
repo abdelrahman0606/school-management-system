@@ -45,6 +45,20 @@ follows [Semantic Versioning](https://semver.org/).
   site). Public site (header, footer, homepage, page `<title>`) now reads these via `transOr()`
   instead of the raw column, with the same silent default-language fallback used throughout this
   feature.
+- AI-assisted draft translation (`docs/modules/30-multilingual-content-plan.md` Phase 5): a
+  "Suggest translation (AI)" button on School settings, the page builder, and the menu editor,
+  backed by the free MyMemory Translation API — no API key, no billing, available to every
+  school (revised from the original plan to reuse the LMS module's paid Anthropic key, since
+  translation drafts aren't an LMS-specific feature). Each of the three content shapes gets its
+  own safety rule: School/SiteSetting fills only currently-empty fields, never overwriting a
+  hand-translated one; Pages always create a brand-new draft revision (never destructive, since
+  `PageLayout` is append-only) and translate every text field inside the block tree via a new
+  schema-driven `BlockTranslator` (structural values — urls, colors, icons — are never sent
+  through translation); Menus only build a translated tree when the target language currently has
+  zero items, since a menu save is a full-tree replace that could otherwise destroy a hand-built
+  nav. One field failing (a rate limit mid-batch) never discards the rest of a suggestion — it's
+  just left in the source language for the admin to finish by hand. Tests exercise the real
+  end-to-end flow via `Http::fake()`, never a real network call.
 
 ## [1.3.4] — 2026-07-31
 

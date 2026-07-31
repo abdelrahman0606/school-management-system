@@ -335,19 +335,35 @@
          announcements. See docs/modules/28-elementor-block-editor-plan.md §7u. --}}
     <div id="a11y-status" class="visually-hidden" aria-live="polite" aria-atomic="true"></div>
 
-    {{-- "Copy from default language" — docs/modules/30-multilingual-content-plan.md
-         Phase 2. Only when viewing a non-default language tab that has no
-         revision of its own yet; a plain form post (copyLocale()), same
-         round-trip style as the rest of this editor. --}}
-    @if ($locale !== $defaultLocale && ! in_array($locale, $localesWithContent, true))
-      <div class="alert alert-info d-flex align-items-center justify-content-between gap-3 rounded-0 mb-0 py-2 px-3" role="alert">
-        <span><i class="bi bi-translate"></i> {{ __('This page has no content in this language yet.') }}</span>
-        <form method="POST" action="{{ route('admin.pages.copy-locale', $page->id) }}" class="d-flex align-items-center">
-          @csrf
-          <input type="hidden" name="from_locale" value="{{ $defaultLocale }}">
-          <input type="hidden" name="to_locale" value="{{ $locale }}">
-          <button type="submit" class="btn btn-outline-primary btn-sm">{{ __('Copy from default language to start translating') }}</button>
-        </form>
+    {{-- "Copy from default language" / "Suggest translation (AI)" —
+         docs/modules/30-multilingual-content-plan.md Phases 2 + 5. Shown for
+         any non-default language tab; "Copy" only when this locale has no
+         revision of its own yet (an untranslated starting point), "Suggest"
+         always (SuggestPageTranslationJob only ever ADDS a new draft
+         revision — safe to run again even if this locale already has
+         content, e.g. after the default-language text changed). Plain form
+         posts, same round-trip style as the rest of this editor. --}}
+    @if ($locale !== $defaultLocale)
+      @php $hasContent = in_array($locale, $localesWithContent, true); @endphp
+      <div class="alert alert-info d-flex align-items-center justify-content-between gap-3 rounded-0 mb-0 py-2 px-3 flex-wrap" role="alert">
+        <span><i class="bi bi-translate"></i>
+          {{ $hasContent ? __('AI translation creates a new draft revision — review it in History before publishing.') : __('This page has no content in this language yet.') }}
+        </span>
+        <div class="d-flex align-items-center gap-2">
+          @unless ($hasContent)
+            <form method="POST" action="{{ route('admin.pages.copy-locale', $page->id) }}" class="d-flex align-items-center">
+              @csrf
+              <input type="hidden" name="from_locale" value="{{ $defaultLocale }}">
+              <input type="hidden" name="to_locale" value="{{ $locale }}">
+              <button type="submit" class="btn btn-outline-primary btn-sm">{{ __('Copy from default language to start translating') }}</button>
+            </form>
+          @endunless
+          <form method="POST" action="{{ route('admin.pages.suggest-translation', $page->id) }}" class="d-flex align-items-center">
+            @csrf
+            <input type="hidden" name="locale" value="{{ $locale }}">
+            <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="bi bi-magic"></i> {{ __('Suggest translation (AI)') }}</button>
+          </form>
+        </div>
       </div>
     @endif
 

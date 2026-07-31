@@ -1,0 +1,111 @@
+<?php
+
+namespace App\Modules\Language\Jobs;
+
+use App\Modules\Language\Gateways\TranslationGatewayContract;
+use App\Modules\Language\Models\Language;
+use App\Modules\Website\Models\Menu;
+use App\Modules\Website\Models\MenuItem;
+use App\Modules\Website\Services\MenuService;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Bus\Dispatchable;
+use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Collection;
+use Throwable;
+
+/**
+ * "Suggest translation" for a Menu (docs/modules/30-multilingual-content-plan.md
+ * Phase 5) — builds the target locale's menu tree by translating the
+ * default language's item labels, keeping type/page_id/url/dynamic_route/
+ * icon/target/order identical.
+ *
+ * Unlike Pages (append-only, always safe to re-run), a Menu save is a full
+ * tree REPLACE (see MenuService::replaceItems()'s own docblock). Running
+ * this against a locale that already has items would silently destroy
+ * whatever the admin already built/translated by hand, so it only ever
+ * proceeds when the target locale currently has ZERO items — the same
+ * "untranslated" condition the admin editor's own language-tab badge
+ * already uses (MenuController::edit()'s localesWithItems).
+ */
+class SuggestMenuTranslationJob implements ShouldQueue
+{
+    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+
+    /** Best-effort draft suggestion, not a critical write — no retry storm against a free, rate-limited API. */
+    public int $tries = 1;
+
+    public function __construct(private readonly int $schoolId, private readonly string $locale) {}
+
+    public function handle(TranslationGatewayContract $gateway, MenuService $menus): void
+    {
+        $source = Language::defaultCode();
+        if ($this->locale === $source) {
+            return; // nothing to translate into itself
+        }
+
+        $sourceMenu = Menu::forSchool($this->schoolId)->where('locale', $source)
+            ->with('items.children')->first();
+        if (! $sourceMenu || $sourceMenu->items->isEmpty()) {
+            return; // nothing to translate from yet
+        }
+
+        $targetMenu = Menu::forSchool($this->schoolId)->firstOrCreate(
+            ['school_id' => $this->schoolId, 'locale' => $this->locale],
+            ['name' => "Main menu ({$this->locale})"],
+        );
+
+        // Safety: never clobber a menu the admin already built or translated
+        // by hand — see this job's own docblock.
+        if ($targetMenu->allItems()->exists()) {
+            return;
+        }
+
+        $menus->replaceItems($targetMenu, $this->translateItems($sourceMenu->items, $source, $gateway));
+    }
+
+    /**
+     * @param  Collection<int, MenuItem>  $items
+     * @return array<int, array<string, mixed>>
+     */
+    private function translateItems(Collection $items, string $source, TranslationGatewayContract $gateway): array
+    {
+        return $items->map(function (MenuItem $item) use ($source, $gateway) {
+            $row = [
+                'label' => $this->translateField($item->label, $source, $gateway),
+                'type' => $item->type,
+                'page_id' => $item->page_id,
+                'url' => $item->url,
+                'dynamic_route' => $item->dynamic_route,
+                'icon' => $item->icon,
+                'target' => $item->target,
+            ];
+
+            if ($item->relationLoaded('children') && $item->children->isNotEmpty()) {
+                $row['children'] = $this->translateItems($item->children, $source, $gateway);
+            }
+
+            return $row;
+        })->all();
+    }
+
+    /**
+     * Same swallow-and-continue as SuggestPageTranslationJob/BlockTranslator
+     * — one item's label failing (a MyMemory rate limit) must not abort the
+     * rest of the tree; it just leaves that one label in the source
+     * language, easy for the reviewing admin to spot and finish by hand.
+     */
+    private function translateField(?string $value, string $source, TranslationGatewayContract $gateway): ?string
+    {
+        if (! is_string($value) || trim($value) === '') {
+            return $value;
+        }
+
+        try {
+            return $gateway->translate($value, $source, $this->locale);
+        } catch (Throwable) {
+            return $value;
+        }
+    }
+}

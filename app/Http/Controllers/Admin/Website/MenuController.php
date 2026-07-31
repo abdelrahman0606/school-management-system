@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\Website;
 
+use App\Modules\Language\Jobs\SuggestMenuTranslationJob;
 use App\Modules\Language\Models\Language;
 use App\Modules\Website\Models\Menu;
 use App\Modules\Website\Models\MenuItem;
@@ -61,6 +62,30 @@ class MenuController extends Controller
         $this->menus->replaceItems($menu, $items);
 
         return redirect()->route('admin.menus.index', ['locale' => $locale])->with('status', __('Menu Saved.'));
+    }
+
+    /**
+     * "Suggest translation (AI)" — docs/modules/30-multilingual-content-plan.md
+     * Phase 5. Only proceeds when this locale's menu currently has zero
+     * items (SuggestMenuTranslationJob's own safety check) — a full-tree
+     * replace could otherwise destroy hand-built/translated work, so the
+     * button offering this action is likewise only shown for an untranslated
+     * locale in the editor view.
+     */
+    public function suggestTranslation(Request $request): RedirectResponse
+    {
+        $schoolId = app('current_school_id');
+        $locale = Language::resolve($request->input('locale'));
+
+        if ($locale === Language::defaultCode()) {
+            return redirect()->route('admin.menus.index', ['locale' => $locale])
+                ->with('warning', __('Nothing to translate — that is the default language.'));
+        }
+
+        SuggestMenuTranslationJob::dispatch($schoolId, $locale);
+
+        return redirect()->route('admin.menus.index', ['locale' => $locale])
+            ->with('status', __('Translation suggestion is being generated — refresh in a few seconds.'));
     }
 
     /** Get (or create) this school's menu for one locale — each language owns its own full tree. */
