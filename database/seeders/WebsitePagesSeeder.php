@@ -15,7 +15,10 @@ use Illuminate\Database\Seeder;
  * (About/History/Mission/Administration, Staff/Teachers, Online admission,
  * Gallery/Video, Contact, Notices) with real block content, so the whole public
  * site is navigable right after install. Staff/notices/stats blocks pull live
- * data seeded by DemoDataSeeder.
+ * data seeded by DemoDataSeeder. Also exercises every block type introduced by
+ * docs/modules/29-frontend-modernization-proposal.md — the homepage leads with
+ * an announcement_bar, and Online Admission ends with a faq block — so the
+ * demo site actually shows both in real use, not just their empty states.
  */
 class WebsitePagesSeeder extends Seeder
 {
@@ -36,6 +39,11 @@ class WebsitePagesSeeder extends Seeder
 
         // ── Homepage (block-built, set as is_homepage so "/" renders it) ────────
         $this->page($sid, 'home', 'Home', 'full', [
+            ['type' => 'announcement_bar', 'data' => [
+                'text' => 'Admissions open for the 2026–27 academic year.',
+                'link_text' => 'Apply now', 'link_url' => '/online-admission',
+                'dismissible' => true,
+            ]],
             ['type' => 'hero', 'data' => [
                 'title' => $school->name ?: 'Welcome to our school',
                 'subtitle' => 'Nurturing curiosity, character, and community.',
@@ -98,6 +106,12 @@ class WebsitePagesSeeder extends Seeder
             ['type' => 'richtext', 'data' => ['html' => '<p>Admission for the new academic year is now open for classes Six to Ten. '
                 .'Please apply online or visit the school office during working hours.</p>']],
             ['type' => 'admission_form', 'data' => ['heading' => 'Apply for admission', 'intro' => 'Start your online application below.']],
+            ['type' => 'faq', 'data' => ['heading' => 'Frequently asked questions', 'faq_items' => [
+                ['question' => 'What is the age requirement for admission?', 'answer' => 'Students must meet the minimum age requirement for their class as of January 1st of the academic year. Contact the school office for specific class-wise age criteria.'],
+                ['question' => 'What documents are required to apply?', 'answer' => "A copy of the student's birth certificate, the previous school's transfer certificate (if applicable), and recent passport-size photographs."],
+                ['question' => 'Is there an admission test?', 'answer' => 'Yes — students applying for Class Six and above sit a short admission test covering Bangla, English, and Mathematics.'],
+                ['question' => 'When does the academic year start?', 'answer' => 'The academic year runs January to December, with classes typically starting in the first week of January.'],
+            ]]],
         ]);
 
         // ── Galleries ───────────────────────────────────────────────────────
