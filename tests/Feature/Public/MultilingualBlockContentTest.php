@@ -189,4 +189,28 @@ class MultilingualBlockContentTest extends TestCase
             ->assertOk()
             ->assertSee(LocalizedDate::digits(date('Y'), 'bn'));
     }
+
+    /**
+     * Regression guard: the header's "today" date (public/partials/header.blade.php)
+     * used to pin to $school->locale (the school's configured home-language column,
+     * 'en' by default) instead of the visitor's browsing locale — the one date on the
+     * public site that silently ignored the language switcher. It must follow
+     * app()->getLocale() like every other date on the site (footer year, notices).
+     */
+    public function test_header_today_date_follows_the_visitors_locale_not_the_schools_own_locale(): void
+    {
+        Carbon::setTestNow(Carbon::create(2026, 7, 31, 10, 0, 0, 'Asia/Dhaka'));
+        $this->school->update(['locale' => 'en']); // school's own locale stays English
+
+        $this->publishPage('header-date', [
+            'template' => 'full',
+            'blocks' => [['type' => 'heading', 'data' => ['text' => 'Hi']]],
+        ]);
+
+        $this->withSession(['app_locale' => 'bn'])->get('/header-date')
+            ->assertOk()
+            ->assertSee('৩১ জুলাই ২০২৬');
+
+        Carbon::setTestNow();
+    }
 }

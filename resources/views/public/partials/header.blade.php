@@ -5,11 +5,16 @@
     // swap as layout.blade.php's own $siteName computation.
     $siteName = $settings->site_name ?? ($school?->transOr('name') ?? 'Our School');
 
-    // The school's OWN configured locale, not necessarily the visitor's
-    // browsing locale (app()->getLocale()) -- this date is shown as the
-    // institution's "today", so it stays in the school's home language even
-    // for a visitor browsing the site in a different one.
-    $loc = $school?->locale ?? app()->getLocale();
+    // Follows the VISITOR's browsing locale (app()->getLocale()), same as
+    // every other date on the public site (footer copyright year, notices,
+    // sidebar) -- LocalizedDate::format() already defaults its $locale param
+    // to app()->getLocale() when null, so no override is passed here. (This
+    // used to pin to $school->locale -- the school's configured home-
+    // language column, seeded 'en' -- on the theory that "today" should
+    // reflect the institution's own language regardless of visitor. That
+    // made the header date the one place on the site that silently ignored
+    // the language switcher, which read as "the date hasn't changed" rather
+    // than as an intentional institutional-language date.)
     $tz = $school?->timezone ?? config('app.timezone');
     try {
         $today = \Illuminate\Support\Carbon::now($tz);
@@ -19,7 +24,7 @@
     // App\Support\LocalizedDate -- translatedFormat() for the month/day
     // names (Carbon's own bundled locale data, no API call) + a native-digit
     // swap Carbon doesn't do on its own.
-    $dateStr = \App\Support\LocalizedDate::format($today, 'l j F Y', $loc);
+    $dateStr = \App\Support\LocalizedDate::format($today, 'l j F Y');
 
     $tickerPos = $settings->ticker_position ?? 'below_nav';
     $showTicker = $tickerPos !== 'hidden' && ($ticker ?? collect())->isNotEmpty();

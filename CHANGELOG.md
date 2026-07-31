@@ -52,6 +52,15 @@ follows [Semantic Versioning](https://semver.org/).
   (`tests/Feature/Admin/MultilingualAnnouncementAndStaffContentTest.php`).
 
 ### Fixed
+- Reported: "header date hasn't changed" — the public header's "today" date
+  (`public/partials/header.blade.php`) pinned to `$school->locale` (the school's configured
+  home-language column, `en` by default) instead of the visitor's browsing locale, making it the
+  one date on the site that silently ignored the language switcher (footer copyright year,
+  notices, and sidebar dates all already followed `app()->getLocale()`). Dropped the
+  school-locale override so `LocalizedDate::format()` defaults to the visitor's locale like every
+  other call site. Test:
+  `test_header_today_date_follows_the_visitors_locale_not_the_schools_own_locale`
+  (`tests/Feature/Public/MultilingualBlockContentTest.php`).
 - Reported: the public footer's "© 2026 &lt;school name&gt;. All rights reserved." only translated
   the school name — "All rights reserved." was a bare literal string, never wrapped in `__()`,
   unlike every other string in `public/layout.blade.php`'s footer. Also fixed the same bug in the
