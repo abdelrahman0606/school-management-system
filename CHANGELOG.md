@@ -6,6 +6,15 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- Multilingual content foundation (`docs/modules/30-multilingual-content-plan.md` Phase 1):
+  `page_layouts` gains `locale` + per-locale SEO meta columns, `menus` gains `locale`, and a new
+  `content_translations` table + `HasTranslations` trait (wired onto `School` and `SiteSetting`)
+  provide per-field translations for scalar singleton-row models. Purely additive — no rendered
+  output changes yet. This is the first phase of fixing a reported gap: the public language
+  switcher only ever changed static `__()` UI strings, never a school's own page/menu/site
+  content, because none of it had a locale column to switch between.
+
 ## [1.3.4] — 2026-07-31
 
 ### Added

@@ -8,7 +8,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Menu extends Model
 {
-    protected $fillable = ['school_id', 'name'];
+    // locale: docs/modules/30-multilingual-content-plan.md Phase 1 — each Menu
+    // is one full tree for one locale. Not yet consumed by MenuController/
+    // MenuService (Phase 3); every existing lookup still finds the single
+    // school-wide menu it always has.
+    protected $fillable = ['school_id', 'name', 'locale'];
 
     /** @return HasMany<MenuItem> */
     public function items(): HasMany
