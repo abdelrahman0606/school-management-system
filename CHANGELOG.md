@@ -14,6 +14,17 @@ follows [Semantic Versioning](https://semver.org/).
   the existing salary components), Loan (an approved staff loan with its repayment schedule), Refund
   (a partial refund against an existing payment), Holidays, and public Contact messages. Runs after
   `DemoOptionalSeeder`, which it depends on for staff salary values.
+- `bn.json` refreshed from a live dev DB export: 126 UI-string keys that only existed as machine
+  translations (via Settings → Languages → "Suggest translations (AI)", MyMemory) had no seed-pack
+  entry at all — added as-is per explicit instruction, though a handful are known-rough (e.g. "Font
+  Weight" picked up a stray `@ label` artifact, "Background Image" translated as if it were "Account
+  name") and should be spot-checked in the admin Translations editor rather than trusted blindly.
+- `SchoolSeeder`/`DemoDataSeeder` bn values updated to match hand-edits found in the same DB export:
+  School name spelling (গ্রীন → গ্রিন, applied to both `School.name` and `SiteSetting.meta_title`),
+  `institution_code_label` transliterated instead of left as Latin "EIIN", native-Bengali-digit
+  translations added for institution_code/school_code/technical_branch_code (previously skipped as
+  "meaningless" — they're not, BD documents commonly render codes in Bengali numerals), the "Accounts
+  Officer" designation's bn label, and all 3 seeded announcements' bn titles.
 
 ### Fixed
 - Online admission form: Last name, Blood group, Student phone, Student photo, Permanent address,
