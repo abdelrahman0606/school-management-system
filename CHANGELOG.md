@@ -27,6 +27,15 @@ follows [Semantic Versioning](https://semver.org/).
   Officer" designation's bn label, and all 3 seeded announcements' bn titles.
 
 ### Fixed
+- `bn.json` full-catalog sweep for remaining translation-quality issues (whitespace, values reused
+  across keys with unrelated meanings, cross-checked against the actual call site rather than
+  assumed): fixed a trailing space on "Mother's Name", "Apply action to" (a bulk-action confirm
+  dialog fragment) which had been reduced to just "নির্বাচিত" ("selected"), losing the actual verb,
+  and "Promoted" which shared "উত্তীর্ণ" ("passed [an exam]") with "Pass" — promoting a student to the
+  next class is a different concept, now "উন্নীত". Two other flagged duplicates turned out correct on
+  inspection of their real call sites and were left alone: "Run" (a report button — চালান is also the
+  Bengali imperative "run/operate it", not just the noun "invoice" it happens to share a spelling
+  with) and "Clear" (an actual bulk-delete action on exam seating, so মুছুন/"Delete" is accurate).
 - `bn.json` review pass over the 126 AI-suggested (MyMemory) keys added in the previous entry: fixed
   26 that were wrong, garbled, or inconsistent with the rest of the catalog — outright mistranslations
   ("Background Image" was "Account name", "Body Text Color" was "Heading text color", "og:image" was
