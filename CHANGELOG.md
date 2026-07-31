@@ -6,6 +6,38 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- Reported: saving the Menu editor for a locale after using "Build from default language (AI)"
+  left the tree corrupted — some top-level items duplicated, the Gallery dropdown split into two
+  separate single-child dropdowns instead of one with both children, and later items (Notices,
+  Contact) missing entirely, despite the page showing a clean, correct tree right up until "Save
+  Menu" was clicked — and it reproduced identically on every attempt, growing worse each time a
+  save was repeated (confirmed via direct DB dumps: the same specific items were left behind every
+  single time, never a random subset — the signature of a deterministic bug, not a timing race).
+  Root cause: `menu_items.parent_id` is a self-referencing foreign key with `cascadeOnDelete()` (a
+  dropdown's children are auto-deleted when their parent row is), and `MenuService::replaceItems()`
+  deleted via `$menu->allItems()->delete()`, whose relation carries `orderBy('sort_order')`. A
+  child's own `sort_order` is independently 0-based per parent, so it routinely ties with unrelated
+  top-level items' `sort_order` values — and when that ordering caused the delete statement to
+  remove a dropdown's parent row before its own scan reached that parent's children, the cascade
+  silently removed those children out from under the statement, while rows the cascade never raced
+  were left behind untouched — then the fresh insert landed on top of whatever survived. Fixed by
+  deleting children (no children of their own — one level of nesting only) before parents, with no
+  ordering involved either time, so the cascade can never race the delete statement's own scan.
+  Also closed a related, smaller gap while investigating: `replaceItems()` had no protection against
+  two overlapping saves against the same menu racing each other (unlike `replaceItemsIfEmpty()`,
+  used by the AI-suggest flow, which already locks the row) — it now takes the same row lock first.
+  The Save Menu button is also disabled (with a spinner) the instant it's clicked, closing off the
+  easiest way to fire two overlapping saves at the source.
+
+### Changed
+- Removed the Menu editor's "Copy from default language to start translating" button (and its
+  `POST /admin/menus/copy-locale` route/controller action) — it duplicated "Build from default
+  language (AI)" (Phase 5) for no real benefit once that shipped, and having both on screen was
+  more confusing than useful. The Page editor keeps its own Copy button, which still offers
+  something AI-suggest there doesn't (labels stay in the source language rather than
+  auto-translated, useful when a school wants to translate by hand).
+
 ### Added
 - Multilingual content foundation (`docs/modules/30-multilingual-content-plan.md` Phase 1):
   `page_layouts` gains `locale` + per-locale SEO meta columns, `menus` gains `locale`, and a new
@@ -103,6 +135,19 @@ follows [Semantic Versioning](https://semver.org/).
   `app_locale` a visitor had actually chosen (reported: the language switcher "reverts back to
   English" on that page specifically). Now matches `admin`/`admin/*` (an exact segment boundary)
   instead.
+- The above backend-locale split exposed a real, previously-latent crash: any admin page fatals
+  (`htmlspecialchars(): Argument #1 ($string) must be of type string, array given`) rendering
+  `components/sidebar.blade.php` under `backend_locale=bn`, because nothing had ever rendered the
+  admin panel in a non-English locale independently of the public site before. Root cause: a no-dot
+  `__()` key not found in the flat English-as-key JSON cache falls through to Laravel's group-based
+  translation lookup, treating the *entire key* as a group name — `__('SMS')` (used as the nav
+  label, command palette entry, and page title/breadcrumbs across the SMS module) collided with
+  the real `resources/lang/{locale}/sms.php` group file, and since the key has no item segment,
+  `Arr::get()` returned the file's *whole array* instead of a string. Renamed that lang file to
+  `sms_templates.php` (no visible UI text changed — only the internal `sms.due_reminder` key,
+  updated at its one call site in `SendSmsBatchJob`) to remove the collision, and added a defensive
+  string coercion in `sidebar.blade.php`'s label output so a future label/lang-group name clash
+  degrades to a blank label instead of a 500.
 
 ## [1.3.4] — 2026-07-31
 

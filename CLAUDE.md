@@ -245,6 +245,39 @@ DB::transaction(function () use ($data) {
   additionally checks, on demand (`GET /api/v2/health`, `php artisan version:verify`), whether that version
   number corresponds to a real tagged commit reachable from `HEAD` — catches a hand-edited/stale `VERSION`
   file rather than silently displaying (or trusting) whatever it says.
+- **A bare (no-dot) `__()` key falls through to Laravel's GROUP-based translation lookup if it
+  isn't found in the flat English-as-key JSON cache — and that lookup treats the whole key as a
+  group *file* name.** `__('SMS')` (the admin nav label, command palette entry, and several
+  page titles/breadcrumbs) collided with `resources/lang/{locale}/sms.php`; since the key has no
+  item segment, `Translator::getLine()`'s `Arr::get($group, null)` returns the file's *entire
+  array* instead of a string, and the first `{{ }}` that echoes it fatals with `htmlspecialchars():
+  ... array given`. This was latent from the day that file was added — it only surfaced once a
+  page was actually rendered under a non-English `backend_locale` (Language module's public/
+  backend locale split made that possible for the first time). Never name a `resources/lang/*/`
+  group file after a bare English string that's also used as a translation *key* anywhere in the
+  app (renamed `sms.php` → `sms_templates.php`) — and treat this as a standing constraint on any
+  future `resources/lang/{locale}/{name}.php` group file, not just this one instance.
+- **A self-referencing `cascadeOnDelete()` foreign key can race a bulk `DELETE ... ORDER BY` on
+  the SAME table.** `menu_items.parent_id` cascades (a dropdown's children die with their parent).
+  `MenuService::replaceItems()` deleted via `$menu->allItems()->delete()`, whose relation carries
+  `orderBy('sort_order')` — but a child's own `sort_order` is independently 0-based per parent, so
+  it routinely ties with unrelated top-level items' `sort_order`. When that ordering caused the
+  delete statement to reach a dropdown's parent row before its own scan reached that parent's
+  children, the cascade silently removed those children out from under the statement, while
+  whatever rows the cascade never raced were left behind — deterministically, the same specific
+  items every time (confirmed via raw DB dumps: not a random subset, not timing-dependent), then a
+  fresh insert landing on top of the leftovers. Any bulk delete on a table with a self-referencing
+  cascading FK must delete children before parents explicitly, with **no** `ORDER BY` on either
+  step — never rely on a relation's own `orderBy()` (added for display purposes, e.g. rendering a
+  menu in the right order) surviving unmodified into a `->delete()` call built on top of it.
+- **A reproducible-every-time bug is not a race condition — don't reach for locking/concurrency
+  fixes on a symptom before confirming the mechanism with real data.** The menu-corruption bug
+  above was initially (wrongly) diagnosed as a double-submit race and "fixed" with a row lock; only
+  after asking for raw `tinker` dumps of the actual `menu_items` rows before/after a save — and
+  seeing the EXACT same items survive/vanish on three separate reproductions — did it become clear
+  the split was deterministic, ruling out timing entirely and pointing at the cascade/ORDER BY
+  interaction instead. When a "random-looking" corruption bug turns out to reproduce identically on
+  repeat attempts, that's the tell it isn't random at all.
 
 ## Git Commit Convention
 ```
