@@ -247,17 +247,40 @@ easy for the reviewing admin to spot and finish by hand.
    website — see Non-goals below, updated): `HasTranslations` wired onto `Announcement`
    (title/body), `Staff` (name), `Designation` (name), `Department` (name) — all four reuse
    Phase 4/5's exact mechanism (`content_translations`, `TranslationService::saveMany()`, a
-   per-model `Suggest*TranslationJob`) unchanged, just for admin-only content (staff directory,
-   announcements board) rather than the public site. The one real difference: these are all
-   per-row list-with-modal-per-row admin screens (DataTable + Bootstrap modal), not a singleton
-   settings page or a dedicated edit route — so the language-panel-per-`<details>` and "hidden
-   sibling AI-suggest form" pattern from School's editor had to go *inside* each row's own edit
-   modal, with per-row-unique DOM/route ids (`ai-suggest-{model}-{id}-{locale}`) instead of one
-   set per page. Designation and Department share one `SuggestStaffReferenceTranslationJob`
-   (parameterized by model class string) the same way `StaffReferenceController` already shares
-   one controller for both. `TranslationService::saveMany()`'s union type widened to admit all
-   four new hosts (see its own docblock). Tests
-   (`tests/Feature/Admin/MultilingualAnnouncementAndStaffContentTest.php`). Merged to `dev`.
+   per-model `Suggest*TranslationJob`) unchanged, for admin editing (staff directory,
+   announcements board). The one real difference: these are all per-row list-with-modal-per-row
+   admin screens (DataTable + Bootstrap modal), not a singleton settings page or a dedicated edit
+   route — so the language-panel-per-`<details>` and "hidden sibling AI-suggest form" pattern
+   from School's editor had to go *inside* each row's own edit modal, with per-row-unique
+   DOM/route ids (`ai-suggest-{model}-{id}-{locale}`) instead of one set per page. Designation and
+   Department share one `SuggestStaffReferenceTranslationJob` (parameterized by model class
+   string) the same way `StaffReferenceController` already shares one controller for both.
+   `TranslationService::saveMany()`'s union type widened to admit all four new hosts (see its own
+   docblock). Tests (`tests/Feature/Admin/MultilingualAnnouncementAndStaffContentTest.php`).
+   Merged to `dev`.
+8. ✅ **Public block rendering follow-up** — Phase 7 above wired up admin editing/AI-suggest for
+   Announcement/Staff but missed that both already feed the *public* site through the "notices"
+   and "staff" website blocks (`PageRenderService::resolveBlockData()` →
+   `PublicPortalService::notices()`/`staffList()` → `public/blocks/render.blade.php`) and the
+   header notice ticker (`AppServiceProvider`'s `public.partials.header` composer). That live-data
+   path is completely separate from `BlockTranslator` (which only ever walks a page's stored
+   `layout_json` — the block's own static `heading` field, never the live-resolved
+   notices/members list), so admin-saved translations never reached a real visitor: `$locale` was
+   never threaded down to `PublicPortalService` at all. Fixed by adding a required `string $locale`
+   parameter through the whole chain — `PageRenderService::renderPage()`/`buildView()`/
+   `buildViewFromBlocks()`/`resolveBlockData()`/`resolveNestedBlocks()`/`staffFor()` down to
+   `PublicPortalService::notices()`/`staffList()`, which now call `transOr()` per item (skipped
+   entirely for the default locale — no-op fast path, same convention as
+   `publishedLayoutFor()`'s own default-locale check). `listVisible()`'s Announcement collection is
+   cache-aside (`BaseRepository::remember()`); mutating a cached model's `title`/`body` in place
+   would leak one locale's translated text into every other locale's cache hit under any cache
+   store that doesn't round-trip through serialization (the `array` driver the test suite runs
+   on) — both `notices()` and `staffList()` clone each item before overwriting its translatable
+   attributes. Also threaded through the admin page-builder's live-preview endpoints
+   (`preview()`/`previewBlock()`) so the iframe reflects the language tab actually being edited,
+   not always the default locale. Tests
+   (`tests/Feature/Public/MultilingualBlockContentTest.php`). Landed directly on `dev` (small
+   follow-up, same convention as #6 above).
 
 Each phase is its own branch off `dev`, its own commit(s), tests green before merge — same
 workflow as modules 20/29. Small follow-up fixes after a phase's initial merge (like #6 above) go
@@ -268,7 +291,10 @@ directly onto `dev` instead, same convention CLAUDE.md documents for every other
 - Locale-prefixed URLs (`/en/about`) — out of scope, stays session-based.
 - Machine-translating existing untouched content in bulk on migration — new content only,
   admin/AI-assist opts in per field.
-- Translating staff/student-facing portal UI strings, or any further admin-only content beyond
-  what Phase 7 above already covers (Announcement title/body, Staff/Designation/Department name)
-  — those four were the specific, explicitly-requested exceptions to this plan's original
-  public-website-only scope; nothing else in the admin panel gained translation from this work.
+- Translating staff/student-facing portal UI strings, or any further admin-editable content
+  beyond what Phase 7 above already covers (Announcement title/body, Staff/Designation/Department
+  name) — those four were the specific, explicitly-requested exceptions to this plan's original
+  public-website-only scope. (Phase 8 corrected an initial assumption here: Announcement/Staff
+  content isn't admin-only — it already reaches the public site via the notices/staff blocks and
+  header ticker, so Phase 8 wired the locale into that rendering path too. The scope boundary is
+  still "these four models, nothing else," just not "admin-only" as first described.)

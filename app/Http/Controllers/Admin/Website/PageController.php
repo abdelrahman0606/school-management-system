@@ -349,10 +349,16 @@ class PageController extends Controller
         $sidebar = $template === 'sidebar'
             ? $this->normalizeBlocks($request->input('sidebar', []), PageRenderService::SIDEBAR_BLOCKS)
             : [];
+        // #page-form always carries a hidden 'locale' input for whichever
+        // language tab is open (edit.blade.php) — runPreview()'s
+        // `new FormData(form)` includes it automatically, so the notices/
+        // staff blocks preview in the language actually being edited
+        // instead of always the default locale.
+        $locale = Language::resolve($request->input('locale'));
 
         return view('public.page', [
             'page' => $page,
-            'view' => $this->render->buildViewFromBlocks($schoolId, $template, $blocks, $sidebar),
+            'view' => $this->render->buildViewFromBlocks($schoolId, $template, $blocks, $sidebar, $locale),
             'settings' => SiteSetting::forSchool($schoolId),
             'school' => School::current(),
         ]);
@@ -381,10 +387,14 @@ class PageController extends Controller
             return response('', 204);
         }
         $block = $blocks[0];
+        // See preview()'s own comment — runBlockPreview() explicitly appends
+        // #page-form's 'locale' field (edit.blade.php) since blockFormData()
+        // otherwise only collects the single block card's own fields.
+        $locale = Language::resolve($request->input('locale'));
 
         $html = view($group === 'sidebar' ? 'public.sidebar.render' : 'public.blocks.render', [
             'type' => $block['type'],
-            'd' => $this->render->resolveBlockData($schoolId, $block),
+            'd' => $this->render->resolveBlockData($schoolId, $block, $locale),
             'style' => $block['style'],
             'layout' => $block['layout'],
             'contained' => $request->boolean('contained'),

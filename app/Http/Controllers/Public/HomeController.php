@@ -54,11 +54,13 @@ class HomeController extends Controller
         }
 
         // Fallback: default landing built from live data.
+        $locale = app()->getLocale();
+
         return view('public.home', [
             'school' => $school,
             'settings' => SiteSetting::forSchool($school->id),
-            'notices' => $this->portal->notices($school->id),
-            'staff' => $this->portal->staffList($school->id),
+            'notices' => $this->portal->notices($school->id, $locale),
+            'staff' => $this->portal->staffList($school->id, [], $locale),
             'stats' => $this->portal->stats($school->id),
         ]);
     }

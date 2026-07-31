@@ -98,7 +98,7 @@ class AdmissionFormTest extends TestCase
         $page = Page::where('school_id', $this->school->id)->where('slug', 'online-admission')->firstOrFail();
         $layout = $page->publishedLayout->first();
 
-        $view = app(PageRenderService::class)->buildView($this->school->id, $layout->layout_json);
+        $view = app(PageRenderService::class)->buildView($this->school->id, $layout->layout_json, 'en');
 
         $this->assertIsString(serialize($view));
     }

@@ -1680,6 +1680,11 @@
 
           var fd = blockFormData(card);
           fd.append('group', group);
+          // blockFormData() only collects this card's own fields — the
+          // notices/staff blocks need the page-level 'locale' field too
+          // (see PageController::previewBlock()'s own comment).
+          var localeInput = form.querySelector('[name="locale"]');
+          if (localeInput) fd.append('locale', localeInput.value);
           // A nested child (path.length > 1) is ALWAYS rendered inside its
           // parent's own wrapper (see the container/grid @case in
           // public/blocks/render.blade.php, which always passes

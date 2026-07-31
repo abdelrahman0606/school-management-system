@@ -130,17 +130,23 @@ class PageRenderService
      * Resolve the live data a dynamic block needs (notices/stats/staff). Static
      * blocks (text/image) just return their own stored data.
      *
+     * $locale: docs/modules/30-multilingual-content-plan.md Phase 4/5
+     * extension — notices/staff are live-resolved from Announcement/Staff on
+     * every render (never baked into layout_json like a block's own
+     * 'heading' text), so the locale has to be threaded all the way down to
+     * PublicPortalService rather than translated once and cached.
+     *
      * @param  array{type: string, data: array}  $block
      * @return array<string, mixed>
      */
-    public function resolveBlockData(int $schoolId, array $block, int $depth = 0): array
+    public function resolveBlockData(int $schoolId, array $block, string $locale, int $depth = 0): array
     {
         $data = $block['data'] ?? [];
 
         return match ($block['type']) {
-            'notices', 'recent_notices' => $data + ['notices' => $this->portal->notices($schoolId)],
+            'notices', 'recent_notices' => $data + ['notices' => $this->portal->notices($schoolId, $locale)],
             'stats' => $data + ['stats' => $this->portal->stats($schoolId)],
-            'staff' => $data + ['members' => $this->staffFor($schoolId, $data)],
+            'staff' => $data + ['members' => $this->staffFor($schoolId, $data, $locale)],
             'contact_info', 'contact' => $data + ['school' => School::find($schoolId)],
             'admission_form' => $data + [
                 'classes' => SchoolClass::where('school_id', $schoolId)
@@ -156,7 +162,7 @@ class PageRenderService
             // its 'd' key (undefined array key at render time). array_merge()
             // correctly lets the resolved value win.
             'container', 'grid' => array_merge($data, [
-                'blocks' => $this->resolveNestedBlocks($schoolId, is_array($data['blocks'] ?? null) ? $data['blocks'] : [], $depth + 1),
+                'blocks' => $this->resolveNestedBlocks($schoolId, is_array($data['blocks'] ?? null) ? $data['blocks'] : [], $depth + 1, $locale),
             ]),
             default => $data,
         };
@@ -184,7 +190,7 @@ class PageRenderService
      * @param  list<array<string, mixed>>  $blocks
      * @return array<int, array{type: string, d: array, style: array, layout: array}>
      */
-    private function resolveNestedBlocks(int $schoolId, array $blocks, int $depth): array
+    private function resolveNestedBlocks(int $schoolId, array $blocks, int $depth, string $locale): array
     {
         $allowed = $depth >= self::MAX_NESTING_DEPTH ? self::LEAF_BLOCKS : self::BLOCKS;
         $out = [];
@@ -195,7 +201,7 @@ class PageRenderService
             }
             $out[] = [
                 'type' => $type,
-                'd' => $this->resolveBlockData($schoolId, $b, $depth),
+                'd' => $this->resolveBlockData($schoolId, $b, $locale, $depth),
                 'style' => $b['style'] ?? [],
                 'layout' => $b['layout'] ?? [],
             ];
@@ -213,7 +219,7 @@ class PageRenderService
      * @param  array<string, mixed>  $data
      * @return Collection<int, Staff>
      */
-    private function staffFor(int $schoolId, array $data): Collection
+    private function staffFor(int $schoolId, array $data, string $locale): Collection
     {
         $filters = [];
         if (! empty($data['designation_id'])) {
@@ -223,7 +229,7 @@ class PageRenderService
             $filters['department_id'] = (int) $data['department_id'];
         }
 
-        return $this->portal->staffList($schoolId, $filters);
+        return $this->portal->staffList($schoolId, $filters, $locale);
     }
 
     /**
@@ -548,8 +554,8 @@ class PageRenderService
             ['pageview'],
             "pageview:layout:{$layout->id}",
             self::CACHE_TTL,
-            function () use ($page, $layout): array {
-                $view = $this->buildView($page->school_id, $layout->layout_json);
+            function () use ($page, $layout, $locale): array {
+                $view = $this->buildView($page->school_id, $layout->layout_json, $locale);
                 $view['meta'] = [
                     'title' => $layout->title,
                     'meta_title' => $layout->meta_title,
@@ -571,11 +577,11 @@ class PageRenderService
      * @param  array<string, mixed>|null  $layout
      * @return array{template: string, blocks: array<int, array{type: string, d: array, style: array, layout: array}>, sidebar: array<int, array{type: string, d: array, style: array, layout: array}>}
      */
-    public function buildView(int $schoolId, ?array $layout): array
+    public function buildView(int $schoolId, ?array $layout, string $locale): array
     {
         $norm = $this->normalize($layout);
 
-        return $this->buildViewFromBlocks($schoolId, $norm['template'], $norm['blocks'], $norm['sidebar']);
+        return $this->buildViewFromBlocks($schoolId, $norm['template'], $norm['blocks'], $norm['sidebar'], $locale);
     }
 
     /**
@@ -591,11 +597,11 @@ class PageRenderService
      * @param  array<int, array{type: string, data: array, style: array, layout: array}>  $sidebar
      * @return array{template: string, blocks: array<int, array{type: string, d: array, style: array, layout: array}>, sidebar: array<int, array{type: string, d: array, style: array, layout: array}>}
      */
-    public function buildViewFromBlocks(int $schoolId, string $template, array $blocks, array $sidebar): array
+    public function buildViewFromBlocks(int $schoolId, string $template, array $blocks, array $sidebar, string $locale): array
     {
         $map = fn (array $b): array => [
             'type' => $b['type'],
-            'd' => $this->resolveBlockData($schoolId, $b),
+            'd' => $this->resolveBlockData($schoolId, $b, $locale),
             'style' => $b['style'] ?? [],
             'layout' => $b['layout'] ?? [],
         ];

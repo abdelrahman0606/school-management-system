@@ -238,7 +238,7 @@ class AppServiceProvider extends ServiceProvider
         View::composer('public.partials.header', function ($view): void {
             $school = School::current();
             $view->with('ticker', $school
-                ? app(PublicPortalService::class)->notices($school->id)->take(8)
+                ? app(PublicPortalService::class)->notices($school->id, app()->getLocale())->take(8)
                 : collect());
             // docs/modules/30-multilingual-content-plan.md Phase 3 — the
             // current visitor's locale's own menu, falling back to the

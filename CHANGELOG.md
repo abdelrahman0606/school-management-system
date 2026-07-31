@@ -9,7 +9,7 @@ follows [Semantic Versioning](https://semver.org/).
 ### Added
 - Per-field translation for Announcement (title + body) and Staff/Designation/Department (name),
   extending `docs/modules/30-multilingual-content-plan.md`'s Phase 4/5 pattern beyond the public
-  website to these four admin-only screens. `HasTranslations` wired onto all four models; each
+  website's original scope to these four models. `HasTranslations` wired onto all four models; each
   gets a "Translations" section (one collapsed panel per active non-default language, same
   convention as School settings) inside its existing modal-per-row edit form, plus a "Suggest
   translations (AI)" button per language. Designation and Department share one
@@ -19,6 +19,23 @@ follows [Semantic Versioning](https://semver.org/).
   (`tests/Feature/Admin/MultilingualAnnouncementAndStaffContentTest.php`).
 
 ### Fixed
+- Reported: the newly-added Announcement/Staff translations weren't showing up on the public
+  website — the "notices" and "staff" blocks (and the header's notice ticker) kept showing the
+  default-locale English text no matter which language a visitor was browsing in. Root cause: those
+  blocks' content is *live-resolved* from Announcement/Staff on every render
+  (`PageRenderService::resolveBlockData()` → `PublicPortalService::notices()`/`staffList()`), a
+  completely separate path from `BlockTranslator` (which only ever translates a page's stored
+  `layout_json` — a block's own static `heading` field, never live-resolved data) — the visitor's
+  locale was simply never passed down to `PublicPortalService` at all, anywhere in the chain. Fixed
+  by threading a required `string $locale` parameter through the full render pipeline
+  (`renderPage()`/`buildView()`/`buildViewFromBlocks()`/`resolveBlockData()`/
+  `resolveNestedBlocks()`/`staffFor()`) down to `notices()`/`staffList()`, which now apply
+  `transOr()` per item (skipped for the default locale as a fast path). `listVisible()`'s
+  Announcement collection is cache-aside; both methods clone each item before overwriting its
+  translatable attributes so a locale's translated text can never leak into another locale's cache
+  hit. Also wired into the admin page-builder's live-preview endpoints so the iframe reflects
+  whichever language tab is actually being edited. Tests
+  (`tests/Feature/Public/MultilingualBlockContentTest.php`).
 - Reported: saving the Menu editor for a locale after using "Build from default language (AI)"
   left the tree corrupted — some top-level items duplicated, the Gallery dropdown split into two
   separate single-child dropdowns instead of one with both children, and later items (Notices,
