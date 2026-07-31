@@ -38,7 +38,8 @@ class ContactFormTest extends TestCase
 
         $page = Page::create(['school_id' => $this->school->id, 'slug' => 'contact', 'title' => 'Contact', 'status' => 'published']);
         PageLayout::create([
-            'school_id' => $this->school->id, 'page_id' => $page->id, 'is_published' => true, 'published_at' => now(),
+            'school_id' => $this->school->id, 'page_id' => $page->id, 'locale' => 'en',
+            'is_published' => true, 'published_at' => now(),
             'layout_json' => ['template' => 'full', 'blocks' => [['type' => 'contact', 'data' => ['heading' => 'Get in touch']]]],
         ]);
     }
