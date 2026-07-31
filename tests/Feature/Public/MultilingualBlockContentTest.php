@@ -9,8 +9,10 @@ use App\Modules\Staff\Models\Staff;
 use App\Modules\Website\Models\Page;
 use App\Modules\Website\Models\PageLayout;
 use App\Modules\Website\Models\SiteSetting;
+use App\Support\LocalizedDate;
 use Database\Seeders\LanguageSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 /**
@@ -139,5 +141,52 @@ class MultilingualBlockContentTest extends TestCase
         $this->withSession(['app_locale' => 'bn'])->get('/home-with-ticker')
             ->assertOk()
             ->assertSee('পরীক্ষার সময়সূচী');
+    }
+
+    /**
+     * App\Support\LocalizedDate — native (offline, no translation API) month
+     * name + digit localization. The notices block's date line
+     * (optional($n->publish_at)->format('d M Y') before this) is the most
+     * visible place this shows up.
+     */
+    public function test_notices_block_date_shows_bengali_month_name_and_native_digits(): void
+    {
+        Carbon::setTestNow(Carbon::create(2026, 7, 31, 10));
+
+        Announcement::create([
+            'school_id' => $this->school->id, 'title' => 'Exam Schedule', 'body' => 'Exams start Monday.',
+            'type' => 'exam', 'audience' => 'all', 'priority' => 'normal',
+            'is_pinned' => false, 'is_trash' => false, 'publish_at' => now()->subDay(), // 2026-07-30
+        ]);
+
+        $this->publishPage('notices-date', [
+            'template' => 'full',
+            'blocks' => [['type' => 'notices', 'data' => []]],
+        ]);
+
+        $this->withSession(['app_locale' => 'bn'])->get('/notices-date')
+            ->assertOk()
+            ->assertSee('৩০ জুলাই ২০২৬');
+
+        Carbon::setTestNow();
+    }
+
+    /**
+     * The footer copyright year (public/layout.blade.php) uses PHP's raw
+     * date('Y'), which Carbon::setTestNow() doesn't affect — asserts against
+     * whatever "now" actually is via the same LocalizedDate::digits() helper
+     * the view itself calls, rather than hardcoding a year that would go
+     * stale.
+     */
+    public function test_footer_copyright_year_uses_native_bengali_digits(): void
+    {
+        $this->publishPage('footer-year', [
+            'template' => 'full',
+            'blocks' => [['type' => 'heading', 'data' => ['text' => 'Hi']]],
+        ]);
+
+        $this->withSession(['app_locale' => 'bn'])->get('/footer-year')
+            ->assertOk()
+            ->assertSee(LocalizedDate::digits(date('Y'), 'bn'));
     }
 }

@@ -57,7 +57,7 @@
       @forelse(($d['notices'] ?? collect())->take($d['limit'] ?? 5) as $n)
         <div class="small border-bottom py-2">
           <div class="fw-semibold">{{ $n->title }}</div>
-          <div class="text-muted">{{ optional($n->publish_at ?? $n->created_at)->format('d M Y') }}</div>
+          <div class="text-muted">{{ \App\Support\LocalizedDate::format($n->publish_at ?? $n->created_at, 'd M Y') }}</div>
         </div>
       @empty
         <p class="text-muted small mb-0">{{ __('No Notices.') }}</p>

@@ -7,6 +7,18 @@ follows [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- `App\Support\LocalizedDate` — native (offline, no third-party translation API) date
+  localization: translated month/day names via Carbon's own bundled locale data
+  (`vendor/nesbot/carbon`, a one-time composer install, never a runtime network call), plus a
+  hardcoded native-digit map (currently Bengali ০-৯) Carbon doesn't apply on its own. `SetLocale`
+  middleware now also calls `Carbon::setLocale()` alongside `app()->setLocale()`, so every
+  `translatedFormat()` call downstream (this helper, or a raw Carbon call anywhere else) picks up
+  the visitor's locale automatically. Wired into the public site's four date-rendering call sites:
+  the header's "today" date, the notices block/sidebar/homepage-fallback date lines, and the
+  footer's copyright year + established year. Tests: `tests/Unit/Support/LocalizedDateTest.php`,
+  plus two new cases in `MultilingualBlockContentTest.php`. Admin/portal/staff areas (~70 more
+  `->format()` call sites) are NOT touched by this — public-site-only for now, same scoping
+  discipline as the rest of this multilingual work; a good next step if wanted.
 - Per-field translation for Announcement (title + body) and Staff/Designation/Department (name),
   extending `docs/modules/30-multilingual-content-plan.md`'s Phase 4/5 pattern beyond the public
   website's original scope to these four models. `HasTranslations` wired onto all four models; each

@@ -5,17 +5,21 @@
     // swap as layout.blade.php's own $siteName computation.
     $siteName = $settings->site_name ?? ($school?->transOr('name') ?? 'Our School');
 
+    // The school's OWN configured locale, not necessarily the visitor's
+    // browsing locale (app()->getLocale()) -- this date is shown as the
+    // institution's "today", so it stays in the school's home language even
+    // for a visitor browsing the site in a different one.
     $loc = $school?->locale ?? app()->getLocale();
     $tz = $school?->timezone ?? config('app.timezone');
     try {
-        $today = \Illuminate\Support\Carbon::now($tz)->locale($loc);
+        $today = \Illuminate\Support\Carbon::now($tz);
     } catch (\Throwable $e) {
-        $today = now()->locale($loc);
+        $today = now();
     }
-    $dateStr = $today->translatedFormat('l j F Y');
-    if (str_starts_with((string) $loc, 'bn')) {
-        $dateStr = strtr($dateStr, ['0' => '০', '1' => '১', '2' => '২', '3' => '৩', '4' => '৪', '5' => '৫', '6' => '৬', '7' => '৭', '8' => '৮', '9' => '৯']);
-    }
+    // App\Support\LocalizedDate -- translatedFormat() for the month/day
+    // names (Carbon's own bundled locale data, no API call) + a native-digit
+    // swap Carbon doesn't do on its own.
+    $dateStr = \App\Support\LocalizedDate::format($today, 'l j F Y', $loc);
 
     $tickerPos = $settings->ticker_position ?? 'below_nav';
     $showTicker = $tickerPos !== 'hidden' && ($ticker ?? collect())->isNotEmpty();

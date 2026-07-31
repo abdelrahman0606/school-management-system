@@ -62,7 +62,7 @@
                                     <div class="d-flex align-items-center justify-content-center notice-icon mb-3">
                                         <i class="bi bi-megaphone-fill"></i>
                                     </div>
-                                    <div class="small text-muted mb-1">{{ optional($n->publish_at ?? $n->created_at)->format('d M Y') }}</div>
+                                    <div class="small text-muted mb-1">{{ \App\Support\LocalizedDate::format($n->publish_at ?? $n->created_at, 'd M Y') }}</div>
                                     <h3 class="h6 fw-semibold">{{ $n->title }}</h3>
                                     <p class="text-muted small mb-0">{{ \Illuminate\Support\Str::limit(strip_tags($n->body), 120) }}
                                     </p>

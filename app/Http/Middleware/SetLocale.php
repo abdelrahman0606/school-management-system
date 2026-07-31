@@ -7,6 +7,7 @@ use App\Modules\Language\Models\Translation;
 use Closure;
 use Illuminate\Contracts\Translation\Translator;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\View;
 use Symfony\Component\HttpFoundation\Response;
 use Throwable;
@@ -58,6 +59,16 @@ class SetLocale
         }
 
         app()->setLocale($chosen);
+
+        // Carbon bundles its own month/day-name translations for every
+        // Symfony Translation locale (including bn) — this is offline data
+        // shipped in vendor/nesbot/carbon, never a network/API call. Setting
+        // it here means every ->translatedFormat() call downstream
+        // (App\Support\LocalizedDate, or a raw Carbon call) picks up the
+        // visitor's locale automatically without passing it explicitly. An
+        // explicit ->locale(...) on a specific instance (e.g. the header's
+        // school-configured-locale date) still overrides this default.
+        Carbon::setLocale($chosen);
 
         if ($chosen !== 'en') {
             $lines = Translation::linesFor($chosen);

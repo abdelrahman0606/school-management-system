@@ -888,7 +888,12 @@
                             ['label' => $school?->transOr('school_code_label'), 'value' => $school?->transOr('school_code')],
                             ['label' => $school?->transOr('technical_branch_code_label'), 'value' => $school?->transOr('technical_branch_code')],
                         ])->filter(fn ($c) => filled($c['value']));
-                        $footerEstablished = $school?->established ? (optional($school->established)->format('Y') ?? $school->established) : null;
+                        // 'established' is cast to a Carbon date on the model
+                        // ('date' cast) -- always null or a real date, never a
+                        // raw scalar, so LocalizedDate::format() (Y -> native
+                        // digits, no translated month/day needed here) is safe
+                        // with no extra fallback.
+                        $footerEstablished = \App\Support\LocalizedDate::format($school?->established, 'Y');
                     @endphp
                     @if ($footerCodes->isNotEmpty() || $footerEstablished)
                     <p class="mb-0 small text-white-50">
@@ -911,7 +916,7 @@
                 </div>
             </div>
             <hr class="border-secondary my-4">
-            <p class="small mb-0 text-center text-white-50">© {{ date('Y') }} {{ $siteName }}. {{ __('All rights reserved.') }}</p>
+            <p class="small mb-0 text-center text-white-50">© {{ \App\Support\LocalizedDate::digits(date('Y')) }} {{ $siteName }}. {{ __('All rights reserved.') }}</p>
         </div>
     </footer>
 
