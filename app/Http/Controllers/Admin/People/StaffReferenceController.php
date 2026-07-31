@@ -7,7 +7,6 @@ use App\Modules\Language\Models\Language;
 use App\Modules\Language\Services\TranslationService;
 use App\Modules\Staff\Models\Department;
 use App\Modules\Staff\Models\Designation;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
@@ -23,7 +22,7 @@ use Illuminate\View\View;
  */
 class StaffReferenceController extends Controller
 {
-    /** @var array<string, array{model: class-string<Model>, table: string, label: string, singular: string}> */
+    /** @var array<string, array{model: class-string<Designation|Department>, table: string, label: string, singular: string}> */
     private const TYPES = [
         'designations' => ['model' => Designation::class, 'table' => 'designations', 'label' => 'Designations', 'singular' => 'Designation'],
         'departments' => ['model' => Department::class,  'table' => 'departments',  'label' => 'Departments',  'singular' => 'Department'],
@@ -97,6 +96,11 @@ class StaffReferenceController extends Controller
             return back()->with('status', __('Nothing to translate — that is the default language.'));
         }
 
+        // Same narrowing as update() — TYPES only ever maps to
+        // Designation|Department, but $meta['model']::findOrFail() alone
+        // isn't enough for PHPStan to carry that through to $item.
+        assert($item instanceof Designation || $item instanceof Department);
+
         // dispatchSync() — see SchoolController::suggestTranslation()'s own
         // comment: queued dispatch() returns before Horizon actually runs
         // the job under this app's normal QUEUE_CONNECTION=redis.
@@ -120,7 +124,7 @@ class StaffReferenceController extends Controller
     }
 
     /**
-     * @return array{model: class-string<Model>, table: string, label: string, singular: string}
+     * @return array{model: class-string<Designation|Department>, table: string, label: string, singular: string}
      */
     private function meta(Request $request): array
     {

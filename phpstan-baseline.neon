@@ -9629,3 +9629,45 @@ parameters:
 			identifier: property.notFound
 			count: 2
 			path: app/Modules/User/Services/SessionDeviceService.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Language\\Models\\Language\:\:\$code\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/Comms/AnnouncementController.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Language\\Models\\Language\:\:\$code\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/People/StaffController.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Language\\Models\\Language\:\:\$code\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/People/StaffReferenceController.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Announcement\\Models\\Announcement\:\:\$title\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Language/Jobs/SuggestAnnouncementTranslationJob.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Announcement\\Models\\Announcement\:\:\$body\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Language/Jobs/SuggestAnnouncementTranslationJob.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Staff\\Models\\Staff\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Language/Jobs/SuggestStaffTranslationJob.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Staff\\Models\\Department\|App\\Modules\\Staff\\Models\\Designation\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Language/Jobs/SuggestStaffReferenceTranslationJob.php
