@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\Setup;
 
+use App\Modules\Language\Jobs\SuggestUiTranslationsJob;
 use App\Modules\Language\Models\Language;
 use App\Modules\Language\Models\Translation;
 use App\Modules\Language\Services\TranslationScanner;
@@ -123,6 +124,52 @@ class LanguageController extends Controller
         Translation::flushCache($code);
 
         return back()->with('status', __('Translations Saved.'));
+    }
+
+    /**
+     * "Suggest translations (AI)" for every row currently on screen — exactly
+     * the ids the Translations editor's own "Save Translations" button
+     * already submits as t[id]=value (same page/search/missing-only filter
+     * the admin is looking at; the button is a second submit on that same
+     * form, via formaction). Fills only whatever is still empty after that;
+     * never overwrites an existing translation.
+     *
+     * Persists any manually-typed values from this same submission FIRST
+     * (identical to saveTranslations()'s own loop) before running AI-suggest
+     * — otherwise an in-progress edit the admin had typed but not yet saved
+     * would be silently discarded by the back() redirect re-fetching from
+     * the DB. This makes "Suggest" a strict superset of "Save": it saves
+     * whatever you typed, then drafts AI suggestions for whatever's left.
+     */
+    public function suggestTranslations(Request $request, string $code): RedirectResponse
+    {
+        Language::where('code', $code)->where('code', '!=', 'en')->firstOrFail();
+
+        $values = (array) $request->input('t', []);
+        $ids = array_map('intval', array_keys($values));
+        if ($ids === []) {
+            return back()->with('status', __('No Strings On This Page To Translate.'));
+        }
+
+        foreach ($values as $id => $value) {
+            if (filled($value)) {
+                Translation::where('locale', $code)->where('id', (int) $id)->update(['value' => $value]);
+            }
+        }
+        // The mass-update above goes through the query builder, not a loaded
+        // model's save() -- Translation::booted()'s saved-event cache flush
+        // never fires for it, so it needs an explicit flush here (same as
+        // saveTranslations()'s own explicit call after its per-row loop).
+        Translation::flushCache($code);
+
+        // dispatchSync() -- see SchoolController::suggestTranslation()'s own
+        // comment: queued dispatch() returns before Horizon actually runs
+        // the job under this app's normal QUEUE_CONNECTION=redis. Re-queries
+        // fresh from the DB, so it correctly sees (and skips) the rows just
+        // saved above.
+        SuggestUiTranslationsJob::dispatchSync($code, $ids);
+
+        return back()->with('status', __('Translation suggestions filled in below — review before saving.'));
     }
 
     /** Re-scan the codebase for __() strings and register missing keys. */

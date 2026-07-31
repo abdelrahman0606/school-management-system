@@ -322,6 +322,12 @@ Route::middleware(['auth', 'school'])->prefix('admin')->name('admin.')->group(fu
         Route::post('/languages/scan', [$lc, 'scan'])->name('languages.scan');
         Route::get('/languages/{code}/translations', [$lc, 'translations'])->name('languages.translations');
         Route::put('/languages/{code}/translations', [$lc, 'saveTranslations'])->name('languages.translations.save');
+        // PUT, not POST: the "Suggest translations (AI)" button is a second
+        // submit on the SAME form as Save (via formaction) — that form is
+        // already @method('PUT')-spoofed, and the hidden _method=PUT field
+        // submits regardless of which button was clicked, so this route has
+        // to match PUT too or Laravel's method-override would 404 it.
+        Route::put('/languages/{code}/translations/suggest', [$lc, 'suggestTranslations'])->name('languages.translations.suggest');
 
         // Website page builder
         Route::get('/pages', [WebsitePageController::class, 'index'])->name('pages.index');

@@ -7,6 +7,16 @@ follows [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- "Suggest translations (AI)" for the general UI-string catalog (Settings → Languages →
+  Translations editor) — previously only the per-model content (School, Pages, Menus, Announcement,
+  Staff, ...) had an AI-suggest button; the flat `__()` string catalog (~2,200 keys) was manual-only.
+  New `SuggestUiTranslationsJob` translates a given list of `Translation` row ids via the existing
+  MyMemory gateway, never overwriting an already-translated row. The editor's "Suggest translations
+  (AI)" button is a second submit on the same form as "Save Translations" (via `formaction`) and
+  operates on exactly the ids currently on screen — one paginated page at a time (≤50 rows), not the
+  whole catalog in one request. Clicking it also saves any values you've already typed in but not
+  yet clicked Save for, so it can never discard in-progress edits. Tests
+  (`tests/Feature/Admin/UiTranslationSuggestTest.php`).
 - `App\Support\LocalizedDate` — native (offline, no third-party translation API) date
   localization: translated month/day names via Carbon's own bundled locale data
   (`vendor/nesbot/carbon`, a one-time composer install, never a runtime network call), plus a

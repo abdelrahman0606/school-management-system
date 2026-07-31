@@ -295,6 +295,25 @@ easy for the reviewing admin to spot and finish by hand.
    empty, so it can never clobber text the admin already typed. A real (non-ajax) form submit still
    redirects exactly as before — kept as a plain fallback. Tests added to
    `MultilingualAnnouncementAndStaffContentTest.php` covering the JSON response path.
+10. ✅ **"Suggest translation (AI)" for the flat UI-string catalog** (Settings → Languages →
+    Translations) — everywhere else Phase 5's AI-suggest covers a fixed field list on ONE model
+    (School's `name`/`address`/..., a Page's blocks, ...); this catalog has no field list at all —
+    every row IS its own translatable unit, keyed by the row's own `key` column (always the literal
+    English source text, never `Language::defaultCode()` — this table is English-as-key by
+    construction). New `SuggestUiTranslationsJob(string $locale, array $ids)` operates over an
+    explicit list of `Translation` row ids rather than "every untranslated row for this locale":
+    `LanguageController::suggestTranslations()` passes exactly the ids the editor's own "Save
+    Translations" form already submits (`t[id]=value`) — i.e. one paginated page's worth (≤50),
+    never the whole ~2,200-row catalog in one request, which would be long enough a sequence of
+    sequential MyMemory calls to risk a real HTTP timeout on shared hosting. The new button is a
+    second `type="submit"` on the SAME form (via `formaction`, reusing every `t[id]` field already
+    rendered — no separate hidden-id-list form needed) and is registered as a `PUT` route to match
+    that form's existing `@method('PUT')` spoofing. `suggestTranslations()` first persists any
+    manually-typed-but-unsaved values from the same submission (identical to `saveTranslations()`'s
+    own loop) before dispatching the job — otherwise an in-progress edit sitting in the form would
+    be silently discarded by the `back()` redirect re-fetching from the DB; this makes "Suggest" a
+    strict superset of "Save," never a data-loss risk. Tests
+    (`tests/Feature/Admin/UiTranslationSuggestTest.php`).
 
 Each phase is its own branch off `dev`, its own commit(s), tests green before merge — same
 workflow as modules 20/29. Small follow-up fixes after a phase's initial merge (like #6 above) go
