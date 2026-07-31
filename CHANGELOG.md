@@ -6,6 +6,15 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- `DemoCompletionSeeder`: demo data for the modules that were reachable but permanently empty on a
+  fresh install — Certificate (admit cards, testimonials, a transfer certificate), IdCard (student +
+  staff templates with a completed batch each), Sms (a completed due-reminder batch with per-recipient
+  logs, including one deliberately-failed send), Payroll (an approved run with entries derived from
+  the existing salary components), Loan (an approved staff loan with its repayment schedule), Refund
+  (a partial refund against an existing payment), Holidays, and public Contact messages. Runs after
+  `DemoOptionalSeeder`, which it depends on for staff salary values.
+
 ### Fixed
 - Online admission form: Last name, Blood group, Student phone, Student photo, Permanent address,
   and Notes still showed English under `bn` even after wrapping their fallback labels in `__()`.

@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
             DemoDataSeeder::class,
             DemoOperationsSeeder::class,
             DemoOptionalSeeder::class,
+            DemoCompletionSeeder::class,
             WebsitePagesSeeder::class,
         ]);
     }

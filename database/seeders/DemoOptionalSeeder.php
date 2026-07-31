@@ -25,7 +25,9 @@ use Illuminate\Database\Seeder;
 
 /**
  * Optional-module demo data. Enables the optional modules and seeds Library,
- * Transport, Payroll, and LMS so every module is walkable. Run last.
+ * Transport, Payroll, and LMS so every module is walkable. Run after
+ * DemoOperationsSeeder; DemoCompletionSeeder (Certificate/IdCard/Sms/payroll
+ * runs/Loan/Refund/Holidays/Contact messages) runs after this.
  */
 class DemoOptionalSeeder extends Seeder
 {
