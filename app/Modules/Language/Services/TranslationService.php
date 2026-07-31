@@ -22,10 +22,6 @@ class TranslationService
     public function saveMany(School|SiteSetting $record, array $translationsByLocale): void
     {
         foreach ($translationsByLocale as $locale => $fields) {
-            if (! is_array($fields)) {
-                continue;
-            }
-
             foreach ($fields as $field => $value) {
                 $value = is_string($value) ? trim($value) : $value;
 
