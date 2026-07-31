@@ -34,6 +34,17 @@ follows [Semantic Versioning](https://semver.org/).
   itself into a shared `Language::resolve()`, now used by both controllers. Demo site seeder
   fixed to seed its "Main menu" with an explicit locale (the same class of bug Phase 2 hit with
   `PageLayout`, caught here before it shipped).
+- Multilingual school identity & SEO text (`docs/modules/30-multilingual-content-plan.md` Phase
+  4): School name/address/institution codes and SiteSetting meta title/description can now vary
+  per language. Unlike Pages/Menus (a full duplicate row per locale), these are singleton-per-
+  school rows, so they reuse Phase 1's generic `content_translations` table directly — new
+  `TranslationService::saveMany()` bulk-saves every active language's overrides from one admin
+  form submit. School settings gains a collapsed "Translations" panel per active language; a
+  blank submitted field clears back to the fallback rather than saving a literal blank override
+  (guards against a freshly-added language's untouched panel silently blanking the whole public
+  site). Public site (header, footer, homepage, page `<title>`) now reads these via `transOr()`
+  instead of the raw column, with the same silent default-language fallback used throughout this
+  feature.
 
 ## [1.3.4] — 2026-07-31
 

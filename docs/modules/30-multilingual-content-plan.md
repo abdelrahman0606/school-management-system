@@ -166,8 +166,21 @@ Payroll/LMS).
    `Menu::firstOrCreate()` had no `locale`, which the new locale-scoped `Menu::published()` query
    would never have matched — the seeded demo nav would have silently disappeared. Tests
    (`tests/Feature/Admin/MultilingualMenuTest.php`). Merged to `dev`.
-4. **School identity + SiteSetting text**: admin Translations panel, public call-site swap to
-   `transOr()`. Tests.
+4. ✅ **School identity + SiteSetting text**: new `TranslationService::saveMany()` bulk-upserts
+   one `HasTranslations` host's fields for every active language from a single admin form
+   submit (School/SiteSetting are singleton-per-school rows, unlike Pages/Menus' per-locale
+   duplicate row, so this reuses Phase 1's `content_translations` mechanism directly rather than
+   adding a locale-switcher tab). School settings gains a "Translations" section — one collapsed
+   panel per active non-default language (`<details>`, matching the page's own Advanced Theme
+   convention), covering `name`/`address`/the three institution code label+value pairs plus
+   `SiteSetting::meta_title`/`meta_description`. A blank submitted field clears the override back
+   to the fallback rather than storing a literal empty-string translation (the naive form-submit
+   failure mode this had to guard against: every untouched language panel starts blank, so saving
+   the form once must not silently blank out the whole public site for every active language).
+   Public call sites swapped to `transOr()`: `layout.blade.php` (site name fallback, meta
+   description/title, footer address + institution codes), `header.blade.php` (site name
+   fallback), `home.blade.php`/`page.blade.php` (title/meta fallbacks). Tests
+   (`tests/Feature/Admin/MultilingualSchoolContentTest.php`). Merged to `dev`.
 5. **AI-assist**: `SuggestTranslationJob`, "Suggest translation" buttons wired into the Phase
    2–4 admin UIs, gated on `module.enabled:lms` + a set `lms_ai_api_key`. Tests (queued-job
    catches-everything per the sync-queue gotcha, never asserts a real network call).

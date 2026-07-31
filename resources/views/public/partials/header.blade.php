@@ -1,7 +1,9 @@
 @php
     $primary = $settings->primary_color ?? '#1d4ed8';
     $topText = $settings->topbar_text_color ?? '#ffffff';
-    $siteName = $settings->site_name ?? ($school->name ?? 'Our School');
+    // docs/modules/30-multilingual-content-plan.md Phase 4: same fallback
+    // swap as layout.blade.php's own $siteName computation.
+    $siteName = $settings->site_name ?? ($school?->transOr('name') ?? 'Our School');
 
     $loc = $school?->locale ?? app()->getLocale();
     $tz = $school?->timezone ?? config('app.timezone');

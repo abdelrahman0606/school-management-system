@@ -29,7 +29,7 @@
   $effectiveOgImage = ($view['meta']['og_image'] ?? null) ?: $page->og_image;
 @endphp
 @section('title')
-{!! ($effectiveMetaTitle ?: $effectiveTitle) . ' · ' . ($settings->site_name ?? $school?->name ?? 'School') !!}
+{!! ($effectiveMetaTitle ?: $effectiveTitle) . ' · ' . ($settings->site_name ?? $school?->transOr('name') ?? 'School') !!}
 @endsection
 {{-- Only defined when the page has its own value — layout.blade.php falls
      back to the site-wide Website > Settings default otherwise (see its
