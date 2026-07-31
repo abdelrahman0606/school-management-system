@@ -6,6 +6,8 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [1.4.0] — 2026-07-31
+
 ### Added
 - Translation-status columns on the Staff, Designation, Department, Pages, and Announcements admin
   list screens — one column per active non-default language, header = the language's short code
