@@ -35,7 +35,15 @@ class LocalizedDate
      * Latin-script locale) is returned from format() untouched, with no
      * strtr() call at all.
      *
-     * @var array<string, array<string, string>>
+     * Inner array keys are int, not string: '0'..'9' are canonical decimal
+     * integer strings, so PHP silently casts them to int keys at runtime
+     * (this is why PHPStan flagged the previous `array<string, string>` doc
+     * as not matching the actual literal's inferred type) — strtr() behaves
+     * identically either way, since it stringifies array keys itself when
+     * matching search terms, but the annotation has to describe what PHP
+     * actually stores.
+     *
+     * @var array<string, array<int, string>>
      */
     private const NATIVE_DIGITS = [
         'bn' => [

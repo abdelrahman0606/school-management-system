@@ -9665,3 +9665,51 @@ parameters:
 			identifier: property.notFound
 			count: 1
 			path: app/Modules/Language/Jobs/SuggestStaffReferenceTranslationJob.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Language\\Models\\Language\:\:\$code\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/Website/PageController.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Language\\Models\\Translation\:\:\$value\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Language/Jobs/SuggestUiTranslationsJob.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Language\\Models\\Translation\:\:\$key\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Language/Jobs/SuggestUiTranslationsJob.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\PageLayout\:\:\$locale\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Website/Models/Page.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Announcement\\Models\\Announcement\:\:\$title\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Website/Services/PublicPortalService.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Announcement\\Models\\Announcement\:\:\$body\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Website/Services/PublicPortalService.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Staff\\Models\\Staff\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Website/Services/PublicPortalService.php
+
+		-
+			message: '#^Access to an undefined property App\\Modules\\Staff\\Models\\Designation\:\:\$name\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Modules/Website/Services/PublicPortalService.php

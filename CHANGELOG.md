@@ -70,6 +70,23 @@ follows [Semantic Versioning](https://semver.org/).
   (`tests/Feature/Admin/MultilingualAnnouncementAndStaffContentTest.php`).
 
 ### Fixed
+- `vendor/bin/phpstan analyse` reported 9 fresh errors, all from this session's multilingual work
+  never having been checked against the (level 5, Larastan) analyser before now:
+  - 8 were `property.notFound` on plain-Eloquent-attribute reads (`$lang->code`, `$translation->value`/
+    `->key`, `$layout->locale`, `$announcement->title`/`->body`, `$staff->name`,
+    `$designation->name`) — the exact same shape of error already baselined for dozens of other
+    call sites across the app (this codebase has no `@property` PHPDoc convention on any model;
+    every one of these goes through `phpstan-baseline.neon` instead). Added matching baseline
+    entries for the 8 new call sites (`PageController.php`, `SuggestUiTranslationsJob.php`,
+    `Page.php`, `PublicPortalService.php`) rather than introducing a one-off annotation convention
+    nowhere else in the app uses.
+  - The 9th, in `LocalizedDate::NATIVE_DIGITS`, was a real (if harmless) type-annotation bug, fixed
+    directly instead of baselined: `'0' => '০'` etc. — PHP silently casts a canonical-decimal-string
+    array key like `'0'` to an actual `int` key at runtime, so the inner map is really
+    `array<int, string>`, not the `array<string, string>` the `@var` claimed. `strtr()` behaves
+    identically either way (it stringifies array keys itself when matching), so this was never a
+    runtime bug — just a docblock that didn't describe what PHP actually stores. Corrected to
+    `array<string, array<int, string>>`.
 - Reported: "header mobile number link will be in English but the shown content should be in
   translation" — the header's `tel:` phone link (and the contact/contact_info block's plain-text
   phone display) showed raw ASCII digits like every other number on the site used to. Localized
