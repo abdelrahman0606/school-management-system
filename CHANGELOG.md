@@ -27,6 +27,18 @@ follows [Semantic Versioning](https://semver.org/).
   Officer" designation's bn label, and all 3 seeded announcements' bn titles.
 
 ### Fixed
+- `bn.json` review pass over the 126 AI-suggested (MyMemory) keys added in the previous entry: fixed
+  26 that were wrong, garbled, or inconsistent with the rest of the catalog — outright mistranslations
+  ("Background Image" was "Account name", "Body Text Color" was "Heading text color", "og:image" was
+  rendered as "e.g.: image"), a leaked artifact ("Font Weight" had a stray `@ label` suffix), an
+  untranslated passthrough ("Not Translated"), broken grammar ("Get In Touch" → "টাচ পান", missing
+  "in"), a non-word ("Save as Template" used "ফর্মা", not a real Bengali word for template — every
+  other template-related string in the catalog uses টেমপ্লেট), and several units/terms left
+  inconsistent with how the same word is translated elsewhere (রং vs কালার, গ্লোবাল vs বিশ্বব্যাপী,
+  টিন্ট vs টিনের/"tin metal"). Also removed `sms_templates.due_reminder` — a `TranslationScanner`
+  false positive: that's a dotted Laravel group-file key (resolved via
+  `resources/lang/bn/sms_templates.php`, which already has a correct template), not a flat catalog
+  string, so it was never actually looked up through this table; it just sat there as noise.
 - Online admission form: Last name, Blood group, Student phone, Student photo, Permanent address,
   and Notes still showed English under `bn` even after wrapping their fallback labels in `__()`.
   Root cause was upstream in `PageRenderService::normalizeAdmissionFields()`, which always baked in
