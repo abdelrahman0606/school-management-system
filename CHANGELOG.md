@@ -6,6 +6,13 @@ follows [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- Online admission form: Last name, Blood group, Student phone, Student photo, Permanent address,
+  and Notes still showed English under `bn` even after wrapping their fallback labels in `__()`.
+  Root cause was upstream in `PageRenderService::normalizeAdmissionFields()`, which always baked in
+  a hardcoded English label even when the admin hadn't customized the field, so the Blade layer's
+  `__()` fallback never actually ran. Fixed by leaving the label `null` until the admin sets one.
+
 ## [1.4.0] — 2026-07-31
 
 ### Added
