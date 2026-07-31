@@ -4,9 +4,11 @@ namespace App\Modules\Website\Services;
 
 use App\Modules\Academic\Models\AcademicYear;
 use App\Modules\Academic\Models\SchoolClass;
+use App\Modules\Language\Models\Language;
 use App\Modules\School\Models\School;
 use App\Modules\Staff\Models\Staff;
 use App\Modules\Website\Models\Page;
+use App\Modules\Website\Models\PageLayout;
 use App\Support\CacheTags;
 use Illuminate\Support\Collection;
 
@@ -463,11 +465,30 @@ class PageRenderService
         ];
     }
 
-    /** The page whose layout should drive the homepage, if any. */
+    /** The page whose layout should drive the homepage, if any — locale-independent, the same Page serves every language. */
     public function homepage(int $schoolId): ?Page
     {
-        return Page::forSchool($schoolId)->published()->where('is_homepage', true)
-            ->with('publishedLayout')->first();
+        return Page::forSchool($schoolId)->published()->where('is_homepage', true)->first();
+    }
+
+    /**
+     * The published layout for one locale, falling back to the default
+     * locale's published layout when this locale has no translation yet
+     * (docs/modules/30-multilingual-content-plan.md Phase 2 — untranslated
+     * content silently renders in the default language, same as the
+     * existing __() translator's own fallback behavior). Returns null only
+     * when NEITHER locale has a published layout.
+     */
+    public function publishedLayoutFor(Page $page, string $locale): ?PageLayout
+    {
+        $layout = $page->publishedLayout()->where('locale', $locale)->first();
+        if ($layout) {
+            return $layout;
+        }
+
+        $default = Language::defaultCode();
+
+        return $locale !== $default ? $page->publishedLayout()->where('locale', $default)->first() : null;
     }
 
     /** How long a rendered page's live-resolved block data (notices/stats/staff) may lag reality. */
@@ -494,11 +515,20 @@ class PageRenderService
      * without a new publish — bounded by CACHE_TTL rather than making
      * Announcement/Staff/etc. aware this cache exists.
      *
-     * @return array{template: string, blocks: array, sidebar: array}|null
+     * $locale: docs/modules/30-multilingual-content-plan.md Phase 2 —
+     * resolved via publishedLayoutFor()'s default-locale fallback, so a
+     * locale with no translation yet still renders (in the default
+     * language) instead of coming back null. Still keyed by the resolved
+     * layout's own id, not by (page, locale): a fallback render reuses the
+     * SAME underlying row as a direct default-locale request, so they
+     * correctly share one cache entry rather than needlessly duplicating it
+     * per locale.
+     *
+     * @return array{template: string, blocks: array, sidebar: array, meta: array{title: ?string, meta_title: ?string, meta_desc: ?string, og_image: ?string}}|null
      */
-    public function renderPage(Page $page): ?array
+    public function renderPage(Page $page, string $locale): ?array
     {
-        $layout = $page->publishedLayout->first();
+        $layout = $this->publishedLayoutFor($page, $locale);
         if (! $layout) {
             return null;
         }
@@ -518,7 +548,17 @@ class PageRenderService
             ['pageview'],
             "pageview:layout:{$layout->id}",
             self::CACHE_TTL,
-            fn () => $this->buildView($page->school_id, $layout->layout_json),
+            function () use ($page, $layout): array {
+                $view = $this->buildView($page->school_id, $layout->layout_json);
+                $view['meta'] = [
+                    'title' => $layout->title,
+                    'meta_title' => $layout->meta_title,
+                    'meta_desc' => $layout->meta_desc,
+                    'og_image' => $layout->og_image,
+                ];
+
+                return $view;
+            },
         );
     }
 

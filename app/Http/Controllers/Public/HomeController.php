@@ -38,10 +38,11 @@ class HomeController extends Controller
 
         // A designated homepage page's published layout wins. renderPage()
         // (cached, keyed by the published layout's own id) returns null when
-        // there's no published layout, in which case the default landing
-        // below still applies exactly as before.
+        // there's no published layout for this locale OR the default
+        // locale, in which case the default landing below still applies
+        // exactly as before.
         $home = $this->render->homepage($school->id);
-        $view = $home ? $this->render->renderPage($home) : null;
+        $view = $home ? $this->render->renderPage($home, app()->getLocale()) : null;
 
         if ($home && $view) {
             return view('public.page', [

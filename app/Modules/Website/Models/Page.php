@@ -55,7 +55,33 @@ class Page extends Model
         return $this->hasMany(PageLayout::class)->orderByDesc('created_at')->orderByDesc('id');
     }
 
-    /** @return HasMany<PageLayout> */
+    /**
+     * Same ordering as layouts(), scoped to one locale — docs/modules/
+     * 30-multilingual-content-plan.md Phase 2. "Latest revision" is now
+     * per-locale: each language has its own independent draft/publish
+     * history, so admin edit()/history() need this instead of layouts()
+     * whenever "latest" means "latest FOR THE LOCALE BEING EDITED".
+     *
+     * @return HasMany<PageLayout>
+     */
+    public function layoutsForLocale(string $locale): HasMany
+    {
+        return $this->hasMany(PageLayout::class)->where('locale', $locale)
+            ->orderByDesc('created_at')->orderByDesc('id');
+    }
+
+    /**
+     * NOT locale-scoped by itself — a page can have one published row PER
+     * locale simultaneously now (Phase 2: publishing the English content
+     * doesn't touch a Bangla draft, and vice versa). Callers that need "the
+     * published layout for locale X" must add ->where('locale', ...)
+     * themselves (see PageRenderService::publishedLayoutFor()) rather than
+     * relying on ->first() here, which would return whichever locale's
+     * published row the query happens to return first once more than one
+     * exists.
+     *
+     * @return HasMany<PageLayout>
+     */
     public function publishedLayout(): HasMany
     {
         return $this->hasMany(PageLayout::class)->where('is_published', true);

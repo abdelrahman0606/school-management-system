@@ -14,6 +14,15 @@ follows [Semantic Versioning](https://semver.org/).
   output changes yet. This is the first phase of fixing a reported gap: the public language
   switcher only ever changed static `__()` UI strings, never a school's own page/menu/site
   content, because none of it had a locale column to switch between.
+- Multilingual page/block content (`docs/modules/30-multilingual-content-plan.md` Phase 2): each
+  page's block layout, title, and SEO meta can now vary per language — every locale owns its own
+  independently draft/published `PageLayout` revision (`pages.*` stays the default-locale seed),
+  publishing one language never touches another's, and an untranslated locale silently falls back
+  to the default language instead of rendering blank. Admin page builder gains a language tab
+  switcher (marks untranslated locales) and a "Copy from default language" starter action; History
+  now tracks "Latest"/"Current" per locale, not globally. Demo site seed fixed to set an explicit
+  locale on its seeded page revisions (an oversight that would otherwise have made every seeded
+  page invisible under the new locale-scoped public render query).
 
 ## [1.3.4] — 2026-07-31
 
