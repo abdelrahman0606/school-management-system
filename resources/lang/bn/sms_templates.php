@@ -4,8 +4,11 @@
 |--------------------------------------------------------------------------
 | Sms Module Language Lines (Bangla)
 |--------------------------------------------------------------------------
-| Mirrors resources/lang/en/sms.php. Keep the :student, :currency, :amount
-| placeholders intact — SendSmsBatchJob fills them in per recipient.
+| Mirrors resources/lang/en/sms_templates.php. Keep the :student, :currency,
+| :amount placeholders intact — SendSmsBatchJob fills them in per recipient.
+| Renamed from sms.php — see that file's docblock for why (group-name
+| collision with the bare __('SMS') translation key used across the admin
+| UI, which crashed sidebar.blade.php's rendering under backend_locale=bn).
 */
 
 return [

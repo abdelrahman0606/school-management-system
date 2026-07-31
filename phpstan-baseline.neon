@@ -9061,48 +9061,6 @@ parameters:
 			path: app/Modules/Language/Jobs/SuggestMenuTranslationJob.php
 
 		-
-			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\MenuItem\:\:\$label\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Website/Services/MenuService.php
-
-		-
-			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\MenuItem\:\:\$type\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Website/Services/MenuService.php
-
-		-
-			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\MenuItem\:\:\$page_id\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Website/Services/MenuService.php
-
-		-
-			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\MenuItem\:\:\$url\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Website/Services/MenuService.php
-
-		-
-			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\MenuItem\:\:\$dynamic_route\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Website/Services/MenuService.php
-
-		-
-			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\MenuItem\:\:\$icon\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Website/Services/MenuService.php
-
-		-
-			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\MenuItem\:\:\$target\.$#'
-			identifier: property.notFound
-			count: 1
-			path: app/Modules/Website/Services/MenuService.php
-
-		-
 			message: '#^Access to an undefined property App\\Modules\\Website\\Models\\MenuItem\:\:\$url\.$#'
 			identifier: property.notFound
 			count: 1
