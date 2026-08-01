@@ -19,6 +19,24 @@ Every deployment serves exactly one school — no multi-tenant SaaS layer, no se
 
 ---
 
+## 💡 About This Project
+
+This is a **hobby / R&D project**, built almost entirely with [Claude](https://claude.com) (Anthropic's AI) — an
+exploration of how far an AI coding agent can take a real, production-shaped Laravel application with minimal
+hand-written code from me.
+
+The idea is inspired by an existing **closed-source** school management system built by another developer in
+Bangladesh — I don't have access to or reuse any of that code, just the general concept of what a Bangladeshi
+school office actually needs day to day. Everything in this repository (architecture, modules, tests, docs) was
+designed and built independently, working module-by-module with Claude.
+
+I'm a Senior Software Engineer by profession. This project is a personal feasibility study — a way to gauge, with
+minimal coding of my own, whether an AI agent can carry a full, multi-module production-style application
+(25+ modules, tests, multi-country-ready architecture, deployment docs, the works) from an idea to something that
+actually runs. Treat it accordingly: a prototyping playground, not a funded, professionally QA'd product.
+
+---
+
 ## ✨ Key Features
 
 | Category | Modules |
