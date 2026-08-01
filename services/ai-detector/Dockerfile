@@ -6,14 +6,20 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+COPY requirements.txt .
+
 # CPU-only PyTorch wheel — the regular PyPI wheel bundles CUDA libraries
 # that are ~5x the size and useless without a GPU passed through to Docker,
 # which most self-hosters running this alongside a school app won't have.
+# torch's exact version+variant (the "+cpu" suffix) is pinned directly in
+# requirements.txt now, not duplicated here — a prior version of this file
+# pinned it a second time on its own RUN line, and a Dependabot bump that
+# only touches requirements.txt (all it can see) silently went out of sync
+# with it: `torch==2.13.0` (no +cpu) here then quietly resolved to the
+# regular CUDA-bundled PyPI wheel instead of the CPU one. One install, one
+# source of truth, so this can't happen again.
 RUN pip install --no-cache-dir --extra-index-url https://download.pytorch.org/whl/cpu \
-    torch==2.5.1+cpu
-
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+    -r requirements.txt
 
 COPY main.py .
 
