@@ -45,3 +45,36 @@ This optional module supports learning management features such as courses, less
 ## Integration Points
 - Depends on Academic for course structure and Student for learner context.
 - Works as an optional teaching and assessment extension.
+
+## Setting Up the Self-Hosted AI Checker
+Only needed if you want the free/unlimited provider instead of Anthropic. Requires the full Docker Compose
+stack (not plain cPanel hosting).
+
+1. In `.env`, set:
+   ```
+   LMS_AI_PROVIDER=self_hosted
+   LMS_AI_SELF_HOSTED_SECRET=<any random string>
+   ```
+   `docker-compose.yml`'s `ai-detector` service reads the same variable, so the app and the detector always
+   share the same secret automatically — nothing else to sync by hand.
+2. Build and start the container:
+   ```
+   docker compose up -d --build ai-detector
+   ```
+   The first build takes several minutes — it bakes the ~1.7GB model into the image at build time so the
+   container starts ready to serve, with no internet access needed at runtime after that.
+3. Confirm it's healthy:
+   ```
+   docker compose logs -f ai-detector
+   docker compose exec app curl http://ai-detector:8000/health
+   ```
+   There's no published host port — `ai-detector` is only reachable from other containers on the same
+   Compose network (same as `db`/`redis`/`minio`), so the health check has to run from inside another
+   container.
+4. Restart the app and queue worker so they pick up the new `.env` values:
+   ```
+   docker compose restart app horizon
+   ```
+
+To switch back to Anthropic later, set `LMS_AI_PROVIDER=anthropic` in `.env` and restart `app`/`horizon` again
+— `ai-detector` can keep running idle or be stopped, either is fine.

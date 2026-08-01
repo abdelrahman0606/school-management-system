@@ -10,6 +10,8 @@ follows [Semantic Versioning](https://semver.org/).
 - Free self-hosted alternative to the paid AI checker in LMS. You can now choose between the existing
   Anthropic-based checker (default, needs a per-school API key) or a free, unlimited, locally-run checker
   (needs the new `ai-detector` Docker service). Switch with one setting; no other changes needed.
+- Documented the setup steps for the self-hosted AI checker (env vars, Docker build/start/health-check
+  commands) in `docs/modules/22-lms.md`.
 
 ### Fixed
 - Cleaned up a stale, misleading comment on the AI checker code and made sure its score is always kept
