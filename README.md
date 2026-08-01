@@ -35,6 +35,12 @@ minimal coding of my own, whether an AI agent can carry a full, multi-module pro
 (25+ modules, tests, multi-country-ready architecture, deployment docs, the works) from an idea to something that
 actually runs. Treat it accordingly: a prototyping playground, not a funded, professionally QA'd product.
 
+**Want to pick this up for your own project?** [`CLAUDE.md`](CLAUDE.md) and [`AGENTS.md`](AGENTS.md) are the
+project's own instructions for AI coding agents (Claude Code and friends) — architecture rules, naming
+conventions, the module build order, and a running list of real gotchas hit along the way. Point an agent at
+either file and it can pick up right where this project left off. Suggestions and improvements are always
+welcome — see [Contributing](#-contributing) below.
+
 ---
 
 ## ✨ Key Features
