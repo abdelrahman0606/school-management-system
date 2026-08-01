@@ -19,6 +19,30 @@ Every deployment serves exactly one school — no multi-tenant SaaS layer, no se
 
 ---
 
+## 💡 About This Project
+
+This is a **hobby / R&D project**, built almost entirely with [Claude](https://claude.com) (Anthropic's AI) — an
+exploration of how far an AI coding agent can take a real, production-shaped Laravel application with minimal
+hand-written code from me.
+
+The idea is inspired by an existing **closed-source** school management system built by another developer in
+Bangladesh — I don't have access to or reuse any of that code, just the general concept of what a Bangladeshi
+school office actually needs day to day. Everything in this repository (architecture, modules, tests, docs) was
+designed and built independently, working module-by-module with Claude.
+
+I'm a Senior Software Engineer by profession. This project is a personal feasibility study — a way to gauge, with
+minimal coding of my own, whether an AI agent can carry a full, multi-module production-style application
+(25+ modules, tests, multi-country-ready architecture, deployment docs, the works) from an idea to something that
+actually runs. Treat it accordingly: a prototyping playground, not a funded, professionally QA'd product.
+
+**Want to pick this up for your own project?** [`CLAUDE.md`](CLAUDE.md) and [`AGENTS.md`](AGENTS.md) are the
+project's own instructions for AI coding agents (Claude Code and friends) — architecture rules, naming
+conventions, the module build order, and a running list of real gotchas hit along the way. Point an agent at
+either file and it can pick up right where this project left off. Suggestions and improvements are always
+welcome — see [Contributing](#-contributing) below.
+
+---
+
 ## ✨ Key Features
 
 | Category | Modules |
@@ -28,7 +52,7 @@ Every deployment serves exactly one school — no multi-tenant SaaS layer, no se
 | **Academics** | Examination (types, exams, seating), Mark (grades, GPA, tabulation), Certificate (admit cards, testimonials, TC), Attendance (student + staff, RFID, auto clock-out) |
 | **Finance** | FeeItem (categories, items, discounts), Payment (invoices, bKash/SSLCommerz/Stripe/PayPal, cheques, refunds, credits), Payroll (salary components, runs, loan integration), Report (fee collection, dues, ledger) |
 | **Communication** | Announcement, SMS (batches, GSM-7/Unicode segments, billing), Messaging (threads, 1:1 + group, role-restricted, attachments) |
-| **Operations** | Staff (departments, designations, loans), Leave (student + staff, approval workflow), Library (books, borrow/return, overdue), Transport (routes, vehicles, driver swap, SMS alerts), ID Card (batches, PDF generation, Horizon jobs), LMS (courses, lessons, assignments, AI check), Website (CMS, block-based homepage, drag-drop menus) |
+| **Operations** | Staff (departments, designations, loans), Leave (student + staff, approval workflow), Library (books, borrow/return, overdue), Transport (routes, vehicles, driver swap, SMS alerts), ID Card (batches, PDF generation, Horizon jobs), LMS (courses, lessons, assignments, AI-generated-content check via Anthropic or an optional free self-hosted detector), Website (CMS, block-based homepage, drag-drop menus) |
 | **Localization** | Language (DB-backed translations, RTL support, scan + editor UI) |
 
 ---
@@ -65,7 +89,7 @@ school-management-system/
 │   │       │   ├── Requests/     # FormRequests for every write endpoint
 │   │       │   └── Resources/    # JsonResources — never return raw models
 │   │       ├── Models/           # Eloquent models with scopes, relationships
-│   │       ├── Repositories/     # Cache-aside pattern (Cache::tags)
+│   │       ├── Repositories/     # Cache-aside pattern (App\Support\CacheTags)
 │   │       ├── Services/         # Business logic, DB transactions
 │   │       ├── Observers/        # Cache tag flushing on saved/deleted
 │   │       ├── database/migrations/
@@ -89,7 +113,9 @@ school-management-system/
 
 **Key Patterns:**
 - **10-step module pattern**: Migration → Model → Repository → Service → Observer → Requests → Resources → Controller/Routes → Tests → Pint/DocBlocks
-- **Repository pattern** with Redis tag-based caching (`Cache::tags(['student'])->flush()` in observers)
+- **Repository pattern** with driver-agnostic tag-based caching (`App\Support\CacheTags::flush(['student'])`
+  in observers — works on database/file cache stores too, not just Redis, so it also runs on shared cPanel
+  hosting without native tagging support)
 - **Financial writes** wrapped in `DB::transaction()` — never cached
 - **All queries scoped to `school_id`** via `app('current_school_id')` (set by `SetCurrentSchoolFromSession` middleware)
 - **Sanctum abilities** for API; **Spatie roles** for admin UI authorization
@@ -123,6 +149,10 @@ Expected services: `app`, `nginx`, `db` (MySQL 8), `redis`, `minio`, `horizon`, 
 `minio-init` — a one-shot container that creates MinIO's `school-files` bucket on first boot, then exits
 (`docker compose ps` showing it as `Exited (0)` is expected, not a failure — MinIO starts with no buckets and
 nothing else creates one, so every file upload in the app would fail without this step).
+
+> **Optional:** there's also an `ai-detector` service (a free, self-hosted alternative to the paid
+> Anthropic-based LMS AI checker) — it's profile-gated and does **not** start with the command above. See
+> [`docs/modules/22-lms.md`](docs/modules/22-lms.md) if you want to enable it.
 
 ### 3. Initialize Application
 

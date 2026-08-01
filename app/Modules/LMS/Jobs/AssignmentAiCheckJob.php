@@ -57,7 +57,12 @@ class AssignmentAiCheckJob implements ShouldQueue
             ['school_id' => $submission->school_id, 'status' => 'pending'],
         );
 
-        if (empty($school->lms_ai_api_key)) {
+        // The self-hosted provider has no per-school credential — it's
+        // configured (or not) once, at the container level, via
+        // LMS_AI_SELF_HOSTED_SECRET. Only the Anthropic provider needs a
+        // school to have entered its own key in School Settings first.
+        $usesAnthropic = config('lms.ai_provider', 'anthropic') === 'anthropic';
+        if ($usesAnthropic && empty($school->lms_ai_api_key)) {
             $check->update([
                 'status' => 'failed',
                 'error_message' => 'AI checking is not configured for this school (no API key set in School Settings).',
@@ -74,7 +79,10 @@ class AssignmentAiCheckJob implements ShouldQueue
             $extension = pathinfo($submission->file_path, PATHINFO_EXTENSION);
             $content = $extractor->extract($localPath, $extension);
 
-            $result = $checker->check($school->lms_ai_api_key, $content);
+            // Self-hosted has no per-school key — $school->lms_ai_api_key is
+            // legitimately null there, but check()'s signature wants a
+            // string (SelfHostedAiChecker ignores it anyway).
+            $result = $checker->check((string) ($school->lms_ai_api_key ?? ''), $content);
 
             $check->update([
                 'status' => 'completed',

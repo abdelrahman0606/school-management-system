@@ -85,6 +85,30 @@ services:
             - db
             - redis
 
+    # Free/unlimited self-hosted alternative to the paid Anthropic-backed LMS
+    # AI checker (app/Modules/LMS/Gateways/). Opt-in — the app defaults to
+    # the Anthropic provider and never talks to this service unless
+    # LMS_AI_PROVIDER=self_hosted is set in .env. No published port: only
+    # reachable from other containers on this compose project's network
+    # (same as db/redis/minio), at http://ai-detector:8000. First build is
+    # slow (~1.7GB model baked into the image) — that's expected, not a hang.
+    ai-detector:
+        # Gated behind a profile so a plain `docker compose up -d --build`
+        # (the README Quick Start default) never builds/starts this — it
+        # would otherwise silently add several minutes and ~1.7GB to every
+        # fresh install's first run, even for the (default) Anthropic-only
+        # setups that never talk to it. Start it explicitly, either
+        # `docker compose up -d --build ai-detector` (naming it directly
+        # still works despite the profile) or `docker compose --profile
+        # ai-detector up -d`.
+        profiles: ["ai-detector"]
+        build:
+            context: ./services/ai-detector
+        container_name: school_ai_detector
+        restart: unless-stopped
+        environment:
+            AI_DETECTOR_SHARED_SECRET: ${LMS_AI_SELF_HOSTED_SECRET:-}
+
     minio:
         image: minio/minio
         container_name: school_minio
