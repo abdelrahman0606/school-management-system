@@ -4,7 +4,7 @@ All notable changes to this project are documented here. Format loosely
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning
 follows [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.4.1] — 2026-08-01
 
 ### Added
 - Free, self-hosted alternative to the paid Anthropic AI checker in LMS — switch with one setting.
