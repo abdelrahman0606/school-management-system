@@ -7,54 +7,30 @@ follows [Semantic Versioning](https://semver.org/).
 ## [1.4.0] — 2026-07-31
 
 ### Added
-- Multilingual public content: pages/blocks, menus, School/SiteSetting text, and Announcement/
-  Staff/Designation/Department fields can now vary per language, with an AI-assist ("Suggest
-  translation") button backed by the free MyMemory API. See
-  `docs/modules/30-multilingual-content-plan.md`.
-- "Suggest translations (AI)" for the flat UI-string catalog (Settings → Languages → Translations).
-- Native (offline) date/digit localization (`App\Support\LocalizedDate`) — translated month names
-  and native digits (Bengali ০-৯) across the public site.
-- Bilingual (en + bn) seed/demo data for School, Staff, Designations/Departments, Announcements,
-  all public pages, and the primary nav menu.
-- Translation-status columns (tick/cross per language) on the Staff, Designation, Department,
-  Pages, and Announcements admin list screens.
-- `DemoCompletionSeeder`: demo data for previously-empty modules — Certificate, IdCard, Sms, Payroll,
-  Loan, Refund, Holidays, and Contact messages.
-- `bn.json` refreshed from a live dev DB export — 126 new UI-string keys, plus real edits to School/
-  SiteSetting/Designation/Announcement bn content (name spelling, EIIN transliteration, Bengali-digit
-  codes).
+- Multi-language support for pages, menus, school info, staff, departments, and announcements.
+- AI-assisted translation button, for both website content and admin UI text.
+- Automatic Bengali date and digit formatting across the public site.
+- Bilingual (English + Bengali) sample data for the whole app, so it's ready to demo out of the box.
+- Translation status indicators on the Staff, Department, Page, and Announcement lists.
+- Sample data for features that had none before: certificates, ID cards, SMS, payroll, loans,
+  refunds, holidays, and contact messages.
+- Refreshed and cleaned up Bengali translations using real usage data.
 
 ### Fixed
-- Admin and public backend language were coupled — switching your own admin working language no
-  longer changes what public visitors see, and vice versa (separate session keys).
-- Admin sidebar crash under a non-English backend locale (a lang key colliding with a translation
-  group file).
-- Menu editor could corrupt the tree (duplicated/missing items) after AI-suggest — a cascade-
-  delete/ordering race in `MenuService::replaceItems()`.
-- Several public-site strings/values that silently ignored the language switcher: footer "All
-  rights reserved.", header date, header phone number, stats block numbers, contact block address,
-  and a cluster of literals in the online admission form.
-- Staff/Announcement translations weren't reaching the public site's notices/staff blocks — locale
-  was never threaded into that live-data render path.
-- "Suggest translation (AI)" used to close the edit modal on Staff/Announcement/Designation/
-  Department — now updates in place.
-- Cleared 9 `phpstan` errors and a handful of test failures found by actually running the suite.
-- `phpstan-baseline.neon` drift: `DemoCompletionSeeder.php`'s undefined-property noise (no `@property`
-  annotations anywhere in this codebase, same as everywhere else) wasn't baselined yet, and a `label`
-  type change in `PageRenderService` from an earlier fix had gone stale against its old baseline
-  entries.
-- Cleaned up `bn.json` translation quality: fixed ~30 wrong or garbled entries (mistranslations,
-  leaked artifacts, inconsistent terms) found across two review passes, and removed one scanner
-  false-positive key.
-- Online admission form: several field labels stayed in English under `bn` because
-  `PageRenderService` baked in a hardcoded default instead of leaving it `null` for the `__()`
-  fallback to catch.
-- Merged 61 case-variant duplicate keys in the UI-string catalog onto one Title Case canonical form;
-  repointed 104 `__()` call sites across 53 admin views.
+- Your own admin language setting no longer changes what visitors see on the public site.
+- Fixed a crash when browsing the admin panel in Bengali.
+- Fixed a bug where AI-translating a menu could scramble its order.
+- Several public-site details (dates, phone numbers, addresses, the admission form) were ignoring
+  the language switcher — now translated properly.
+- Staff and announcement translations weren't showing up on the public site.
+- The AI-translate button no longer closes your edit form unexpectedly.
+- General code-quality cleanup: fixed test failures and static-analysis warnings.
+- Cleaned up roughly 30 incorrect or awkward Bengali translations.
+- Some admission form labels stayed in English under Bengali — now translate correctly.
+- Cleaned up duplicate entries in the translation system.
 
 ### Changed
-- Removed the Menu editor's redundant "Copy from default language" button (superseded by
-  AI-suggest).
+- Removed a redundant "copy" button now that AI-translate does the same job.
 
 ## [1.3.4] — 2026-07-31
 
