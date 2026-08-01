@@ -16,6 +16,9 @@ follows [Semantic Versioning](https://semver.org/).
 ### Fixed
 - Cleaned up a stale, misleading comment on the AI checker code and made sure its score is always kept
   within the expected 0–100 range.
+- Fixed the test suite picking up a developer's real "use the self-hosted AI checker" setting and making
+  real network calls during tests instead of using the fake responses the tests expect. Tests now always
+  use the Anthropic checker's fake responses, regardless of local `.env` settings.
 
 ## [1.4.0] — 2026-07-31
 
