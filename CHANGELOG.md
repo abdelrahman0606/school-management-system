@@ -7,24 +7,12 @@ follows [Semantic Versioning](https://semver.org/).
 ## [Unreleased]
 
 ### Added
-- Free self-hosted alternative to the paid AI checker in LMS. You can now choose between the existing
-  Anthropic-based checker (default, needs a per-school API key) or a free, unlimited, locally-run checker
-  (needs the new `ai-detector` Docker service). Switch with one setting; no other changes needed.
-- Documented the setup steps for the self-hosted AI checker (env vars, Docker build/start/health-check
-  commands) in `docs/modules/22-lms.md`.
+- Free, self-hosted alternative to the paid Anthropic AI checker in LMS — switch with one setting.
 
 ### Fixed
-- Cleaned up a stale, misleading comment on the AI checker code and made sure its score is always kept
-  within the expected 0–100 range.
-- Fixed the test suite picking up a developer's real "use the self-hosted AI checker" setting and making
-  real network calls during tests instead of using the fake responses the tests expect. Tests now always
-  use the Anthropic checker's fake responses, regardless of local `.env` settings.
-- Starting the app with the normal `docker compose up -d --build` command no longer also builds and starts
-  the self-hosted AI-checker container in the background — that only happens if you actually opt into it.
-- Corrected several outdated details in the project documentation: README described an old caching approach
-  that isn't what the code actually does anymore; AGENTS.md still described an early multi-tenant/subdomain
-  version of the product plan that was dropped in favor of the current single-school design, so it's been
-  brought back in line with CLAUDE.md (the two now describe the same, current project).
+- AI checker score is now always kept within the expected range, and no longer builds/starts by default.
+- Test suite no longer makes real network calls when a developer has the self-hosted checker enabled locally.
+- Updated README, CLAUDE.md, and AGENTS.md to match the current codebase (both were out of date).
 
 ## [1.4.0] — 2026-07-31
 
