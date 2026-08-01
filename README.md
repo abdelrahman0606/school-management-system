@@ -52,7 +52,7 @@ welcome — see [Contributing](#-contributing) below.
 | **Academics** | Examination (types, exams, seating), Mark (grades, GPA, tabulation), Certificate (admit cards, testimonials, TC), Attendance (student + staff, RFID, auto clock-out) |
 | **Finance** | FeeItem (categories, items, discounts), Payment (invoices, bKash/SSLCommerz/Stripe/PayPal, cheques, refunds, credits), Payroll (salary components, runs, loan integration), Report (fee collection, dues, ledger) |
 | **Communication** | Announcement, SMS (batches, GSM-7/Unicode segments, billing), Messaging (threads, 1:1 + group, role-restricted, attachments) |
-| **Operations** | Staff (departments, designations, loans), Leave (student + staff, approval workflow), Library (books, borrow/return, overdue), Transport (routes, vehicles, driver swap, SMS alerts), ID Card (batches, PDF generation, Horizon jobs), LMS (courses, lessons, assignments, AI check), Website (CMS, block-based homepage, drag-drop menus) |
+| **Operations** | Staff (departments, designations, loans), Leave (student + staff, approval workflow), Library (books, borrow/return, overdue), Transport (routes, vehicles, driver swap, SMS alerts), ID Card (batches, PDF generation, Horizon jobs), LMS (courses, lessons, assignments, AI-generated-content check via Anthropic or an optional free self-hosted detector), Website (CMS, block-based homepage, drag-drop menus) |
 | **Localization** | Language (DB-backed translations, RTL support, scan + editor UI) |
 
 ---
@@ -89,7 +89,7 @@ school-management-system/
 │   │       │   ├── Requests/     # FormRequests for every write endpoint
 │   │       │   └── Resources/    # JsonResources — never return raw models
 │   │       ├── Models/           # Eloquent models with scopes, relationships
-│   │       ├── Repositories/     # Cache-aside pattern (Cache::tags)
+│   │       ├── Repositories/     # Cache-aside pattern (App\Support\CacheTags)
 │   │       ├── Services/         # Business logic, DB transactions
 │   │       ├── Observers/        # Cache tag flushing on saved/deleted
 │   │       ├── database/migrations/
@@ -113,7 +113,9 @@ school-management-system/
 
 **Key Patterns:**
 - **10-step module pattern**: Migration → Model → Repository → Service → Observer → Requests → Resources → Controller/Routes → Tests → Pint/DocBlocks
-- **Repository pattern** with Redis tag-based caching (`Cache::tags(['student'])->flush()` in observers)
+- **Repository pattern** with driver-agnostic tag-based caching (`App\Support\CacheTags::flush(['student'])`
+  in observers — works on database/file cache stores too, not just Redis, so it also runs on shared cPanel
+  hosting without native tagging support)
 - **Financial writes** wrapped in `DB::transaction()` — never cached
 - **All queries scoped to `school_id`** via `app('current_school_id')` (set by `SetCurrentSchoolFromSession` middleware)
 - **Sanctum abilities** for API; **Spatie roles** for admin UI authorization
@@ -147,6 +149,10 @@ Expected services: `app`, `nginx`, `db` (MySQL 8), `redis`, `minio`, `horizon`, 
 `minio-init` — a one-shot container that creates MinIO's `school-files` bucket on first boot, then exits
 (`docker compose ps` showing it as `Exited (0)` is expected, not a failure — MinIO starts with no buckets and
 nothing else creates one, so every file upload in the app would fail without this step).
+
+> **Optional:** there's also an `ai-detector` service (a free, self-hosted alternative to the paid
+> Anthropic-based LMS AI checker) — it's profile-gated and does **not** start with the command above. See
+> [`docs/modules/22-lms.md`](docs/modules/22-lms.md) if you want to enable it.
 
 ### 3. Initialize Application
 
