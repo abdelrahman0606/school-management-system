@@ -27,8 +27,12 @@ class SchoolResource extends JsonResource
             'logo' => $this->logo,
             'sms_sender_id' => $this->sms_sender_id,
             'sms_cost_per_segment' => $this->sms_cost_per_segment,
-            // sms_api_key / lms_ai_api_key are in $hidden — never exposed
-            'lms_ai_checker_configured' => ! empty($this->lms_ai_api_key),
+            // sms_api_key / lms_ai_api_key are in $hidden — never exposed.
+            // The self-hosted AI provider has no per-school key — it's
+            // configured once at the container level, so it always counts
+            // as "configured" here.
+            'lms_ai_checker_configured' => config('lms.ai_provider', 'anthropic') === 'self_hosted'
+                || ! empty($this->lms_ai_api_key),
             'auto_due_enabled' => $this->auto_due_enabled,
             'fine_per_day' => $this->fine_per_day,
             'quick_payment_process' => $this->quick_payment_process,

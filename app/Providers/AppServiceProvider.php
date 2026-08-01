@@ -41,6 +41,7 @@ use App\Modules\Leave\Observers\StaffLeaveRequestObserver;
 use App\Modules\Leave\Observers\StudentLeaveRequestObserver;
 use App\Modules\LMS\Gateways\AiCheckerContract;
 use App\Modules\LMS\Gateways\AnthropicAiChecker;
+use App\Modules\LMS\Gateways\SelfHostedAiChecker;
 use App\Modules\LMS\Models\Assignment;
 use App\Modules\LMS\Models\Course;
 use App\Modules\LMS\Models\Lesson;
@@ -124,10 +125,18 @@ class AppServiceProvider extends ServiceProvider
         // of SmsGatewayContract here once one is chosen, nothing else changes.
         $this->app->bind(SmsGatewayContract::class, LogGateway::class);
 
-        // LMS module — real Anthropic API integration (per the confirmed decision,
-        // unlike Sms's stub gateway). Swap this binding for a different provider
-        // by implementing AiCheckerContract; nothing else in the module changes.
-        $this->app->bind(AiCheckerContract::class, AnthropicAiChecker::class);
+        // LMS module — real Anthropic API integration by default (per the
+        // confirmed decision, unlike Sms's stub gateway). LMS_AI_PROVIDER=
+        // self_hosted swaps in the free/unlimited self-hosted detector
+        // instead (services/ai-detector/ + SelfHostedAiChecker) — opt-in,
+        // since it needs its own Docker container and won't run on plain
+        // shared cPanel hosting. Any other provider implements
+        // AiCheckerContract and gets added to this match; nothing else in
+        // the module changes.
+        $this->app->bind(AiCheckerContract::class, fn () => match (config('lms.ai_provider', 'anthropic')) {
+            'self_hosted' => new SelfHostedAiChecker,
+            default => new AnthropicAiChecker,
+        });
 
         // Multilingual content AI-assisted draft translation (docs/modules/
         // 30-multilingual-content-plan.md Phase 5) — free, keyless MyMemory

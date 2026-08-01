@@ -31,13 +31,32 @@ class AnthropicAiCheckerTest extends TestCase
         $this->assertSame('Highly uniform sentence structure.', $result->originalityNote);
     }
 
-    public function test_throws_on_a_non_successful_response_so_the_queue_can_retry(): void
+    public function test_throws_on_a_non_successful_response(): void
     {
         Http::fake(['api.anthropic.com/*' => Http::response('rate limited', 429)]);
 
         $this->expectException(RuntimeException::class);
 
         (new AnthropicAiChecker)->check('fake-key', 'content');
+    }
+
+    public function test_ai_score_is_clamped_to_0_100(): void
+    {
+        Http::fake([
+            'api.anthropic.com/*' => Http::response([
+                'content' => [
+                    ['type' => 'text', 'text' => json_encode([
+                        'ai_score' => 140,
+                        'likely_ai_generated' => true,
+                        'originality_note' => 'Out-of-range score from the model.',
+                    ])],
+                ],
+            ], 200),
+        ]);
+
+        $result = (new AnthropicAiChecker)->check('fake-key', 'content');
+
+        $this->assertSame(100, $result->aiScore);
     }
 
     public function test_throws_on_an_unparseable_response(): void

@@ -8,9 +8,13 @@ use RuntimeException;
 /**
  * Calls Anthropic's Messages API to assess a submission's likely-AI-generated
  * score. Any exception here (timeout, non-2xx response, unparseable model
- * output) is allowed to propagate — AssignmentAiCheckJob relies on that to
- * trigger the queue's own retry/backoff, and only logs a final failure once
- * retries are exhausted (see the job's failed() method).
+ * output) propagates straight out of check() — this class has no retry
+ * policy of its own. See AssignmentAiCheckJob's own docblock for what
+ * happens to it from there: caught and swallowed by design, not retried
+ * (an earlier version let it propagate "for the queue to retry" and it
+ * surfaced as a 500 on the submit endpoint under QUEUE_CONNECTION=sync
+ * instead — this class's job is just to throw or return cleanly, not to
+ * second-guess how the caller handles either outcome).
  */
 class AnthropicAiChecker implements AiCheckerContract
 {
@@ -50,8 +54,12 @@ class AnthropicAiChecker implements AiCheckerContract
             throw new RuntimeException('Anthropic API returned an unparseable response: '.$response->body());
         }
 
+        // Model output is prompted to stay 0-100 but nothing enforces that
+        // contractually — clamp defensively (same as SelfHostedAiChecker).
+        $score = max(0, min(100, (int) $decoded['ai_score']));
+
         return AiCheckResult::success(
-            (int) $decoded['ai_score'],
+            $score,
             (bool) ($decoded['likely_ai_generated'] ?? false),
             (string) ($decoded['originality_note'] ?? ''),
             $response->json(),

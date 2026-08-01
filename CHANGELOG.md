@@ -4,6 +4,17 @@ All notable changes to this project are documented here. Format loosely
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning
 follows [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- Free self-hosted alternative to the paid AI checker in LMS. You can now choose between the existing
+  Anthropic-based checker (default, needs a per-school API key) or a free, unlimited, locally-run checker
+  (needs the new `ai-detector` Docker service). Switch with one setting; no other changes needed.
+
+### Fixed
+- Cleaned up a stale, misleading comment on the AI checker code and made sure its score is always kept
+  within the expected 0–100 range.
+
 ## [1.4.0] — 2026-07-31
 
 ### Added
