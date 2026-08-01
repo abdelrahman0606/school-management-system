@@ -19,6 +19,12 @@ follows [Semantic Versioning](https://semver.org/).
 - Fixed the test suite picking up a developer's real "use the self-hosted AI checker" setting and making
   real network calls during tests instead of using the fake responses the tests expect. Tests now always
   use the Anthropic checker's fake responses, regardless of local `.env` settings.
+- Starting the app with the normal `docker compose up -d --build` command no longer also builds and starts
+  the self-hosted AI-checker container in the background — that only happens if you actually opt into it.
+- Corrected several outdated details in the project documentation: README described an old caching approach
+  that isn't what the code actually does anymore; AGENTS.md still described an early multi-tenant/subdomain
+  version of the product plan that was dropped in favor of the current single-school design, so it's been
+  brought back in line with CLAUDE.md (the two now describe the same, current project).
 
 ## [1.4.0] — 2026-07-31
 

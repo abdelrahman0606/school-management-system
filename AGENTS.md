@@ -3,13 +3,12 @@
 Read automatically at the start of every session. Follow every rule here across all 26 modules.
 
 ## Project Overview
-Multi-tenant SaaS school management platform.
+Multi-school self-hosted school management platform.
 Stack: Laravel 13 · PHP 8.3 · MySQL 8 · Redis 7 · Laravel Horizon · MinIO · Sanctum · Spatie Permission
 
-## Frontend (Laravel Blade + Bootstrap admin — in this repo; superseded the Next.js SPA)
+## Frontend (Laravel Blade + Bootstrap admin — in this repo)
 - **Decision:** the school-facing admin UI is **server-rendered Laravel Blade + Bootstrap 5**, living in THIS
-  backend repo — not a separate Next.js/Turborepo app. Reuses the module Services and **session auth** (`web`
-  guard), no API tokens / BFF proxy / CORS. Full plan: `docs/modules/27-blade-admin-plan.md`.
+  backend repo. Reuses the module Services and **session auth** (`web` guard), no API tokens / BFF proxy / CORS.
 - **Reference:** the v1 build in `old/` (SmartAdmin/Bootstrap 4) is the layout + IA reference — reproduce its
   sidebar grouping and panel/breadcrumb structure, **modernized** to BS 5.3, DataTables 2 (bootstrap5 skin),
   native BS modals, and inline FormRequest validation (no Laravel Collective / bootbox / select2).
@@ -18,9 +17,13 @@ Stack: Laravel 13 · PHP 8.3 · MySQL 8 · Redis 7 · Laravel Horizon · MinIO �
   `admin`). `SetCurrentSchoolFromSession` (alias `school`) sets `app('current_school_id')` from `Auth::user()`.
 - Admin controllers stay thin and call existing Services (never `DB::table()`); admin writes reuse module
   FormRequest `rules()`. CDN assets (Bootstrap 5.3.3, DataTables 2.1.8, jQuery 3.7.1, Tom Select) — no build step.
-- Tenant routing: subdomain per school still applies for public sites (`{school}.yourapp.com`); the admin runs
-  under the app host with session auth. `schools.subdomain` column exists (Platform module). Teacher/student/
-  guardian areas and the public school site are later phases of this same Blade app.
+- **Single-school mode:** no subdomain routing. The admin runs under the app host with session auth.
+  Teacher/student/guardian areas and the public school site are later phases of this same Blade app.
+
+**✅ Admin UI Complete:** All 26 modules have full admin coverage. Navigation includes collapsible sidebar
+accordion with icons + active-parent highlight. Fuzzy-search command palette (⌘K) with role/module-aware
+results, keyboard navigation, and context-aware exam sub-pages. Header search trigger opens palette. Mobile
+off-canvas sidebar with backdrop. All 206 admin feature tests pass.
 
 ## Architecture Rules
 - Module path: `app/Modules/{ModuleName}/Http/{Controllers,Requests,Resources}`, `Models/`, `Repositories/`,
@@ -28,13 +31,12 @@ Stack: Laravel 13 · PHP 8.3 · MySQL 8 · Redis 7 · Laravel Horizon · MinIO �
 - Controllers thin (max 40 lines/method) — business logic in Services.
 - Every write endpoint: `FormRequest` with `authorize()`+`rules()`. Every response: `JsonResource` (never a
   raw Model).
-- Repositories: `Cache::tags([...])->remember()` (see `StudentRepository`). Observers flush tags on
-  saved/deleted. Platform-level models (no `school_id`, e.g. `Plan`) don't extend `BaseRepository`/
-  `BaseService` — those assume `school_id` scoping.
+- Repositories: cache-aside via `BaseRepository::remember()`/`flush()` (see `StudentRepository`), backed by
+  `App\Support\CacheTags` — never the raw `Cache::tags()` facade, which only works on redis/memcached/array.
+  Observers flush tags on saved/deleted.
 - Financial/mark-entry writes: `DB::transaction()`, no cache.
-- Sanctum: `middleware(['auth:sanctum', 'ability:admin:*'])`. Every table has `school_id` except platform-level
-  (`schools`, `plans`, `pending_school_signups`). All queries scoped to `school_id` via `app('current_school_id')`
-  (set by `ResolveSchool`; bypassed for `/api/v2/platform/*` and `/api/v2/health`).
+- Sanctum: `middleware(['auth:sanctum', 'ability:admin:*'])`. Every table has `school_id`.
+- All queries scoped to `school_id` via `app('current_school_id')` (set by `SetCurrentSchoolFromSession`).
 
 ## Naming Conventions
 | Type | Convention | Example |
@@ -52,7 +54,7 @@ Build in dependency order.
 
 | # | Module | Depends On | Status | Notes |
 |---|--------|-----------|--------|-------|
-| 1 | School | — | ✅ | School, SchoolPhone, SchoolOpeningHour; locale (currency/timezone/locale/academic_year_pattern), country_code, subdomain |
+| 1 | School | — | ✅ | School, SchoolPhone, SchoolOpeningHour; locale (currency/timezone/locale/academic_year_pattern), country_code |
 | 2 | Academic | School | ✅ | AcademicYear, SchoolClass, Section(+class_teacher_id), Subject, SubjectRelation, AcademicGroup, Version, Shift, ClassRoutine |
 | 3 | User/Auth | — | ✅ | User+Sanctum+Spatie. Roles: `super_admin, admin, teacher, accountant, librarian, receptionist, student, parent` (real list — DevPlan's "moderator"/"Finance"/"Head Teacher" don't exist, never invent them) |
 | 4 | Student | Academic, User | ✅ | Student, StudentAcademic, StudentSubject (optional/4th-subject enrollment) |
@@ -71,13 +73,16 @@ Build in dependency order.
 | 17 | Sms | Student, Payment | ✅ tests green | SmsBatch, SmsLog; per-school billing (`schools.sms_api_key/sms_sender_id/sms_cost_per_segment`); `SmsSegmentCalculator` (GSM-7 160/153, unicode 70/67); stub `LogGateway` behind `SmsGatewayContract` |
 | 18 | DataImport | Student, Academic | ✅ tests green | ImportBatch only (errors as JSON). Reuses `StudentService::enrol()`/`StaffService::hire()` per row; queued Horizon job reads MinIO file via `maatwebsite/excel` |
 | 19 | OnlineAdmission | Academic, Student | ✅ tests green | AdmissionApplication (own table). Public `POST /v2/admission-applications` + status check (reference+phone). `approve()` calls `StudentService::enrol()` |
-| 20 | Website | — | ✅ tests green | 9 tables: Page, PageRedirect, PageLayout, SiteLayout, SiteSetting, Menu, MenuItem, PageTemplate, WebsiteMedia. `layout_json` opaque LONGTEXT blob, every save is a NEW row (versioned). Public `/public/*` (pages, site-chrome, notices, staff, routine, stats, result-check) |
+| 20 | Website | — | ✅ tests green | 10 tables (+ContactMessage): Page, PageRedirect, PageLayout, SiteLayout, SiteSetting, Menu, MenuItem, PageTemplate, WebsiteMedia. `layout_json` opaque LONGTEXT blob, every save is a NEW row (versioned). **Server-rendered Blade** public site (`/`, `/{slug}`) + admin page-builder reuse the module Services directly; site identity/colors/ticker/SEO live in School settings. **Homepage is block-built** — a seeded `is_homepage` Page renders `/` through the same block builder (add/reorder/remove blocks: hero/stats/notices/staff/etc.), editable in Website→Pages. **Nav menu editor** (Website→Menus): WordPress-style drag-to-reorder + drag-under-a-dropdown (one level, `menu_items.parent_id`+`sort_order`), saved via `MenuService::replaceItems` (full-tree replace); the **public navbar is menu-driven** via a `public.partials.header` view composer (`navMenu`), with a hardcoded fallback + `MenuItem::resolvedUrl()` (homepage→`/`). Default "Main" menu seeded. The JSON/Next.js API layer (Http controllers/resources/requests + `routes/api.php`) was **removed** — Models/Services/Repositories/Observers retained. Mobile API is served by the other 24 modules. **Frontend modernization** (`docs/modules/29-frontend-modernization-proposal.md`, Phases 1–3): `SiteSetting`'s ~19 dormant theming columns (fonts, secondary/surface/link/border colors, button styling, global background) wired end-to-end via a new "Advanced Theme" section in School settings; header collapsed from 3 stacked rows to a slim strip + one sticky logo+nav+CTA bar (institution codes/established year moved to the footer); fluid `clamp()` type scale; two new block types, `announcement_bar` (dismissible, `localStorage`-remembered) and `faq` (Bootstrap accordion, `Question|Answer` per line — same convention as `quick_links`/`office_hours`). |
 | 21 | Payroll *(optional)* | Staff | ✅ tests green | SalaryComponent, StaffSalaryValue, PayrollRun, PayrollEntry, SalaryCertificateRequest. Flat component sums only (no attendance proration). Integrates Loan's deferred repayment. Fixed a real bug: `User::abilitiesForRole()` never emitted `teacher:*`/`staff:*` wildcards, so those ability-gated routes never matched a real login |
-| 22 | LMS *(optional)* | Academic, Student | ✅ tests green | Course, Lesson, Assignment, Submission, SubmissionAiCheck. Real Anthropic API integration (`AnthropicAiChecker`, Http-facade, no SDK). Introduced `school_module_settings`/`CheckModuleEnabled` (`module.enabled:{name}` middleware) — also retrofitted onto Payroll |
-| 23 | Platform | — | ✅ tests green | Plan, PendingSchoolSignup, SubscriptionReminder. Platform-level (not tenant-scoped) — see spec below |
-| 24 | Library *(optional)* | Student, Staff | ✅ tests green | Book, LibraryMember, BorrowRecord, borrow/return workflow. Borrow/return are `DB::transaction`+`lockForUpdate` on `books.available_copies` (no oversell); "overdue" is derived (`returned_at` null AND `due_at` past, `scopeOverdue`), never a stored status |
-| 25 | Transport *(optional)* | Student, Payment, Sms, Academic | ✅ tests green | TransportRoute, TransportVehicle, TransportDriver, StudentTransportAssignment. Vehicle serves a route; swap pulls a pool vehicle (old→`out_of_service`, new→`in_service`) under `lockForUpdate`+seat-capacity, driver stays with the route. Route fee is a `FeeItem` billed only to active riders (guarded `InvoiceService` query). Swap SMS-alerts student + primary guardian via new Sms `transport_alert` purpose. Academic `transports` fare synced one-way (not dropped) |
-| 26 | Messaging *(optional)* | User | ✅ tests green | MessageThread, MessageParticipant, Message, MessageAttachment. Role-restricted `MessagingPolicyService`: non-staff (student/parent) may only share a thread WITH staff, and every thread keeps ≥1 staff. 1:1 + group; 1:1 deduped via unique `direct_key`. REST polling + live unread (`last_read_message_id`); MinIO attachments; soft-deleted messages. Admin oversight via `role:admin` (read + lock, never a participant). `MessageSent` event is the seam for deferred SMS/realtime. Self-contained — no shared-file edits |
+| 22 | LMS *(optional)* | Academic, Student | ✅ tests green | Course, Lesson, Assignment, Submission, SubmissionAiCheck. AI checker is provider-swappable behind `AiCheckerContract` (`LMS_AI_PROVIDER`): `anthropic` (default, real Messages API, per-school key, Http-facade, no SDK) or `self_hosted` (free/unlimited, `services/ai-detector/` FastAPI+PyTorch sidecar running `desklib/ai-text-detector-v1.01`, profile-gated in `docker-compose.yml` so it never starts on a plain `docker compose up`, Docker-only — no cPanel). Introduced `school_module_settings`/`CheckModuleEnabled` (`module.enabled:{name}` middleware) — also retrofitted onto Payroll |
+| 23 | Library *(optional)* | Student, Staff | ✅ tests green | Book, LibraryMember, BorrowRecord, borrow/return workflow. Borrow/return are `DB::transaction`+`lockForUpdate` on `books.available_copies` (no oversell); "overdue" is derived (`returned_at` null AND `due_at` past, `scopeOverdue`), never a stored status |
+| 24 | Transport *(optional)* | Student, Payment, Sms, Academic | ✅ tests green | TransportRoute, TransportVehicle, TransportDriver, StudentTransportAssignment. Vehicle serves a route; swap pulls a pool vehicle (old→`out_of_service`, new→`in_service`) under `lockForUpdate`+seat-capacity, driver stays with the route. Route fee is a `FeeItem` billed only to active riders (guarded `InvoiceService` query). Swap SMS-alerts student + primary guardian via new Sms `transport_alert` purpose. Academic `transports` fare synced one-way (not dropped) |
+| 25 | Messaging *(optional)* | User | ✅ tests green | MessageThread, MessageParticipant, Message, MessageAttachment. Role-restricted `MessagingPolicyService`: non-staff (student/parent) may only share a thread WITH staff, and every thread keeps ≥1 staff. 1:1 + group; 1:1 deduped via unique `direct_key`. REST polling + live unread (`last_read_message_id`); MinIO attachments; soft-deleted messages. Admin oversight via `role:admin` (read + lock, never a participant). `MessageSent` event is the seam for deferred SMS/realtime. Self-contained — no shared-file edits |
+
+| 26 | Language | — | ✅ | Language, Translation (English-as-key JSON-style, DB-backed via `Translator::addLines`, cached). `SetLocale` web middleware (session → default) reads/writes **two independent session keys**: `app_locale` for the public site (guest pages, `/language/{code}`, public topbar) and `backend_locale` for `/admin`, `/staff`, `/portal` (`/backend/language/{code}`, auth-gated, `partials/language-switcher.blade.php` — the only thing that links there). A backend user's own working language and whatever a public visitor is browsing in are unrelated and must never overwrite each other (they used to share `app_locale`/one switcher — fixed after being reported). RTL `dir` on public layout. Admin: Settings→Languages (add/enable/default/RTL, per-locale progress) + per-language Translations editor (search, untranslated-only, bulk save) + `translations:scan` (registers all `__()` keys). ~2,200 strings extracted across views + controller flash messages by `scripts/extract-translations.py` (conservative; idempotent). en (default) + bn seeded. |
+
+Total: **26 modules** (23 core + 3 optional)
 
 ## The 10-Step Pattern (one commit per step)
 1. Migration(s) 2. Model 3. Repository (cache-aside) 4. Service 5. Observer (cache flush)
@@ -128,47 +133,13 @@ V2 is global (v1 was BD-only) — never bake BD assumptions into core code.
   `grade_boundaries`, `marks` (marks_obtained, is_absent, entered_by, locked_at), `exam_results` (total_marks,
   percentage, grade, gpa, is_pass, merit_position, is_locked).
 - `exam_results` written on calculation, locked after Moderator approval — never recompute a locked result.
-  Tabulation cached under `Cache::tags(['tabulation'])`.
+  Tabulation cached under `CacheTags::remember(['tabulation'], ...)`.
 - Must support: absent≠zero ("Ab"), optional/4th-subject GPA bonus (bd_national: GPA=(Σcompulsory GP +
   max(0,optional GP−2.00))/compulsory count, cap 5.00), combined subjects (shared pass mark), merit tie-break
   (GPA→total→percentage, failed ranked after passed), N/A for non-enrolled.
 - Division/exam-weight templates are seed data (`config/grading.php`), not code.
 - Grace marks: separate audited `grace_marks` column (never mixed into `marks_obtained`), per-school cap.
 - No cache on mark writes.
-
-## Platform Module Spec (Module 23)
-Added outside the original 25-module list — powers the marketing site's "buy a package → pay → get logged in"
-flow (a Super Admin Portal the DevPlan had but AGENTS.md silently dropped). **Platform-level, not
-tenant-scoped** — Super Admin sees every school; public signup/checkout run before a school exists.
-
-Plans (seed data in `config/platform.php`, editable by Super Admin, placeholders not final pricing):
-| Plan | Price | Caps | Notes |
-|---|---|---|---|
-| Demo | Free, not purchasable | 20 students/10 staff | ONE shared `is_demo=true` school; prefilled public login page; resets every 14h |
-| Trial | Free, 30 days | 100/15 | Self-serve, no payment |
-| Basic | $19/mo, $190/yr | 500/40 | Stripe Checkout |
-| Pro | $49/mo, $490/yr | Unlimited | Stripe Checkout |
-
-Schema: `plans` (platform-level), `schools` gets `subdomain`, `plan_id` (nullable=legacy/uncapped),
-`trial_ends_at`, `subscription_expires_at`, `is_demo`, `provisioning_type` enum(self_service/offline_manual/
-super_admin), `stripe_customer_id`, `stripe_subscription_id`, `subscription_status`. `pending_school_signups`
-(platform-level staging row for the Stripe round-trip, same pattern as `AdmissionApplication` but
-webhook-triggered). `subscription_reminders` (school-scoped, milestone enum(day_7/day_1), unique per school+
-milestone — idempotent).
-
-Key decisions: Stripe globally for vendor billing (separate from Payment module's per-school student
-gateways); Super Admin can also create offline-paid schools with explicit expiry + reminders; credentials
-delivered via signed "set your password" link, never plaintext; Demo replaces any "request a demo" form
-entirely; plan caps ENFORCED via `PlanLimitService` hook in `StudentService::enrol()`/`StaffService::hire()`
-(schools with `plan_id=null` never capped); `role:super_admin` middleware (real Spatie role check) gates the
-Super Admin portal — NOT `ability:super_admin:*`, since `admin`/`super_admin` both carry a bare Sanctum `'*'`
-which would satisfy any ability check. Stripe integration is raw Http-facade calls (no SDK), webhook signature
-via `hash_hmac('sha256', ...)`. Provisioning idempotent on webhook retry.
-
-Known gaps: no `DemoSchoolSeeder` (demo school's academic structure + fixed-password admin must be created
-once, manually or via a seeder not yet written); demo reset (`platform:demo-reset`, runs ~every 14h via
-00:00/14:00 cron) only wipes/reseeds Student/Staff; subscription reminders email only the first admin found
-per school; pricing/caps are placeholders (no currency conversion).
 
 ## Key Patterns
 
@@ -188,12 +159,17 @@ class StudentRepository extends BaseRepository
 
 **Observer (cache flush):**
 ```php
+use App\Support\CacheTags;
+
 class StudentObserver
 {
-    public function saved(Student $student): void { Cache::tags(['student'])->flush(); }
-    public function deleted(Student $student): void { Cache::tags(['student'])->flush(); }
+    public function saved(Student $student): void { CacheTags::flush(['student']); }
+    public function deleted(Student $student): void { CacheTags::flush(['student']); }
 }
 ```
+Never the raw `Cache::tags()` facade — native Laravel tagging only exists on redis/memcached/array, not the
+database/file drivers shared cPanel hosting needs (see `docs/cpanel-deployment.md`). `App\Support\CacheTags`
+emulates tagging on any driver via versioned keys; every Repository/Observer in the app goes through it.
 
 **Financial write (always transactional):**
 ```php
@@ -217,7 +193,6 @@ DB::transaction(function () use ($data) {
 - **Fresh-model `JsonResource` auto-returns 201** (via `wasRecentlyCreated`). Calling `->fresh()` on a
   just-created model discards that flag (200 instead) — use `->load()` if you need relations but want to keep
   201. Force `->setStatusCode(200)` explicitly on idempotent PUT/toggle endpoints that use a freshly-inserted row.
-  Force `->setStatusCode(200)` explicitly on idempotent PUT/toggle endpoints that use a freshly-inserted row.
 - **Sync queue does NOT swallow job exceptions** — under `QUEUE_CONNECTION=sync`, an uncaught exception in a
   job's `handle()` propagates straight into the dispatching HTTP request as a 500. Every queued job must
   catch everything internally and never rethrow.
@@ -242,6 +217,67 @@ DB::transaction(function () use ($data) {
   per-recipient `SmsLog` insert fail its CHECK constraint. On the sync queue the failing job swallows the
   error, so the symptom is a created batch with *zero logs*, not a 500 — silent. Alter every table carrying
   the enum in the same migration.
+- **A literal line-number prefix pasted into a real file is a silent, spreading bug.** ~250 lines of
+  `admin-design-tokens.css` had a stray number glued onto the front of every line (`1822}`, `1821 /* ... */`),
+  the unmistakable signature of pasting a tool's line-numbered output (`cat -n`, a Read result) back into a
+  file without stripping the prefix. CSS parsers are lenient enough that this didn't hard-fail, so it sat
+  there undetected. Never paste line-numbered output directly into a file — strip the `N\t`/`N  ` prefix
+  first, or write the content fresh.
+- **Don't let a CSS token file and a page's own inline `<style>` both claim to own the brand color.**
+  `admin-design-tokens.css` defined a `--color-primary-*` scale that nothing actually rendered with —
+  `layouts/admin.blade.php`'s inline `<style>` silently redeclared the same variable names with different
+  (the real, live) hex values, plus a second hardcoded set of Bootstrap `--bs-*`/`.btn-primary` overrides for
+  the same color again. Three places to change one color, only one of which was "the" design-tokens file.
+  Pick one file as the actual source of truth for a token and have everything else reference it with `var()`
+  — never redeclare the literal value a second time "to be sure."
+- **Never call the raw `Cache::tags()` facade directly — always `App\Support\CacheTags`.** Native Laravel
+  cache tagging only exists on the redis/memcached/array drivers, not database/file — which is what
+  `CACHE_STORE` needs to be on shared cPanel hosting with no Redis (see `docs/cpanel-deployment.md`).
+  `PageRenderService::renderPage()`'s page-view cache was the one place in the app still on the raw facade;
+  it worked fine under Redis and was invisible under `phpunit.xml`'s `CACHE_STORE=array` (array also supports
+  native tagging), so it went unnoticed until `CACHE_STORE=database`/`file` was actually tried, at which
+  point it threw "This cache store does not support tagging." `App\Support\CacheTags` emulates tags on any
+  driver via versioned keys — every Repository (`BaseRepository::remember()`/`flush()`) and Observer already
+  goes through it; a new one should too, never the bare facade.
+- **A hand-typed VERSION number is not the same as a verified one.** `config('app.version')` reads a
+  git-tracked `/VERSION` file (not `.env` — `.env` isn't git-tracked, so bumping `APP_VERSION` there never
+  actually updated an already-deployed server's footer, only fresh installs). `App\Support\VersionIntegrity`
+  additionally checks, on demand (`GET /api/v2/health`, `php artisan version:verify`), whether that version
+  number corresponds to a real tagged commit reachable from `HEAD` — catches a hand-edited/stale `VERSION`
+  file rather than silently displaying (or trusting) whatever it says.
+- **A bare (no-dot) `__()` key falls through to Laravel's GROUP-based translation lookup if it
+  isn't found in the flat English-as-key JSON cache — and that lookup treats the whole key as a
+  group *file* name.** `__('SMS')` (the admin nav label, command palette entry, and several
+  page titles/breadcrumbs) collided with `resources/lang/{locale}/sms.php`; since the key has no
+  item segment, `Translator::getLine()`'s `Arr::get($group, null)` returns the file's *entire
+  array* instead of a string, and the first `{{ }}` that echoes it fatals with `htmlspecialchars():
+  ... array given`. This was latent from the day that file was added — it only surfaced once a
+  page was actually rendered under a non-English `backend_locale` (Language module's public/
+  backend locale split made that possible for the first time). Never name a `resources/lang/*/`
+  group file after a bare English string that's also used as a translation *key* anywhere in the
+  app (renamed `sms.php` → `sms_templates.php`) — and treat this as a standing constraint on any
+  future `resources/lang/{locale}/{name}.php` group file, not just this one instance.
+- **A self-referencing `cascadeOnDelete()` foreign key can race a bulk `DELETE ... ORDER BY` on
+  the SAME table.** `menu_items.parent_id` cascades (a dropdown's children die with their parent).
+  `MenuService::replaceItems()` deleted via `$menu->allItems()->delete()`, whose relation carries
+  `orderBy('sort_order')` — but a child's own `sort_order` is independently 0-based per parent, so
+  it routinely ties with unrelated top-level items' `sort_order`. When that ordering caused the
+  delete statement to reach a dropdown's parent row before its own scan reached that parent's
+  children, the cascade silently removed those children out from under the statement, while
+  whatever rows the cascade never raced were left behind — deterministically, the same specific
+  items every time (confirmed via raw DB dumps: not a random subset, not timing-dependent), then a
+  fresh insert landing on top of the leftovers. Any bulk delete on a table with a self-referencing
+  cascading FK must delete children before parents explicitly, with **no** `ORDER BY` on either
+  step — never rely on a relation's own `orderBy()` (added for display purposes, e.g. rendering a
+  menu in the right order) surviving unmodified into a `->delete()` call built on top of it.
+- **A reproducible-every-time bug is not a race condition — don't reach for locking/concurrency
+  fixes on a symptom before confirming the mechanism with real data.** The menu-corruption bug
+  above was initially (wrongly) diagnosed as a double-submit race and "fixed" with a row lock; only
+  after asking for raw `tinker` dumps of the actual `menu_items` rows before/after a save — and
+  seeing the EXACT same items survive/vanish on three separate reproductions — did it become clear
+  the split was deterministic, ruling out timing entirely and pointing at the cascade/ORDER BY
+  interaction instead. When a "random-looking" corruption bug turns out to reproduce identically on
+  repeat attempts, that's the tell it isn't random at all.
 
 ## Git Commit Convention
 ```

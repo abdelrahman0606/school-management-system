@@ -1,6 +1,6 @@
 # CLAUDE.md — School Management System v2
 
-Read automatically at the start of every session. Follow every rule here across all 25 modules.
+Read automatically at the start of every session. Follow every rule here across all 26 modules.
 
 ## Project Overview
 Multi-school self-hosted school management platform.
@@ -20,7 +20,7 @@ Stack: Laravel 13 · PHP 8.3 · MySQL 8 · Redis 7 · Laravel Horizon · MinIO �
 - **Single-school mode:** no subdomain routing. The admin runs under the app host with session auth.
   Teacher/student/guardian areas and the public school site are later phases of this same Blade app.
 
-**✅ Admin UI Complete:** All 25 modules have full admin coverage. Navigation includes collapsible sidebar
+**✅ Admin UI Complete:** All 26 modules have full admin coverage. Navigation includes collapsible sidebar
 accordion with icons + active-parent highlight. Fuzzy-search command palette (⌘K) with role/module-aware
 results, keyboard navigation, and context-aware exam sub-pages. Header search trigger opens palette. Mobile
 off-canvas sidebar with backdrop. All 206 admin feature tests pass.
