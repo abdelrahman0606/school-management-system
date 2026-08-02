@@ -46,6 +46,15 @@ class DesklibAIDetectionModel(PreTrainedModel):
     why AutoModelForSequenceClassification can't load it directly."""
 
     config_class = AutoConfig
+    # transformers >=5.0 requires custom PreTrainedModel subclasses to
+    # declare this (see MIGRATION_GUIDE_V5.md's "Custom pretrained models"
+    # section) -- without it, from_pretrained() crashes in
+    # _finalize_model_loading() -> mark_tied_weights_as_initialized() with
+    # "AttributeError: ... has no attribute 'all_tied_weights_keys'" (this
+    # model ties no weights, hence the empty dict). Confirmed by actually
+    # running it under transformers==4.47.1 first (this attribute didn't
+    # exist/matter there) and then under 5.5.0 (crashed without this line).
+    all_tied_weights_keys = dict()
 
     def __init__(self, config):
         super().__init__(config)

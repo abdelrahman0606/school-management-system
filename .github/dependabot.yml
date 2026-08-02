@@ -33,11 +33,15 @@ updates:
       interval: "weekly"
 
   # Self-hosted AI-detector microservice (services/ai-detector/requirements.txt).
-  # transformers is pinned below 5.x on purpose -- our custom PreTrainedModel
-  # subclass (DesklibAIDetectionModel in main.py) broke on startup under
-  # 5.5.0 (confirmed by actually running it: a v5 API change we don't
-  # implement). Ignore major-version bumps here so this can't get silently
-  # auto-merged again; patch/minor bumps within 4.x are still fine.
+  # transformers 4.47.1 -> 5.0.0 previously broke this on startup (a v5 API
+  # change our custom PreTrainedModel subclass, DesklibAIDetectionModel in
+  # main.py, didn't implement) -- now fixed and running on 5.5.0, verified
+  # end to end (real weight loading + correct scoring on a smoke test, see
+  # requirements.txt's comment). Major-version bumps stay ignored here going
+  # forward regardless: this dependency has already broken a custom model
+  # class across one major version, so any future major bump (6.x, etc.)
+  # needs the same manual build-and-smoke-test verification before merging,
+  # not an auto-merge. Patch/minor bumps within 5.x are still auto-proposed.
   - package-ecosystem: "pip"
     directory: "/services/ai-detector"
     schedule:
