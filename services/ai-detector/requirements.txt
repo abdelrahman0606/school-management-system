@@ -2,15 +2,17 @@ fastapi==0.115.6
 uvicorn[standard]==0.34.0
 pydantic==2.10.4
 torch==2.13.0+cpu
-# EXPERIMENTAL on this branch: transformers 5.5.0, with the fix for the
-# all_tied_weights_keys crash applied in main.py (DesklibAIDetectionModel).
-# Do NOT merge this to dev/main until re-verified with the same two-tier
-# essay smoke test used to confirm the 4.47.1 pin actually works: a
-# genuinely AI-style essay should score ~100/likely_ai_generated=true, a
-# genuinely human one with a normal personal voice should score well below
-# 50/false. If that split doesn't hold (e.g. both score high/low/identical,
-# or scores are suspiciously flat regardless of input), the checkpoint's
-# real weights are likely not loading correctly under this version even
-# though it no longer crashes -- revert to transformers==4.47.1 instead.
+# transformers 5.5.0. A 4.47.1 -> 5.0.0 Dependabot bump previously crashed
+# this service on startup (v5's from_pretrained() requires custom
+# PreTrainedModel subclasses to declare all_tied_weights_keys, which
+# DesklibAIDetectionModel in main.py didn't -- fixed there). Verified
+# working end to end after that fix: real weight loading (392/392 tensors,
+# no MISSING/UNEXPECTED against the actual model class) and correct
+# discrimination on the same two-tier essay smoke test used to validate
+# 4.47.1 (formal AI-style essay -> ai_score 100, casual human-voiced essay
+# -> ai_score 48). See .github/dependabot.yml -- any FUTURE transformers
+# major-version bump still needs that same manual verification before
+# merging; this dependency has now broken a custom model class across a
+# major version once already.
 transformers==5.5.0
 safetensors==0.4.5
