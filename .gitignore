@@ -11,6 +11,10 @@ Thumbs.db
 .env.production
 !.env.example
 
+# Python (services/ai-detector/)
+__pycache__/
+*.pyc
+
 # Security — never commit keys or certificates
 deploy-key-*
 auth.json
