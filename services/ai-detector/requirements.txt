@@ -14,5 +14,5 @@ torch==2.13.0+cpu
 # major-version bump still needs that same manual verification before
 # merging; this dependency has now broken a custom model class across a
 # major version once already.
-transformers==5.5.0
+transformers==5.14.1
 safetensors==0.4.5
