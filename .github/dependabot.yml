@@ -31,3 +31,17 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+
+  # Self-hosted AI-detector microservice (services/ai-detector/requirements.txt).
+  # transformers is pinned below 5.x on purpose -- our custom PreTrainedModel
+  # subclass (DesklibAIDetectionModel in main.py) broke on startup under
+  # 5.5.0 (confirmed by actually running it: a v5 API change we don't
+  # implement). Ignore major-version bumps here so this can't get silently
+  # auto-merged again; patch/minor bumps within 4.x are still fine.
+  - package-ecosystem: "pip"
+    directory: "/services/ai-detector"
+    schedule:
+      interval: "weekly"
+    ignore:
+      - dependency-name: "transformers"
+        update-types: ["version-update:semver-major"]

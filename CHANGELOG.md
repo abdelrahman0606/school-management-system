@@ -13,6 +13,8 @@ follows [Semantic Versioning](https://semver.org/).
 - AI checker score is now always kept within the expected range, and no longer builds/starts by default.
 - Test suite no longer makes real network calls when a developer has the self-hosted checker enabled locally.
 - Updated README, CLAUDE.md, and AGENTS.md to match the current codebase (both were out of date).
+- Fixed the self-hosted AI checker container failing to build with a mismatched, non-CPU-only PyTorch install.
+- Fixed the self-hosted AI checker crashing on startup after an automatic dependency update broke it; pinned that dependency so it can't silently happen again.
 
 ## [1.4.0] — 2026-07-31
 

@@ -2,5 +2,17 @@ fastapi==0.115.6
 uvicorn[standard]==0.34.0
 pydantic==2.10.4
 torch==2.13.0+cpu
-transformers==5.5.0
+# Pinned below 5.x on purpose -- DO NOT let Dependabot bump this to a 5.x
+# release. transformers 5.0 changed what a custom PreTrainedModel subclass
+# (see DesklibAIDetectionModel in main.py) needs to define -- from_pretrained()
+# now expects an `all_tied_weights_keys` attribute our model never declared,
+# and 5.5.0 crashed on startup with "AttributeError: 'DesklibAIDetectionModel'
+# object has no attribute 'all_tied_weights_keys'" (confirmed by actually
+# running it). The v5 migration guide also documents custom-model weight-init
+# behavior changes beyond this, and 5.1-5.3 reportedly kept shipping further
+# breaking changes for custom models -- not something to opportunistically
+# bump without re-testing the /detect endpoint end to end. See
+# .github/dependabot.yml, which now ignores transformers major-version
+# updates for this reason.
+transformers==4.47.1
 safetensors==0.4.5
