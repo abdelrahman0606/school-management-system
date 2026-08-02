@@ -15,4 +15,4 @@ torch==2.13.0+cpu
 # merging; this dependency has now broken a custom model class across a
 # major version once already.
 transformers==5.5.0
-safetensors==0.4.5
+safetensors==0.8.0
