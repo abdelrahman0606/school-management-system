@@ -1,18 +1,21 @@
-fastapi==0.115.6
-uvicorn[standard]==0.34.0
-pydantic==2.10.4
+fastapi==0.141.1
+uvicorn[standard]==0.52.0
+pydantic==2.13.4
 torch==2.13.0+cpu
-# transformers 5.5.0. A 4.47.1 -> 5.0.0 Dependabot bump previously crashed
+# transformers 5.14.1. A 4.47.1 -> 5.0.0 Dependabot bump previously crashed
 # this service on startup (v5's from_pretrained() requires custom
 # PreTrainedModel subclasses to declare all_tied_weights_keys, which
 # DesklibAIDetectionModel in main.py didn't -- fixed there). Verified
-# working end to end after that fix: real weight loading (392/392 tensors,
-# no MISSING/UNEXPECTED against the actual model class) and correct
-# discrimination on the same two-tier essay smoke test used to validate
-# 4.47.1 (formal AI-style essay -> ai_score 100, casual human-voiced essay
-# -> ai_score 48). See .github/dependabot.yml -- any FUTURE transformers
+# working end to end after that fix, then re-verified again after this
+# further 5.5.0 -> 5.14.1 bump (bundled with the fastapi/uvicorn/pydantic/
+# safetensors bumps above, all from their respective Dependabot PRs) on a
+# dedicated experiment branch: real weight loading (392/392 tensors, no
+# MISSING/UNEXPECTED against the actual model class) and correct
+# discrimination on the same two-tier essay smoke test used every time
+# (formal AI-style essay -> ai_score 100, casual human-voiced essay ->
+# ai_score 48). See .github/dependabot.yml -- any FUTURE transformers
 # major-version bump still needs that same manual verification before
 # merging; this dependency has now broken a custom model class across a
 # major version once already.
-transformers==5.5.0
-safetensors==0.4.5
+transformers==5.14.1
+safetensors==0.8.0
