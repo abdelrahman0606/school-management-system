@@ -13,6 +13,8 @@ torch==2.13.0+cpu
 # -> ai_score 48). See .github/dependabot.yml -- any FUTURE transformers
 # major-version bump still needs that same manual verification before
 # merging; this dependency has now broken a custom model class across a
-# major version once already.
-transformers==5.5.0
+# major version once already. EXPERIMENTAL on this branch: bumped further
+# to 5.14.1 -- not yet re-verified with the smoke test, do not merge to
+# dev/main until it is.
+transformers==5.14.1
 safetensors==0.8.0
