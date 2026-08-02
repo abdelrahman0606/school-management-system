@@ -35,6 +35,12 @@ This optional module supports learning management features such as courses, less
     change. `AppServiceProvider` binds the contract based on `config('lms.ai_provider')`.
   - The underlying model scores "how AI-generated does this text look", not plagiarism (matching against
     sources) — same scope either way.
+  - **Known limitation (self-hosted provider):** less reliable on very short or casual submissions — verified
+    by hand: a two-sentence formal paragraph and a two-sentence casual one both scored 90+ ("likely AI") even
+    though only one actually was. Full assignment-length essays scored correctly (a genuinely AI-style essay
+    scored 100, a genuinely human one with a personal voice and normal imperfections scored 48/"not AI"). This
+    is a known weak spot of AI-text detectors generally, not specific to this integration — treat a flagged
+    *short* submission as a signal to look closer, not a verdict on its own.
 - `AssignmentAiCheckJob` deliberately catches every exception from the checker and never rethrows, recording
   `status=failed` on the check record instead. This is intentional: under `QUEUE_CONNECTION=sync` (tests, and
   any deployment without Horizon running) an uncaught exception crashes the HTTP request that dispatched the
