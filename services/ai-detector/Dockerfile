@@ -37,6 +37,17 @@ AutoTokenizer.from_pretrained(name); \
 AutoConfig.from_pretrained(name); \
 AutoModel.from_pretrained(name)"
 
+# Force offline mode from here on (build-time baking above still needs the
+# network to actually download the files the first time -- this only
+# applies to the runtime CMD below). Without this, main.py's
+# from_pretrained() calls still phone home to the Hub on every container
+# start to check for updates, even though every file it needs is already
+# baked into the image -- defeating the whole "no outbound internet needed
+# at runtime" point of baking it in, and printing an "unauthenticated
+# requests to the HF Hub" rate-limit warning on every startup as a symptom.
+ENV HF_HUB_OFFLINE=1
+ENV TRANSFORMERS_OFFLINE=1
+
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
