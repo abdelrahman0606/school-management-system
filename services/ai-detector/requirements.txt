@@ -2,17 +2,15 @@ fastapi==0.115.6
 uvicorn[standard]==0.34.0
 pydantic==2.10.4
 torch==2.13.0+cpu
-# Pinned below 5.x on purpose -- DO NOT let Dependabot bump this to a 5.x
-# release. transformers 5.0 changed what a custom PreTrainedModel subclass
-# (see DesklibAIDetectionModel in main.py) needs to define -- from_pretrained()
-# now expects an `all_tied_weights_keys` attribute our model never declared,
-# and 5.5.0 crashed on startup with "AttributeError: 'DesklibAIDetectionModel'
-# object has no attribute 'all_tied_weights_keys'" (confirmed by actually
-# running it). The v5 migration guide also documents custom-model weight-init
-# behavior changes beyond this, and 5.1-5.3 reportedly kept shipping further
-# breaking changes for custom models -- not something to opportunistically
-# bump without re-testing the /detect endpoint end to end. See
-# .github/dependabot.yml, which now ignores transformers major-version
-# updates for this reason.
-transformers==4.47.1
+# EXPERIMENTAL on this branch: transformers 5.5.0, with the fix for the
+# all_tied_weights_keys crash applied in main.py (DesklibAIDetectionModel).
+# Do NOT merge this to dev/main until re-verified with the same two-tier
+# essay smoke test used to confirm the 4.47.1 pin actually works: a
+# genuinely AI-style essay should score ~100/likely_ai_generated=true, a
+# genuinely human one with a normal personal voice should score well below
+# 50/false. If that split doesn't hold (e.g. both score high/low/identical,
+# or scores are suspiciously flat regardless of input), the checkpoint's
+# real weights are likely not loading correctly under this version even
+# though it no longer crashes -- revert to transformers==4.47.1 instead.
+transformers==5.5.0
 safetensors==0.4.5
