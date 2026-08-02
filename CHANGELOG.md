@@ -16,6 +16,8 @@ follows [Semantic Versioning](https://semver.org/).
 - Fixed the self-hosted AI checker container failing to build with a mismatched, non-CPU-only PyTorch install.
 - Fixed the self-hosted AI checker crashing on startup after an automatic dependency update broke it, then properly migrated to and verified the newer version instead of just reverting.
 - Documented that the self-hosted checker is less reliable on very short or casual submissions.
+- Fixed the self-hosted AI checker printing an "unauthenticated requests" warning and unnecessarily phoning home to Hugging Face on every startup, despite already having everything it needs baked into the image.
+- Applied a further batch of routine dependency updates to the self-hosted AI checker (transformers, fastapi, uvicorn, pydantic, safetensors), each verified with a real build and smoke test before merging.
 
 ## [1.4.0] — 2026-07-31
 
