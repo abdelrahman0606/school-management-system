@@ -1602,6 +1602,42 @@ verify it lands on the right element in the live preview; toggle Hero's Backgrou
 confirm only one ever renders; set a Hero button's hover colors and confirm the button actually changes color
 on mouseover.
 
+### §7af — Notices icon color, Staff avatar text color, and a Hero background-color correction
+
+**Three follow-up requests after §7ae shipped:**
+1. Notices: an icon color field for `.notice-icon` (the round badge behind the megaphone icon).
+2. Staff: a text color field for `.text-brand` (the initial-letter avatar shown for a member with no photo).
+3. Hero: "background color should apply to section, not to header" — a correction to §7ae's own design.
+
+**Notices/Staff (straightforward additions):** `icon_color` and `avatar_text_color`, same pattern as every
+other field in §7ae/§7ab — both target elements (`.notice-icon`, `.text-brand`) carry a non-`!important` class
+rule, so a plain inline `style="color:…"` directly on the element wins with no class-swap needed.
+
+**Hero background — reworked, not just relabeled:** §7ae applied `bg_color` directly to the inner
+`<header class="hero">` when `bg_mode === 'color'`. That worked visually, but put hero's background application
+on a different footing than every other block (where `bg_color` always applies to the outer wrapper `<section>`
+via the universal `BlockPresentation::wrapper()` — no per-block special-casing). Reworked so `bg_color` needs
+**zero** special handling in the `'hero'` case now — it already reaches the section wrapper for free, same as
+any other block. What the `'hero'` case still has to do is neutralize the *inner* `<header>`'s own `.hero`
+gradient/image (`background:none`) once a real `bg_color` is set in `'color'` mode, since that inner element
+would otherwise keep painting over the section's color and hide it completely — this is the actual, narrower
+reason a hero background color was invisible before §7ae/§7af (not a missing feature, a genuine bug: the
+wrapper-level color was always being computed correctly, just never visible). `bg_mode`/the Style tab UI are
+unchanged from §7ae; only which element `bg_color` targets changed.
+
+**Updated tests:** the two Hero background-mode tests now assert the section wrapper's own `style` attribute
+carries `background-color:…` (via a regex over the `<section …>` tag, since its exact class list isn't worth
+hardcoding) and that the `<header>` gets `style="background:none;"` only when color mode has an actual color
+set — never when image mode is active, even with a stray `bg_color` value sitting in storage. Notices/Staff's
+existing render-correctness tests gained one more assertion each for the two new fields rather than new test
+methods, since they already cover "starts from a page with several colors set, checks each lands on its own
+element."
+
+**Verification gap:** no PHP/browser in this sandbox, same as every prior entry. Please confirm: a Hero block
+with **no** background color set still shows its default gradient/image exactly as before; setting a solid
+background color makes the whole hero section (not just text sitting on top of the old gradient) show the new
+color; Notices' icon badge and Staff's initial-letter avatar both pick up their new color fields.
+
 ## 8. Decisions to confirm when resuming (if not already answered above)
 
 - Confirm the exact current route/controller method name for the public page `show()` action before Phase 1

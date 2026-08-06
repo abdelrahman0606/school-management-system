@@ -434,6 +434,7 @@ class PageBuilderStyleLayoutNestingTest extends TestCase
                 'date_color' => '#333333',
                 'card_title_color' => '#444444',
                 'card_text_color' => '#555555',
+                'icon_color' => '#666666',
             ],
         ]]);
 
@@ -444,6 +445,7 @@ class PageBuilderStyleLayoutNestingTest extends TestCase
         $this->assertStringContainsString('style="color:#333333"', $html);
         $this->assertStringContainsString('<h3 class="h6 fw-semibold" style="color:#444444">Admissions Open</h3>', $html);
         $this->assertStringContainsString('style="color:#555555"', $html);
+        $this->assertStringContainsString('notice-icon mb-3" style="color:#666666"', $html);
         // date/body normally carry Bootstrap's !important .text-muted — both
         // are dropped from the class list once their own override is set.
         $this->assertStringNotContainsString('text-muted mb-1', $html);
@@ -481,6 +483,7 @@ class PageBuilderStyleLayoutNestingTest extends TestCase
                 'ring_color' => '#222222',
                 'name_color' => '#333333',
                 'designation_color' => '#444444',
+                'avatar_text_color' => '#555555',
             ],
         ]]);
 
@@ -490,6 +493,7 @@ class PageBuilderStyleLayoutNestingTest extends TestCase
         $this->assertStringContainsString('box-shadow:0 0 0 3px #fff, 0 0 0 5px #222222', $html);
         $this->assertStringContainsString('<div class="fw-semibold small" style="color:#333333">Jane Doe</div>', $html);
         $this->assertStringContainsString('<div class="small" style="color:#444444">', $html);
+        $this->assertStringContainsString('<span class="text-brand fw-bold fs-3" style="color:#555555">J</span>', $html);
         $this->assertStringNotContainsString('text-muted">Staff</div>', $html);
     }
 
@@ -510,7 +514,7 @@ class PageBuilderStyleLayoutNestingTest extends TestCase
         $this->assertStringNotContainsString('lead text-white-50', $html);
     }
 
-    public function test_hero_block_solid_color_background_overrides_the_gradient_and_ignores_image(): void
+    public function test_hero_block_solid_color_background_applies_to_the_section_and_neutralizes_the_header(): void
     {
         $this->actingAs($this->admin);
         $page = $this->publish([[
@@ -521,7 +525,12 @@ class PageBuilderStyleLayoutNestingTest extends TestCase
 
         $html = $this->get('/'.$page->slug)->assertOk()->getContent();
 
-        $this->assertStringContainsString('style="background-image:none;background-color:#0a0a0a;"', $html);
+        // bg_color applies to the outer SECTION wrapper — the same universal
+        // mechanism every other block uses — not the inner <header>.
+        $this->assertMatchesRegularExpression('/<section[^>]*style="[^"]*background-color:#0a0a0a[^"]*"[^>]*>/', $html);
+        // The header's own .hero gradient/image would otherwise sit on top of
+        // and hide that section color entirely, so it's neutralized instead.
+        $this->assertMatchesRegularExpression('/<header class="hero py-5 py-lg-6"\s+style="background:none;"/', $html);
         $this->assertStringNotContainsString('bg.jpg', $html);
     }
 
@@ -540,7 +549,10 @@ class PageBuilderStyleLayoutNestingTest extends TestCase
         $html = $this->get('/'.$page->slug)->assertOk()->getContent();
 
         $this->assertStringContainsString("url('https://example.com/bg.jpg')", $html);
-        $this->assertStringNotContainsString('background-color:#0a0a0a', $html);
+        // bg_color is still applied to the section wrapper (universal, always
+        // on) — what must NOT happen is the header being neutralized/losing
+        // its image because of it.
+        $this->assertStringNotContainsString('style="background:none;"', $html);
     }
 
     public function test_hero_block_button_colors_render_with_a_scoped_hover_style_block(): void

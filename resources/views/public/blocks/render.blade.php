@@ -70,11 +70,21 @@
       // Background is an explicit either/or (Style tab radio, 'bg_mode'):
       // 'color' uses the Style tab's own bg_color solid fill; anything else
       // (unset / 'image', the pre-existing behavior) uses the Content tab's
-      // image field exactly as before. Never both at once — before this,
-      // a wrapper-level bg_color was silently invisible here anyway (the
-      // .hero class below paints an opaque gradient/image straight over
-      // whatever the outer wrapper's own background was), so this is also
-      // the fix for that dormant version of the same bug, not just new UI.
+      // image field exactly as before. Never both at once.
+      //
+      // bg_color itself is applied to the outer SECTION wrapper — same as
+      // every other block, via the universal BlockPresentation::wrapper()
+      // mechanism (no special-casing needed there at all). What's special
+      // about hero is the inner <header class="hero">: its own .hero class
+      // (layout.blade.php) paints an opaque gradient (or, when an image is
+      // set, this case paints the image directly on the header too) that
+      // would otherwise sit on TOP of the section's background and hide it
+      // completely — a wrapper-level bg_color has always been silently
+      // invisible on a hero block for exactly this reason. So when 'color'
+      // mode has an actual color set, the header's own background is
+      // neutralized (background:none) instead, letting the section's
+      // already-applied color show through where the header used to paint
+      // over it.
       $heroBgMode = ($style['bg_mode'] ?? 'image') === 'color' ? 'color' : 'image';
       // Bootstrap's .text-white-50 is !important — can't be beaten by a
       // plain inline style, so it's dropped entirely (not fought) only once
@@ -84,7 +94,7 @@
     @endphp
     <header class="hero py-5 py-lg-6"
       @if($heroBgMode === 'color' && !empty($style['bg_color']))
-        style="background-image:none;background-color:{{ $style['bg_color'] }};"
+        style="background:none;"
       @elseif(!empty($d['image']))
         style="background-image:linear-gradient(rgba(0,0,0,.45),rgba(0,0,0,.45)),url('{{ $d['image'] }}');background-size:cover;background-position:center;"
       @endif
@@ -314,7 +324,7 @@
           <div>
             <div class="rounded-circle bg-white avatar-ring d-inline-flex align-items-center justify-content-center mb-3" style="width:88px;height:88px;{{ $staffRingStyle }}">
               @if($m->photo)<img src="{{ $m->photo }}" class="rounded-circle" style="width:88px;height:88px;object-fit:cover;" alt="">
-              @else<span class="text-brand fw-bold fs-3">{{ strtoupper(mb_substr($m->name, 0, 1)) }}</span>@endif
+              @else<span class="text-brand fw-bold fs-3"@if(!empty($style['avatar_text_color'])) style="color:{{ $style['avatar_text_color'] }}"@endif>{{ strtoupper(mb_substr($m->name, 0, 1)) }}</span>@endif
             </div>
             <div class="fw-semibold small"@if(!empty($style['name_color'])) style="color:{{ $style['name_color'] }}"@endif>{{ $m->name }}</div>
             <div class="small{{ empty($style['designation_color']) ? ' text-muted' : '' }}"@if(!empty($style['designation_color'])) style="color:{{ $style['designation_color'] }}"@endif>{{ $m->designation?->name ?? __('Staff') }}</div>
@@ -338,7 +348,7 @@
       <div class="row {{ $bp::columnClasses($layout, ['mobile' => 1, 'tablet' => 2, 'laptop' => 3, 'desktop' => 3]) }} g-4">
         @forelse(($d['notices'] ?? collect())->take($d['limit'] ?? 6) as $n)
           <div><div class="card h-100"@if(!empty($style['card_bg_color'])) style="background-color:{{ $style['card_bg_color'] }}"@endif><div class="card-body p-4">
-            <div class="d-flex align-items-center justify-content-center notice-icon mb-3"><i class="bi bi-megaphone-fill"></i></div>
+            <div class="d-flex align-items-center justify-content-center notice-icon mb-3"@if(!empty($style['icon_color'])) style="color:{{ $style['icon_color'] }}"@endif><i class="bi bi-megaphone-fill"></i></div>
             <div class="small{{ empty($style['date_color']) ? ' text-muted' : '' }} mb-1"@if(!empty($style['date_color'])) style="color:{{ $style['date_color'] }}"@endif>{{ \App\Support\LocalizedDate::format($n->publish_at ?? $n->created_at, 'd M Y') }}</div>
             <h3 class="h6 fw-semibold"@if(!empty($style['card_title_color'])) style="color:{{ $style['card_title_color'] }}"@endif>{{ $n->title }}</h3>
             <p class="{{ empty($style['card_text_color']) ? 'text-muted ' : '' }}small mb-0"@if(!empty($style['card_text_color'])) style="color:{{ $style['card_text_color'] }}"@endif>{{ \Illuminate\Support\Str::limit(strip_tags($n->body), 110) }}</p>

@@ -341,22 +341,28 @@ class PageRenderService
             'date_color' => $hex($style['date_color'] ?? null),
             'card_title_color' => $hex($style['card_title_color'] ?? null),
             'card_text_color' => $hex($style['card_text_color'] ?? null),
+            // Icon color for the round .notice-icon badge — the <i> icon
+            // glyph takes its color from that div's own `color` (Bootstrap
+            // Icons are currentColor), so this is applied directly there.
+            'icon_color' => $hex($style['icon_color'] ?? null),
             // Staff-block-only fields.
             'ring_color' => $hex($style['ring_color'] ?? null),
             'name_color' => $hex($style['name_color'] ?? null),
             'designation_color' => $hex($style['designation_color'] ?? null),
+            // The fallback initial-letter avatar (.text-brand) shown when a
+            // staff member has no photo.
+            'avatar_text_color' => $hex($style['avatar_text_color'] ?? null),
             // Hero-block-only fields. 'heading_color' (above) doubles as the
             // hero's own title (<h1>) color — same key, different element,
             // exactly like it already doubles for stats/notices/staff's own
-            // heading; 'bg_color' (above) doubles as the hero's solid
-            // background color, but ONLY takes effect when 'bg_mode' is
-            // explicitly 'color' — otherwise (default / 'image') the hero
-            // keeps using its own Content-tab background image field, so a
-            // block never tries to show both at once. See render.blade.php's
-            // 'hero' @case and docs/modules/28-elementor-block-editor-plan.md
-            // §7ae for why this needed an explicit mode rather than the
-            // silent "image always wins if both are set" it would otherwise
-            // fall back to.
+            // heading. 'bg_color' (above) needs no special handling here at
+            // all — it already applies to the outer wrapper for every block
+            // type via BlockPresentation. 'bg_mode' instead controls whether
+            // the INNER <header class="hero">'s own gradient/image (which
+            // would otherwise sit on top of and hide the wrapper's color
+            // entirely) is neutralized so that wrapper color can actually
+            // show through. See render.blade.php's 'hero' case and
+            // docs/modules/28-elementor-block-editor-plan.md §7ae/§7af.
             'bg_mode' => in_array($style['bg_mode'] ?? null, ['image', 'color'], true) ? $style['bg_mode'] : null,
             'subtitle_color' => $hex($style['subtitle_color'] ?? null),
             'button_text_color' => $hex($style['button_text_color'] ?? null),

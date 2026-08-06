@@ -96,6 +96,13 @@
         <input type="text" name="{{ $prefix }}[style][card_text_color]" value="{{ $s['card_text_color'] ?? '' }}" class="form-control js-color-text" placeholder="{{ __('None') }}" maxlength="9">
       </div>
     </div>
+    <div class="col-12">
+      <label class="form-label small text-muted mb-1">{{ __('Card icon color') }}</label>
+      <div class="input-group input-group-sm js-color-pair">
+        <input type="color" class="form-control form-control-color js-color-swatch" value="{{ ($s['icon_color'] ?? null) ?: '#000000' }}">
+        <input type="text" name="{{ $prefix }}[style][icon_color]" value="{{ $s['icon_color'] ?? '' }}" class="form-control js-color-text" placeholder="{{ __('None') }}" maxlength="9">
+      </div>
+    </div>
   @elseif ($type === 'staff')
     <div class="col-12">
       <label class="form-label small text-muted mb-1">{{ __('Heading color') }}</label>
@@ -110,6 +117,14 @@
         <input type="color" class="form-control form-control-color js-color-swatch" value="{{ ($s['ring_color'] ?? null) ?: '#000000' }}">
         <input type="text" name="{{ $prefix }}[style][ring_color]" value="{{ $s['ring_color'] ?? '' }}" class="form-control js-color-text" placeholder="{{ __('None') }}" maxlength="9">
       </div>
+    </div>
+    <div class="col-12">
+      <label class="form-label small text-muted mb-1">{{ __('Avatar text color') }}</label>
+      <div class="input-group input-group-sm js-color-pair">
+        <input type="color" class="form-control form-control-color js-color-swatch" value="{{ ($s['avatar_text_color'] ?? null) ?: '#000000' }}">
+        <input type="text" name="{{ $prefix }}[style][avatar_text_color]" value="{{ $s['avatar_text_color'] ?? '' }}" class="form-control js-color-text" placeholder="{{ __('None') }}" maxlength="9">
+      </div>
+      <p class="form-text small text-muted mb-0">{{ __('Only visible for members without a photo (the initial-letter avatar).') }}</p>
     </div>
     <div class="col-12">
       <label class="form-label small text-muted mb-1">{{ __('Name color') }}</label>
