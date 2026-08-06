@@ -1504,6 +1504,32 @@ script on both files. Please re-run
 (and ideally the full suite, since the break was site-wide, not stats-specific) to confirm the ParseError is
 gone before merging `dev` into `main`.
 
+### §7ad — Live preview goes blank on style edit when a block has an entrance animation (bug fix)
+
+**The bug, as reported:** "when styles are updated the preview of that block get white. the html is still
+there in preview. no updated text is shown" — not stats-specific; any block with a Style-tab entrance
+animation set, edited via the fast single-block preview path.
+
+**Root cause:** `layout.blade.php`'s `.reveal { opacity: 0; }` / `.reveal.is-visible { opacity: 1; }` pair
+relies on a single `IntersectionObserver`, set up once in a plain `<script>` IIFE that runs when the iframe's
+document loads (`querySelectorAll('.reveal')` + `io.observe()` over whatever exists at that moment). A full
+preview reload (`runPreview()`, `frame.srcdoc = html`) re-navigates the iframe, so every script — including
+that IIFE — reruns and picks up the current elements. `runBlockPreview()` (`edit.blade.php`,
+`scheduleBlockPreview`'s target of a plain Style/Content field edit) does not reload the srcdoc — it patches
+just one block's markup in place via `target.replaceWith(next)` for speed. Any `.reveal` element inside `next`
+is a brand-new DOM node the original observer never learned about, so it sits at `opacity: 0` forever: exactly
+"still in the DOM, nothing visible."
+
+**Fix:** in `runBlockPreview()`'s success handler, right before `target.replaceWith(next)`, mark every
+`.reveal` element in the replacement (including `next` itself) `is-visible` directly, rather than trying to
+reach into the iframe's closed-over `io` instance (not exposed on `window`). A block being live-edited is
+already on-screen, so there's no UX loss in skipping the scroll-triggered fade for it specifically — the real
+public page and a full preview reload both still animate normally.
+
+**Verification gap:** no browser in this sandbox. Please confirm: open a block with any entrance animation set
+(e.g. Statistics with "Fade Up"), edit an unrelated Style field (a color), and verify the block's content stays
+visible in the preview instead of disappearing.
+
 ## 8. Decisions to confirm when resuming (if not already answered above)
 
 - Confirm the exact current route/controller method name for the public page `show()` action before Phase 1

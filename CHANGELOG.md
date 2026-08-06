@@ -8,6 +8,7 @@ follows [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 - Statistics block: Style tab colors and the entrance animation now actually apply. A single wrapper-level color/animation could never reach the heading or tile text (they each carry their own explicit CSS), so those settings visibly did nothing. Replaced with four targeted fields (Heading, Tile Background, Tile Number, Tile Subtext color) for this block only, and the entrance animation now plays on the heading and each tile individually instead of the whole section at once.
+- Page builder: editing a block's Style tab could make its live preview go blank (content still in the DOM, just invisible) whenever that block had an entrance animation set — the preview's fast per-block update path never told the page's scroll-reveal animation about newly-inserted elements, so they stayed permanently hidden instead of fading in.
 
 ## [1.4.1] — 2026-08-01
 

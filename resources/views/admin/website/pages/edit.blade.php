@@ -1714,6 +1714,20 @@
             // detection (data-block-type) keeps working after a field edit.
             var oldType = target.getAttribute('data-block-type');
             if (oldType) next.setAttribute('data-block-type', oldType);
+            // A block with a Style-tab entrance animation renders '.reveal'
+            // elements (opacity:0 until layout.blade.php's own
+            // IntersectionObserver adds '.is-visible') — but that observer
+            // only ever ran once, over whatever '.reveal' elements existed
+            // at srcdoc-load time (runPreview()'s full iframe reload). This
+            // fast path patches the block in place instead of reloading the
+            // srcdoc, so a freshly-inserted '.reveal' element here is never
+            // seen by that observer and would sit at opacity:0 forever —
+            // the block "goes white" the moment any style field changes.
+            // Mark it visible immediately instead: the block is already
+            // on-screen being edited, so there's nothing to gain from
+            // waiting on a scroll trigger that will never fire for it.
+            if (next.classList.contains('reveal')) next.classList.add('is-visible');
+            next.querySelectorAll('.reveal').forEach(function (el) { el.classList.add('is-visible'); });
             target.replaceWith(next);
             setStatus(@json(__('Up To Date')));
           }).catch(function () {
