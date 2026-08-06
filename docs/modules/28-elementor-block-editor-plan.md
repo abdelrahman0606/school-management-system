@@ -1638,6 +1638,59 @@ with **no** background color set still shows its default gradient/image exactly 
 background color makes the whole hero section (not just text sitting on top of the old gradient) show the new
 color; Notices' icon badge and Staff's initial-letter avatar both pick up their new color fields.
 
+### §7ag — Hero background color still did nothing: duplicate form field name (bug fix)
+
+**The report, verbatim, with the actual rendered HTML attached:** the admin set Hero's new Background Color
+(Style tab) and republished, but the live block still showed no `style` attribute at all on either the
+`<section>` wrapper or the `<header>` — not even the `background:none` §7af was supposed to add once a color
+mode was picked.
+
+**Root cause:** §7ae reused the existing universal `bg_color` field name (`[style][bg_color]`) for hero's new
+Style-tab color picker, on the reasoning that it's "the same key, different element" — true for `heading_color`
+reused across several blocks' own heading, but **not** true here, because unlike `heading_color`, `bg_color`
+*already had its own dedicated input* elsewhere on the same block card: the Advanced tab's generic "Background"
+section (`_layout_fields.blade.php`, added in §7aa, present for every block type). Bootstrap's tabs only
+toggle which tab-pane is *visible* (`display:none` via the `.tab-pane`/`.show` classes) — every tab's fields
+stay in the DOM and stay part of the `<form>` regardless of which tab is currently open. That meant a hero
+block card had **two** `<input name="blocks[0][style][bg_color]">` elements at once: one in the Style tab
+(what the admin actually used) and one in the Advanced tab (always present, defaulting to an empty string
+since nobody had ever needed to touch it for a hero block before). `new FormData(form)` (the full-page live
+preview and the real Save/Publish submit) and `blockFormData()` (the single-block AJAX preview) both collect
+*every* matching field in DOM/source order; PHP's own request parsing takes the **last** value for a
+non-array-suffixed duplicate key. The Advanced tab's pane renders after the Style tab's in `_card.blade.php`'s
+markup, so its empty value always arrived last and silently overwrote whatever the admin had actually picked
+in the Style tab — indistinguishable, from the outside, from the color simply "not applying."
+
+**Why this wasn't caught by §7ae's/§7af's own tests:** every existing test posts the `style` array directly as
+structured PHP data to `PUT /admin/pages/{id}` (see `publish()`'s helper), which has no concept of "two HTML
+inputs sharing one name" — that collision only exists in the actual rendered admin-editor HTML, which none of
+the prior tests rendered and inspected for hero specifically.
+
+**Fix:** `_layout_fields.blade.php`'s Background section now takes `$type` (threaded through from
+`_card.blade.php`'s include, alongside `_style_fields.blade.php` already receiving it) and skips rendering its
+generic Background color/Background image URL/Overlay darkness fields entirely for `$type === 'hero'`,
+replacing them with a one-line pointer to the Style tab instead — same pattern as the Style tab's own
+Announcement Bar note pointing the other direction (§7ae). No JS changes needed: removing the duplicate field
+from the DOM removes the collision at its source for both submission paths at once.
+
+**New tests:** one confirming a hero block's edit-page HTML contains exactly one `[style][bg_color]`-named
+input (not two) plus the new pointer text, and a companion test confirming a non-hero block (`richtext`) still
+shows the generic field completely normally — a regression guard on the `$type === 'hero'` branch not
+accidentally swallowing every other block type, same shape as §7ae's own `test_non_stats_block_still_uses_…`
+guard.
+
+**Standing lesson, generalized from §7ae's mistake:** reusing an existing field *name* across two different UI
+locations on the same block card is only safe when at most ONE of those locations can ever actually render for
+a given block type — `heading_color`/`bg_color`-for-announcement_bar were safe reuses because each block type
+only ever shows one Style-tab branch. Hero's case was different: the Style tab's *new* branch and the Advanced
+tab's *pre-existing, unconditional* field both rendered for the exact same block type at the exact same time.
+Before reusing a `[style][…]` key name anywhere, check whether _layout_fields.blade.php (or any other partial
+included unconditionally into the same card) already renders a field under that exact name.
+
+**Verification gap:** no PHP/browser in this sandbox. Please confirm: open a Hero block, switch Background to
+Solid Color, pick a color, save, and verify the color now actually shows (previously confirmed only via
+server-side rendering tests, never through the actual admin form submission path that originally broke it).
+
 ## 8. Decisions to confirm when resuming (if not already answered above)
 
 - Confirm the exact current route/controller method name for the public page `show()` action before Phase 1

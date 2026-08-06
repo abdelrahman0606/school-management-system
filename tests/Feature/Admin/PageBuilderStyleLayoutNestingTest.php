@@ -534,6 +534,46 @@ class PageBuilderStyleLayoutNestingTest extends TestCase
         $this->assertStringNotContainsString('bg.jpg', $html);
     }
 
+    public function test_hero_block_edit_form_does_not_duplicate_the_bg_color_field_name(): void
+    {
+        // Regression guard (§7af): the Advanced tab's generic Background
+        // color field and the Style tab's hero-specific one used to share
+        // the exact same [style][bg_color] input name. Both exist in the
+        // DOM at once (Bootstrap tabs only toggle visibility, not presence),
+        // so submitting the whole #page-form sent BOTH values under one
+        // key — whichever field was LAST in source order (the Advanced tab)
+        // silently won and overwrote whatever the admin actually set in the
+        // Style tab, making the Style tab's color picker look like it did
+        // nothing. There must only ever be one such input per hero block.
+        $this->actingAs($this->admin);
+        $page = $this->publish([[
+            'type' => 'hero',
+            'data' => ['title' => 'Welcome'],
+            'style' => ['bg_mode' => 'color', 'bg_color' => '#0a0a0a'],
+        ]]);
+
+        $html = $this->get("/admin/pages/{$page->id}/edit")->assertOk()->getContent();
+
+        $this->assertSame(1, preg_match_all('/name="blocks\[0\]\[style\]\[bg_color\]"/', $html));
+        $this->assertStringContainsString("Background Image/Solid Color is set in this block's Style tab.", $html);
+    }
+
+    public function test_non_hero_block_still_shows_the_generic_background_color_field(): void
+    {
+        // Regression guard for the fix above: hiding the Advanced tab's
+        // Background color field must be scoped to hero only, not applied
+        // to every block type.
+        $this->actingAs($this->admin);
+        $page = $this->publish([[
+            'type' => 'richtext', 'data' => ['html' => 'Text'],
+        ]]);
+
+        $html = $this->get("/admin/pages/{$page->id}/edit")->assertOk()->getContent();
+
+        $this->assertSame(1, preg_match_all('/name="blocks\[0\]\[style\]\[bg_color\]"/', $html));
+        $this->assertStringNotContainsString("Background Image/Solid Color is set in this block's Style tab.", $html);
+    }
+
     public function test_hero_block_image_mode_is_the_default_and_unaffected_by_bg_color(): void
     {
         $this->actingAs($this->admin);

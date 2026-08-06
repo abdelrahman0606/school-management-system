@@ -148,24 +148,36 @@
   </button>
   <div class="collapse" id="adv-bg-{{ $tabId }}">
     <div class="pt-1 pb-2">
-      <div class="mb-2">
-        <label class="form-label small text-muted mb-1">{{ __('Background color') }}</label>
-        <div class="input-group input-group-sm js-color-pair">
-          <input type="color" class="form-control form-control-color js-color-swatch" value="{{ ($s['bg_color'] ?? null) ?: '#ffffff' }}">
-          <input type="text" name="{{ $prefix }}[style][bg_color]" value="{{ $s['bg_color'] ?? '' }}" class="form-control js-color-text" placeholder="{{ __('None') }}" maxlength="9">
+      @if (($type ?? null) === 'hero')
+        {{-- Hero owns its own Background Image/Solid Color toggle on the
+             Style tab (see _style_fields.blade.php and
+             docs/modules/28-elementor-block-editor-plan.md §7ae/§7af) —
+             this generic field must NOT also be rendered here: both used
+             the exact same [style][bg_color] input name, so whichever of
+             the two fields the browser happened to submit last silently
+             overwrote the other, and the Style tab's color picker looked
+             like it simply did nothing. --}}
+        <p class="form-text small text-muted mb-0">{{ __('Background Image/Solid Color is set in this block\'s Style tab.') }}</p>
+      @else
+        <div class="mb-2">
+          <label class="form-label small text-muted mb-1">{{ __('Background color') }}</label>
+          <div class="input-group input-group-sm js-color-pair">
+            <input type="color" class="form-control form-control-color js-color-swatch" value="{{ ($s['bg_color'] ?? null) ?: '#ffffff' }}">
+            <input type="text" name="{{ $prefix }}[style][bg_color]" value="{{ $s['bg_color'] ?? '' }}" class="form-control js-color-text" placeholder="{{ __('None') }}" maxlength="9">
+          </div>
         </div>
-      </div>
-      <div class="mb-2">
-        <label class="form-label small text-muted mb-1">{{ __('Background image URL') }}</label>
-        <input type="text" name="{{ $prefix }}[style][bg_image]" value="{{ $s['bg_image'] ?? '' }}" class="form-control form-control-sm" placeholder="https://…">
-      </div>
-      <div class="mb-2">
-        <label class="form-label small text-muted mb-1 d-flex justify-content-between">
-          <span>{{ __('Overlay darkness') }}</span>
-          <span class="text-muted">{{ $s['bg_overlay'] ?? 0 }}%</span>
-        </label>
-        <input type="range" min="0" max="100" name="{{ $prefix }}[style][bg_overlay]" value="{{ $s['bg_overlay'] ?? 0 }}" class="form-range js-range-echo">
-      </div>
+        <div class="mb-2">
+          <label class="form-label small text-muted mb-1">{{ __('Background image URL') }}</label>
+          <input type="text" name="{{ $prefix }}[style][bg_image]" value="{{ $s['bg_image'] ?? '' }}" class="form-control form-control-sm" placeholder="https://…">
+        </div>
+        <div class="mb-2">
+          <label class="form-label small text-muted mb-1 d-flex justify-content-between">
+            <span>{{ __('Overlay darkness') }}</span>
+            <span class="text-muted">{{ $s['bg_overlay'] ?? 0 }}%</span>
+          </label>
+          <input type="range" min="0" max="100" name="{{ $prefix }}[style][bg_overlay]" value="{{ $s['bg_overlay'] ?? 0 }}" class="form-range js-range-echo">
+        </div>
+      @endif
     </div>
   </div>
 </div>
