@@ -127,6 +127,81 @@ class PageBuilderStyleLayoutNestingTest extends TestCase
             ->assertSee('margin-right:35px', false);
     }
 
+    public function test_margin_and_padding_box_groups_have_no_visible_side_labels_and_a_link_button(): void
+    {
+        // §7ah: the T/B/L/R <span> labels between the 4 boxes were removed
+        // (aria-label/title still carry the full word for accessibility) so
+        // Bootstrap's .input-group rounds only the strip's own outer
+        // corners with nothing visually between the 4 plain inputs; a
+        // "link values" toggle button sits just outside the strip.
+        $this->actingAs($this->admin);
+        $page = $this->publish([[
+            'type' => 'heading', 'data' => ['text' => 'X'],
+        ]]);
+
+        $html = $this->get("/admin/pages/{$page->id}/edit")->assertOk()->getContent();
+
+        $this->assertStringNotContainsString('<span class="input-group-text" title="Top">', $html);
+        $this->assertStringNotContainsString('>T<', $html);
+        $this->assertSame(4, substr_count($html, 'name="blocks[0][style][margin_'));
+        $this->assertGreaterThanOrEqual(4, substr_count($html, 'js-spacing-link'));
+    }
+
+    // ── Background: Image / Solid Color / Gradient (§7ah) ──────────────────
+
+    public function test_gradient_background_is_sanitized_and_rendered(): void
+    {
+        $this->actingAs($this->admin);
+        $page = $this->publish([[
+            'type' => 'heading', 'data' => ['text' => 'Gradient'],
+            'style' => [
+                'bg_mode' => 'gradient',
+                'bg_gradient_start' => '#111111',
+                'bg_gradient_end' => '#222222',
+                'bg_gradient_angle' => '45',
+            ],
+        ]]);
+
+        $style = PageLayout::where('page_id', $page->id)->where('is_published', true)
+            ->latest('id')->first()->layout_json['blocks'][0]['style'];
+
+        $this->assertSame('gradient', $style['bg_mode']);
+        $this->assertSame('#111111', $style['bg_gradient_start']);
+        $this->assertSame('#222222', $style['bg_gradient_end']);
+        $this->assertSame(45, $style['bg_gradient_angle']);
+
+        $this->get('/'.$page->slug)->assertOk()
+            ->assertSee('background-image:linear-gradient(45deg,#111111,#222222)', false);
+    }
+
+    public function test_gradient_background_angle_defaults_to_135_when_unset(): void
+    {
+        $this->actingAs($this->admin);
+        $page = $this->publish([[
+            'type' => 'heading', 'data' => ['text' => 'Gradient'],
+            'style' => ['bg_mode' => 'gradient', 'bg_gradient_start' => '#111111', 'bg_gradient_end' => '#222222'],
+        ]]);
+
+        $this->get('/'.$page->slug)->assertOk()
+            ->assertSee('background-image:linear-gradient(135deg,#111111,#222222)', false);
+    }
+
+    public function test_hero_block_gradient_background_neutralizes_the_header_too(): void
+    {
+        $this->actingAs($this->admin);
+        $page = $this->publish([[
+            'type' => 'hero',
+            'data' => ['title' => 'Welcome', 'image' => 'https://example.com/bg.jpg'],
+            'style' => ['bg_mode' => 'gradient', 'bg_gradient_start' => '#111111', 'bg_gradient_end' => '#222222'],
+        ]]);
+
+        $html = $this->get('/'.$page->slug)->assertOk()->getContent();
+
+        $this->assertMatchesRegularExpression('/<section[^>]*style="[^"]*linear-gradient\(135deg,#111111,#222222\)[^"]*"[^>]*>/', $html);
+        $this->assertMatchesRegularExpression('/<header class="hero py-5 py-lg-6"\s+style="background:none;"/', $html);
+        $this->assertStringNotContainsString('bg.jpg', $html);
+    }
+
     // ── Advanced tab: width, border, radius (§7aa) ──────────────────────────
 
     public function test_width_full_mode_renders_100_percent(): void
@@ -534,44 +609,47 @@ class PageBuilderStyleLayoutNestingTest extends TestCase
         $this->assertStringNotContainsString('bg.jpg', $html);
     }
 
-    public function test_hero_block_edit_form_does_not_duplicate_the_bg_color_field_name(): void
+    public function test_hero_and_non_hero_blocks_both_show_exactly_one_bg_color_field(): void
     {
-        // Regression guard (§7af): the Advanced tab's generic Background
-        // color field and the Style tab's hero-specific one used to share
-        // the exact same [style][bg_color] input name. Both exist in the
-        // DOM at once (Bootstrap tabs only toggle visibility, not presence),
-        // so submitting the whole #page-form sent BOTH values under one
-        // key — whichever field was LAST in source order (the Advanced tab)
-        // silently won and overwrote whatever the admin actually set in the
-        // Style tab, making the Style tab's color picker look like it did
-        // nothing. There must only ever be one such input per hero block.
+        // Regression guard (§7ag/§7ah): a hero-specific copy of the
+        // Background field used to live on the Style tab (§7ae) alongside
+        // the Advanced tab's own generic one, sharing the exact same
+        // [style][bg_color] input name — both existed in the DOM at once
+        // (Bootstrap tabs only toggle visibility, not presence), so
+        // whichever was LAST in source order silently won and overwrote the
+        // other. §7ah removed hero's Style-tab copy entirely and moved
+        // Background (now Image/Solid Color/Gradient) onto the Advanced tab
+        // for every block type uniformly — there must only ever be one such
+        // input, for hero exactly like any other block.
         $this->actingAs($this->admin);
-        $page = $this->publish([[
-            'type' => 'hero',
-            'data' => ['title' => 'Welcome'],
-            'style' => ['bg_mode' => 'color', 'bg_color' => '#0a0a0a'],
-        ]]);
+        $page = $this->publish([
+            ['type' => 'hero', 'data' => ['title' => 'Welcome'], 'style' => ['bg_mode' => 'color', 'bg_color' => '#0a0a0a']],
+            ['type' => 'richtext', 'data' => ['html' => 'Text']],
+        ]);
 
         $html = $this->get("/admin/pages/{$page->id}/edit")->assertOk()->getContent();
 
         $this->assertSame(1, preg_match_all('/name="blocks\[0\]\[style\]\[bg_color\]"/', $html));
-        $this->assertStringContainsString("Background Image/Solid Color is set in this block's Style tab.", $html);
+        $this->assertSame(1, preg_match_all('/name="blocks\[1\]\[style\]\[bg_color\]"/', $html));
+        // The Style tab no longer has anything Background-related for hero.
+        $this->assertStringNotContainsString('Background Image/Solid Color is set', $html);
     }
 
-    public function test_non_hero_block_still_shows_the_generic_background_color_field(): void
+    public function test_background_type_radio_defaults_to_the_mode_a_pre_existing_page_is_actually_using(): void
     {
-        // Regression guard for the fix above: hiding the Advanced tab's
-        // Background color field must be scoped to hero only, not applied
-        // to every block type.
+        // A page saved before 'bg_mode' existed has it unset; the Advanced
+        // tab's radio should default to whichever mode its stored bg_color/
+        // bg_image actually implies (matching BlockPresentation's own
+        // fallback priority), not always "Image" regardless of what's set.
         $this->actingAs($this->admin);
         $page = $this->publish([[
             'type' => 'richtext', 'data' => ['html' => 'Text'],
+            'style' => ['bg_color' => '#123456'],
         ]]);
 
         $html = $this->get("/admin/pages/{$page->id}/edit")->assertOk()->getContent();
 
-        $this->assertSame(1, preg_match_all('/name="blocks\[0\]\[style\]\[bg_color\]"/', $html));
-        $this->assertStringNotContainsString("Background Image/Solid Color is set in this block's Style tab.", $html);
+        $this->assertMatchesRegularExpression('/id="[^"]*-bgmode-color"[^>]*checked/', $html);
     }
 
     public function test_hero_block_image_mode_is_the_default_and_unaffected_by_bg_color(): void

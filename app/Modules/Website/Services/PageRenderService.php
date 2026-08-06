@@ -312,9 +312,21 @@ class PageRenderService
             'width_mode' => $widthMode,
             'width_value' => $widthMode === 'custom' ? $widthValue : null,
             'width_unit' => $widthMode === 'custom' ? $widthUnit : null,
+            // Background is a three-way, explicit either/or (Advanced tab
+            // radio, 'bg_mode': 'image' | 'color' | 'gradient') — never more
+            // than one applied at once. Unset (a page saved before 'bg_mode'
+            // existed) falls back to the original implicit priority in
+            // BlockPresentation::inlineStyle() (image wins if set, else
+            // color), so an already-published page keeps rendering exactly
+            // as it did before this control existed.
             'bg_color' => $hex($style['bg_color'] ?? null),
             'bg_image' => $url($style['bg_image'] ?? null),
             'bg_overlay' => max(0, min(100, (int) ($style['bg_overlay'] ?? 0))),
+            'bg_mode' => in_array($style['bg_mode'] ?? null, ['image', 'color', 'gradient'], true) ? $style['bg_mode'] : null,
+            'bg_gradient_start' => $hex($style['bg_gradient_start'] ?? null),
+            'bg_gradient_end' => $hex($style['bg_gradient_end'] ?? null),
+            'bg_gradient_angle' => isset($style['bg_gradient_angle']) && $style['bg_gradient_angle'] !== ''
+                ? max(0, min(360, (int) $style['bg_gradient_angle'])) : null,
             'text_color' => $hex($style['text_color'] ?? null),
             // Statistics-block-only fields (public/blocks/render.blade.php's
             // 'stats' @case) — a single wrapper-level text_color can never
@@ -355,15 +367,15 @@ class PageRenderService
             // Hero-block-only fields. 'heading_color' (above) doubles as the
             // hero's own title (<h1>) color — same key, different element,
             // exactly like it already doubles for stats/notices/staff's own
-            // heading. 'bg_color' (above) needs no special handling here at
-            // all — it already applies to the outer wrapper for every block
-            // type via BlockPresentation. 'bg_mode' instead controls whether
-            // the INNER <header class="hero">'s own gradient/image (which
-            // would otherwise sit on top of and hide the wrapper's color
-            // entirely) is neutralized so that wrapper color can actually
-            // show through. See render.blade.php's 'hero' case and
-            // docs/modules/28-elementor-block-editor-plan.md §7ae/§7af.
-            'bg_mode' => in_array($style['bg_mode'] ?? null, ['image', 'color'], true) ? $style['bg_mode'] : null,
+            // heading. Background ('bg_mode'/'bg_color'/'bg_gradient_*',
+            // above) needs no hero-specific handling here at all anymore —
+            // it's a fully universal, Advanced-tab-only control now (§7ah).
+            // render.blade.php's 'hero' case still has its own job to do
+            // with it: the INNER <header class="hero">'s own gradient/image
+            // would otherwise sit on top of and hide the wrapper's
+            // background entirely, so it's neutralized whenever 'bg_mode'
+            // is 'color' or 'gradient'. See docs/modules/28-elementor-block-editor-plan.md
+            // §7ae/§7af/§7ag/§7ah for the full history of that one problem.
             'subtitle_color' => $hex($style['subtitle_color'] ?? null),
             'button_text_color' => $hex($style['button_text_color'] ?? null),
             'button_bg_color' => $hex($style['button_bg_color'] ?? null),

@@ -67,25 +67,27 @@
 @switch($type)
   @case('hero')
     @php
-      // Background is an explicit either/or (Style tab radio, 'bg_mode'):
-      // 'color' uses the Style tab's own bg_color solid fill; anything else
-      // (unset / 'image', the pre-existing behavior) uses the Content tab's
-      // image field exactly as before. Never both at once.
-      //
-      // bg_color itself is applied to the outer SECTION wrapper — same as
-      // every other block, via the universal BlockPresentation::wrapper()
-      // mechanism (no special-casing needed there at all). What's special
-      // about hero is the inner <header class="hero">: its own .hero class
-      // (layout.blade.php) paints an opaque gradient (or, when an image is
-      // set, this case paints the image directly on the header too) that
-      // would otherwise sit on TOP of the section's background and hide it
-      // completely — a wrapper-level bg_color has always been silently
-      // invisible on a hero block for exactly this reason. So when 'color'
-      // mode has an actual color set, the header's own background is
-      // neutralized (background:none) instead, letting the section's
-      // already-applied color show through where the header used to paint
-      // over it.
-      $heroBgMode = ($style['bg_mode'] ?? 'image') === 'color' ? 'color' : 'image';
+      // Background is a universal, Advanced-tab-only, explicit three-way
+      // either/or now (§7ah — 'bg_mode': 'image' | 'color' | 'gradient',
+      // never more than one applied at once), applied to the outer SECTION
+      // wrapper exactly like every other block, via the universal
+      // BlockPresentation::wrapper() mechanism (no special-casing needed
+      // there at all). What's special about hero is the inner
+      // <header class="hero">: its own .hero class (layout.blade.php)
+      // paints an opaque gradient (or, in 'image' mode, this case paints
+      // the Content-tab image directly on the header too) that would
+      // otherwise sit on TOP of the section's background and hide it
+      // completely — a wrapper-level bg_color/gradient has always been
+      // silently invisible on a hero block for exactly this reason. So
+      // whenever 'color'/'gradient' mode actually has its value(s) set,
+      // the header's own background is neutralized (background:none)
+      // instead, letting the section's already-applied background show
+      // through where the header used to paint over it. A page saved
+      // before 'bg_mode' existed has it unset (null) and keeps the
+      // original image-only behavior unchanged.
+      $heroBgMode = $style['bg_mode'] ?? null;
+      $heroBgNeutralize = ($heroBgMode === 'color' && ! empty($style['bg_color']))
+        || ($heroBgMode === 'gradient' && ! empty($style['bg_gradient_start']) && ! empty($style['bg_gradient_end']));
       // Bootstrap's .text-white-50 is !important — can't be beaten by a
       // plain inline style, so it's dropped entirely (not fought) only once
       // a real subtitle_color override is set; same trick as stats'
@@ -93,9 +95,9 @@
       $heroSubtitleOverride = ! empty($style['subtitle_color']);
     @endphp
     <header class="hero py-5 py-lg-6"
-      @if($heroBgMode === 'color' && !empty($style['bg_color']))
+      @if($heroBgNeutralize)
         style="background:none;"
-      @elseif(!empty($d['image']))
+      @elseif(($heroBgMode === 'image' || $heroBgMode === null) && !empty($d['image']))
         style="background-image:linear-gradient(rgba(0,0,0,.45),rgba(0,0,0,.45)),url('{{ $d['image'] }}');background-size:cover;background-position:center;"
       @endif
     >

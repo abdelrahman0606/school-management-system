@@ -141,26 +141,11 @@
       </div>
     </div>
   @elseif ($type === 'hero')
-    <div class="col-12">
-      <label class="form-label small text-muted mb-1 d-block">{{ __('Background') }}</label>
-      <div class="btn-group btn-group-sm w-100" role="group" aria-label="{{ __('Background Type') }}">
-        <input type="radio" class="btn-check" name="{{ $prefix }}[style][bg_mode]" id="{{ $prefix }}-bgmode-image" value="image" autocomplete="off" @checked(($s['bg_mode'] ?? 'image') !== 'color')>
-        <label class="btn btn-outline-secondary" for="{{ $prefix }}-bgmode-image"><i class="bi bi-image"></i> {{ __('Image') }}</label>
-
-        <input type="radio" class="btn-check" name="{{ $prefix }}[style][bg_mode]" id="{{ $prefix }}-bgmode-color" value="color" autocomplete="off" @checked(($s['bg_mode'] ?? 'image') === 'color')>
-        <label class="btn btn-outline-secondary" for="{{ $prefix }}-bgmode-color"><i class="bi bi-palette"></i> {{ __('Solid color') }}</label>
-      </div>
-    </div>
-    <div class="col-12" data-depends-on="style.bg_mode" data-depends-values="image" @if(($s['bg_mode'] ?? 'image') !== 'image') style="display:none" @endif>
-      <p class="form-text small text-muted mb-0">{{ __('Uses the Background Image field in the Content tab. Only one of Image or Solid Color is ever applied.') }}</p>
-    </div>
-    <div class="col-12" data-depends-on="style.bg_mode" data-depends-values="color" @if(($s['bg_mode'] ?? 'image') !== 'color') style="display:none" @endif>
-      <label class="form-label small text-muted mb-1">{{ __('Background color') }}</label>
-      <div class="input-group input-group-sm js-color-pair">
-        <input type="color" class="form-control form-control-color js-color-swatch" value="{{ ($s['bg_color'] ?? null) ?: '#1d4ed8' }}">
-        <input type="text" name="{{ $prefix }}[style][bg_color]" value="{{ $s['bg_color'] ?? '' }}" class="form-control js-color-text" placeholder="{{ __('None') }}" maxlength="9">
-      </div>
-    </div>
+    {{-- Background Image/Solid Color/Gradient now lives entirely on the
+         Advanced tab's Background section (§7ah) — a hero-specific copy
+         used to live here too, but it shared its exact field name with the
+         Advanced tab's own generic field, so whichever one the browser
+         submitted last silently overwrote the other (§7ag). --}}
     <div class="col-12">
       <label class="form-label small text-muted mb-1">{{ __('Title text color') }}</label>
       <div class="input-group input-group-sm js-color-pair">

@@ -17,28 +17,33 @@
   $tabId = preg_replace('/[^a-zA-Z0-9]/', '-', $prefix);
 
   // One connected 4-box strip per spacing/border/radius property — still
-  // stored as [style][{property}_{top|bottom|left|right}]. Bootstrap's
-  // .input-group already merges adjacent borders/corners for free, no
-  // bespoke CSS needed to make 4 separate inputs read as one connected
-  // strip. Order requested: top, bottom, left, right (not CSS shorthand
-  // order). $max lets Border Width use a tighter cap than padding/margin/
-  // radius (see PageRenderService::sanitizeStyle()'s $borderPx).
-  $spacingSides = ['top' => 'T', 'bottom' => 'B', 'left' => 'L', 'right' => 'R'];
-  $spacingSideLabels = ['top' => 'Top', 'bottom' => 'Bottom', 'left' => 'Left', 'right' => 'Right'];
-  $boxGroup = function (string $key, string $label, int $max) use ($prefix, $s, $spacingSides, $spacingSideLabels) {
+  // stored as [style][{property}_{top|bottom|left|right}]. No visible
+  // per-box T/B/L/R label — Bootstrap's .input-group already merges the 4
+  // plain inputs into one seamless strip for free (no gap, only the
+  // leftmost/rightmost corners rounded) once there's nothing BETWEEN them;
+  // a title tooltip + aria-label carry Top/Bottom/Left/Right for anyone who
+  // needs to know which box is which without four permanent labels eating
+  // space. A "link values" button sits just outside the strip (not part of
+  // its own rounded corners) — toggling it on and then typing in any one
+  // box copies that value into the other three, exactly like the
+  // width/height "constrain proportions" chain link common in design
+  // tools; see the delegated 'input' listener in edit.blade.php's
+  // js-spacing-link handling. Order requested: top, bottom, left, right
+  // (not CSS shorthand order). $max lets Border Width use a tighter cap
+  // than padding/margin/radius (see PageRenderService::sanitizeStyle()'s
+  // $borderPx).
+  $spacingSides = ['top' => 'Top', 'bottom' => 'Bottom', 'left' => 'Left', 'right' => 'Right'];
+  $boxGroup = function (string $key, string $label, int $max) use ($prefix, $s, $spacingSides) {
     $out = '<div class="mb-2"><label class="form-label small text-muted mb-1">'.e(__($label)).'</label>';
-    $out .= '<div class="input-group input-group-sm">';
-    foreach ($spacingSides as $side => $abbr) {
+    $out .= '<div class="d-flex align-items-center gap-1" data-spacing-link-group>';
+    $out .= '<div class="input-group input-group-sm flex-nowrap">';
+    foreach ($spacingSides as $side => $sideLabel) {
         $name = $prefix.'[style]['.$key.'_'.$side.']';
         $val = $s[$key.'_'.$side] ?? '';
-        // The T/B/L/R letters are left untranslated (a compact universal
-        // abbreviation, same convention as the "(px)" unit suffix used
-        // throughout this file) — the full word is still translated in the
-        // title/aria-label for screen readers and anyone unsure what a bare
-        // letter means.
-        $out .= '<span class="input-group-text" title="'.e(__($spacingSideLabels[$side])).'">'.e($abbr).'</span>';
-        $out .= '<input type="number" min="0" max="'.$max.'" name="'.e($name).'" value="'.e($val).'" class="form-control form-control-sm" placeholder="0" aria-label="'.e(__($label)).' — '.e(__($spacingSideLabels[$side])).'">';
+        $out .= '<input type="number" min="0" max="'.$max.'" name="'.e($name).'" value="'.e($val).'" class="form-control form-control-sm js-spacing-input" placeholder="0" title="'.e(__($sideLabel)).'" aria-label="'.e(__($label)).' — '.e(__($sideLabel)).'">';
     }
+    $out .= '</div>';
+    $out .= '<button type="button" class="btn btn-sm btn-outline-secondary js-spacing-link" aria-pressed="false" title="'.e(__('Link Values Together')).'" aria-label="'.e(__('Link Values Together')).'"><i class="bi bi-link-45deg" aria-hidden="true"></i></button>';
     $out .= '</div></div>';
 
     return $out;
@@ -148,24 +153,32 @@
   </button>
   <div class="collapse" id="adv-bg-{{ $tabId }}">
     <div class="pt-1 pb-2">
-      @if (($type ?? null) === 'hero')
-        {{-- Hero owns its own Background Image/Solid Color toggle on the
-             Style tab (see _style_fields.blade.php and
-             docs/modules/28-elementor-block-editor-plan.md §7ae/§7af) —
-             this generic field must NOT also be rendered here: both used
-             the exact same [style][bg_color] input name, so whichever of
-             the two fields the browser happened to submit last silently
-             overwrote the other, and the Style tab's color picker looked
-             like it simply did nothing. --}}
-        <p class="form-text small text-muted mb-0">{{ __('Background Image/Solid Color is set in this block\'s Style tab.') }}</p>
-      @else
-        <div class="mb-2">
-          <label class="form-label small text-muted mb-1">{{ __('Background color') }}</label>
-          <div class="input-group input-group-sm js-color-pair">
-            <input type="color" class="form-control form-control-color js-color-swatch" value="{{ ($s['bg_color'] ?? null) ?: '#ffffff' }}">
-            <input type="text" name="{{ $prefix }}[style][bg_color]" value="{{ $s['bg_color'] ?? '' }}" class="form-control js-color-text" placeholder="{{ __('None') }}" maxlength="9">
-          </div>
+      {{-- One universal background control for every block type (§7ah) —
+           an explicit three-way choice (Image/Solid Color/Gradient, never
+           more than one applied at once) instead of two separate fields
+           with a silent "image wins if both are set" priority. A page
+           saved before 'bg_mode' existed has it unset; default the radio
+           to whichever mode its existing stored value actually implies
+           (Solid Color if only bg_color was ever set, Image otherwise —
+           matching BlockPresentation::inlineStyle()'s own fallback
+           priority) so re-opening an old block shows the option that's
+           actually already in effect, not just always "Image". --}}
+      @php
+        $bgMode = $s['bg_mode'] ?? ((! empty($s['bg_color']) && empty($s['bg_image'])) ? 'color' : 'image');
+      @endphp
+      <div class="mb-2">
+        <div class="btn-group btn-group-sm w-100" role="group" aria-label="{{ __('Background Type') }}">
+          <input type="radio" class="btn-check" name="{{ $prefix }}[style][bg_mode]" id="{{ $tabId }}-bgmode-image" value="image" autocomplete="off" @checked($bgMode === 'image')>
+          <label class="btn btn-outline-secondary" for="{{ $tabId }}-bgmode-image"><i class="bi bi-image"></i> {{ __('Image') }}</label>
+
+          <input type="radio" class="btn-check" name="{{ $prefix }}[style][bg_mode]" id="{{ $tabId }}-bgmode-color" value="color" autocomplete="off" @checked($bgMode === 'color')>
+          <label class="btn btn-outline-secondary" for="{{ $tabId }}-bgmode-color"><i class="bi bi-palette"></i> {{ __('Solid color') }}</label>
+
+          <input type="radio" class="btn-check" name="{{ $prefix }}[style][bg_mode]" id="{{ $tabId }}-bgmode-gradient" value="gradient" autocomplete="off" @checked($bgMode === 'gradient')>
+          <label class="btn btn-outline-secondary" for="{{ $tabId }}-bgmode-gradient"><i class="bi bi-paint-bucket"></i> {{ __('Gradient') }}</label>
         </div>
+      </div>
+      <div data-depends-on="style.bg_mode" data-depends-values="image" @if($bgMode !== 'image') style="display:none" @endif>
         <div class="mb-2">
           <label class="form-label small text-muted mb-1">{{ __('Background image URL') }}</label>
           <input type="text" name="{{ $prefix }}[style][bg_image]" value="{{ $s['bg_image'] ?? '' }}" class="form-control form-control-sm" placeholder="https://…">
@@ -177,7 +190,34 @@
           </label>
           <input type="range" min="0" max="100" name="{{ $prefix }}[style][bg_overlay]" value="{{ $s['bg_overlay'] ?? 0 }}" class="form-range js-range-echo">
         </div>
-      @endif
+      </div>
+      <div class="mb-2" data-depends-on="style.bg_mode" data-depends-values="color" @if($bgMode !== 'color') style="display:none" @endif>
+        <label class="form-label small text-muted mb-1">{{ __('Background color') }}</label>
+        <div class="input-group input-group-sm js-color-pair">
+          <input type="color" class="form-control form-control-color js-color-swatch" value="{{ ($s['bg_color'] ?? null) ?: '#ffffff' }}">
+          <input type="text" name="{{ $prefix }}[style][bg_color]" value="{{ $s['bg_color'] ?? '' }}" class="form-control js-color-text" placeholder="{{ __('None') }}" maxlength="9">
+        </div>
+      </div>
+      <div data-depends-on="style.bg_mode" data-depends-values="gradient" @if($bgMode !== 'gradient') style="display:none" @endif>
+        <div class="mb-2">
+          <label class="form-label small text-muted mb-1">{{ __('Gradient start color') }}</label>
+          <div class="input-group input-group-sm js-color-pair">
+            <input type="color" class="form-control form-control-color js-color-swatch" value="{{ ($s['bg_gradient_start'] ?? null) ?: '#1d4ed8' }}">
+            <input type="text" name="{{ $prefix }}[style][bg_gradient_start]" value="{{ $s['bg_gradient_start'] ?? '' }}" class="form-control js-color-text" placeholder="{{ __('None') }}" maxlength="9">
+          </div>
+        </div>
+        <div class="mb-2">
+          <label class="form-label small text-muted mb-1">{{ __('Gradient end color') }}</label>
+          <div class="input-group input-group-sm js-color-pair">
+            <input type="color" class="form-control form-control-color js-color-swatch" value="{{ ($s['bg_gradient_end'] ?? null) ?: '#f59e0b' }}">
+            <input type="text" name="{{ $prefix }}[style][bg_gradient_end]" value="{{ $s['bg_gradient_end'] ?? '' }}" class="form-control js-color-text" placeholder="{{ __('None') }}" maxlength="9">
+          </div>
+        </div>
+        <div class="mb-2">
+          <label class="form-label small text-muted mb-1">{{ __('Direction (degrees)') }}</label>
+          <input type="number" min="0" max="360" name="{{ $prefix }}[style][bg_gradient_angle]" value="{{ $s['bg_gradient_angle'] ?? 135 }}" class="form-control form-control-sm">
+        </div>
+      </div>
     </div>
   </div>
 </div>

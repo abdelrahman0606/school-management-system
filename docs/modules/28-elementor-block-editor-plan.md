@@ -1691,6 +1691,98 @@ included unconditionally into the same card) already renders a field under that 
 Solid Color, pick a color, save, and verify the color now actually shows (previously confirmed only via
 server-side rendering tests, never through the actual admin form submission path that originally broke it).
 
+### §7ah — Consolidate Background onto the Advanced tab, add Gradient, redesign the margin/padding boxes
+
+**The ask, verbatim:** "move all background color and background image to advanced tab under Background, with
+image or solid color option. and also add gradient background color. remove, t, b, l, r from margin and
+padding, just 4 input boxes side by side without an gap. and just curve the left and right boxes. add link
+icon to right of the margin and padding input box. which makes so any value put in one box, copies them it to
+other boxes."
+
+Two independent changes, both to the same shared `_layout_fields.blade.php`/`_style_fields.blade.php` pair.
+
+**Background consolidation.** §7ae/§7af/§7ag had, between them, given Hero its own Style-tab-only copy of
+Background (Image/Solid Color toggle), separate from the Advanced tab's generic Background section every other
+block type uses — and §7ag's postmortem already named the standing risk of that split explicitly: "reusing an
+existing field name across two different UI locations on the same block card is only safe when at most ONE of
+those locations can ever actually render for a given block type." Rather than keep patching around that risk,
+this round removes the split entirely. Hero's Style-tab Background block is gone outright (replaced with a
+one-line comment pointing at the Advanced tab); `_layout_fields.blade.php`'s Background section is universal
+again, unconditional on `$type`, and now offers three mutually exclusive modes via a `btn-check` radio group —
+Image, Solid Color, Gradient — instead of the old plain `if ($bg_image) … elseif ($bg_color)` implicit
+priority. The mode is a new `bg_mode` key (`'image'|'color'|'gradient'|null`), sanitized in
+`PageRenderService::sanitizeStyle()` and consumed in `BlockPresentation::inlineStyle()`, which now branches on
+it explicitly instead of guessing from which fields happen to be non-empty.
+
+**Backward compatibility for already-published pages.** Every page saved before `bg_mode` existed has it
+`null` in storage. `inlineStyle()`'s fallback branches reproduce the *exact* old implicit priority when
+`bg_mode` is null (image wins if set, else color) — a previously-published page's rendered output is
+byte-for-byte unchanged. The Advanced tab's radio itself also needs a sane default when opening such a page for
+editing (it can't just always default to "Image" — that would visually contradict a block that's actually
+showing a solid color): `$bgMode = $s['bg_mode'] ?? ((!empty($s['bg_color']) && empty($s['bg_image'])) ? 'color' : 'image')`,
+i.e. infer the mode from whichever field the page actually has a value in.
+
+**Gradient.** New fields `bg_gradient_start`, `bg_gradient_end` (hex, sanitized like every other color field),
+`bg_gradient_angle` (int, clamped 0–360, defaults to 135 — matching Hero's own pre-existing default gradient
+direction so an old Hero block with no explicit gradient set "looks the same" if an admin ever switches it into
+gradient mode). Renders as `background-image:linear-gradient({angle}deg,{start},{end})`.
+
+**Hero's inner-header problem, extended to gradient.** §7ag established that Hero's outer `<section>` wrapper
+and inner `<header class="hero">` are two different elements, and the header's own opaque background always
+painted over a wrapper-level background — fixed for solid color by neutralizing the header (`background:none`)
+whenever a real color was in effect. §7ah extends that exact same neutralization to gradient mode: `$heroBgMode`
+and `$heroBgNeutralize` in `render.blade.php`'s `hero` case now check for either `color`-with-`bg_color`-set or
+`gradient`-with-both-gradient-colors-set, neutralizing the header in either case so the section's own
+background (now handled entirely by the universal `BlockPresentation::wrapper()` mechanism, no Hero-specific
+code needed there at all anymore) actually shows through.
+
+**Margin/Padding/Border box redesign.** The shared `$boxGroup` closure in `_layout_fields.blade.php` (used by
+Margin, Padding, Border Width, and Border Radius — extended to all four for visual consistency within the same
+section, not just the two the request named) dropped its `<span class="input-group-text">T/B/L/R</span>`
+separators between the four number inputs. That turned out to be the entire "no gap, only the outer corners
+curved" requirement for free: Bootstrap's own `.input-group` CSS only rounds the first/last child's outer
+corners and only removes the gap between elements that are directly adjacent with nothing between them — both
+already true once the separating `<span>`s were gone, no new CSS needed. The T/B/L/R words themselves move to
+`title`/`aria-label` attributes on each input instead, so the accessible name is preserved without a visible
+label. A new "link values" toggle button (`<button class="btn btn-outline-secondary js-spacing-link">`, a chain
+icon) sits just outside the `.input-group` — deliberately outside it, not as a fifth grouped element, since
+folding it in would make the button itself the rightmost rounded element instead of the fourth input box,
+contradicting "just curve the left and right boxes."
+
+**Link-values JS.** A `data-spacing-link-group` wrapper around each strip + button lets a small delegated
+handler in `edit.blade.php` do the copying: on `input` on any `.js-spacing-input`, if the group's
+`.js-spacing-link` button has `aria-pressed="true"`, copy the typed value directly into the other three inputs'
+`.value` (not by dispatching synthetic `input` events on them, which would re-enter the same delegated listener
+for each sibling in turn — direct assignment is simpler and sufficient, since both the debounced live-preview
+serializer and the undo/redo capture already read each input's live `.value` at the moment they fire, not from
+per-keystroke event payloads). A second delegated `click` listener toggles the button's own `aria-pressed`/
+`.active` state — `.btn-outline-secondary.active` is a stock Bootstrap look, no bespoke CSS needed for the
+pressed state either.
+
+**Untouched by this round:** the existing `data-depends-on`/`data-depends-values` radio-aware field-dependency
+JS (built generically in §7ae, extended for radio groups there), the copy/paste-style JS's radio handling, and
+the undo/redo capture's radio/checkbox special-casing all needed zero changes to support the new 3-option
+Background Type radio — none of them hardcode an option count, they all resolve generically off `name`/
+`:checked`.
+
+**New tests:** two field-collision regression tests replacing §7ag's two (one confirming both a hero and a
+non-hero block each show *exactly one* `[style][bg_color]`-named input now that the Style-tab copy is gone
+entirely, one confirming the Advanced tab's radio pre-selects whichever mode a pre-existing page's stored
+values actually imply); a gradient sanitize+render test; a test confirming the angle defaults to 135 when
+omitted; a Hero-specific gradient test confirming both the section shows the gradient and the header is
+neutralized; and a markup test confirming the T/B/L/R `<span>` labels are gone from a block's edit-page HTML
+and the link-toggle button is present.
+
+**Verification gap:** no PHP/browser in this sandbox, same as every prior entry — only static syntax/balance
+checks were possible. Please confirm on your machine: every block type's Advanced tab shows the new
+Image/Solid Color/Gradient radio (not just Hero); picking Gradient and setting two colors actually renders a
+gradient background on a live page; a Hero block with a gradient background shows the gradient on the section
+and no longer shows its own default header gradient underneath/instead; a page published before this change
+(any block with a plain `bg_color` or `bg_image` already set) still renders identically to before; the Margin/
+Padding/Border Width/Border Radius boxes now show as four flush, mostly-unlabeled inputs with only the outer
+corners rounded; and the new link button actually copies a typed value into the other three boxes when toggled
+on, in both directions (typing in the first box and typing in a middle box).
+
 ## 8. Decisions to confirm when resuming (if not already answered above)
 
 - Confirm the exact current route/controller method name for the public page `show()` action before Phase 1

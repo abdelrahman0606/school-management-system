@@ -1576,6 +1576,36 @@
           var out = e.target.closest('.col-12').querySelector('label span:last-child');
           if (out) out.textContent = e.target.value + '%';
         }
+        // Margin/Padding/Border Width/Border Radius 4-box strips: while
+        // their "link" button is toggled on, typing in any one box copies
+        // that value straight into the other three (design-tool "constrain"
+        // convention). Set .value directly rather than dispatching a
+        // synthetic 'input' on each sibling — this same listener would
+        // otherwise re-fire recursively for each one; the eventual
+        // debounced preview/history read every box's live .value anyway; no
+        // synthetic event on the siblings is needed for either to pick up
+        // the copied values.
+        if (e.target.matches('.js-spacing-input')) {
+          var spacingGroup = e.target.closest('[data-spacing-link-group]');
+          var linkBtn = spacingGroup && spacingGroup.querySelector('.js-spacing-link');
+          if (linkBtn && linkBtn.getAttribute('aria-pressed') === 'true') {
+            var v = e.target.value;
+            spacingGroup.querySelectorAll('.js-spacing-input').forEach(function (input) {
+              if (input !== e.target) input.value = v;
+            });
+          }
+        }
+      });
+
+      // Toggles a spacing strip's "link" button — Bootstrap's own
+      // .btn-outline-secondary.active gives the pressed/filled look for
+      // free, no bespoke CSS needed.
+      document.addEventListener('click', function (e) {
+        var linkBtn = e.target.closest('.js-spacing-link');
+        if (!linkBtn) return;
+        var linked = linkBtn.getAttribute('aria-pressed') === 'true';
+        linkBtn.setAttribute('aria-pressed', linked ? 'false' : 'true');
+        linkBtn.classList.toggle('active', !linked);
       });
 
       // Rich text fields (richtext/image_text "html") use Quill — open
