@@ -285,6 +285,36 @@ class PageRenderService
         $borderPx = fn ($v) => $v === null || $v === '' ? null : max(0, min(50, (int) $v));
         $hex = fn ($v) => is_string($v) && preg_match('/^#[0-9a-fA-F]{3,8}$/', trim($v)) ? trim($v) : null;
         $url = fn ($v) => is_string($v) && trim($v) !== '' ? trim($v) : null;
+        // Advanced tab "ID"/"Class" fields (§7ai) — an admin-supplied hook
+        // for their own custom CSS/JS, echoed RAW as an id="..."/class="..."
+        // attribute in public/blocks/render.blade.php and sidebar/render.blade.php,
+        // so these are whitelisted character-by-character rather than merely
+        // escaped: nothing that isn't a syntactically valid HTML id/CSS
+        // class token can ever reach the template, full stop.
+        $htmlId = function ($v) {
+            if (! is_string($v) || trim($v) === '') {
+                return null;
+            }
+
+            return preg_match('/^[A-Za-z][A-Za-z0-9_-]{0,63}$/', trim($v)) ? trim($v) : null;
+        };
+        $classList = function ($v) {
+            if (! is_string($v) || trim($v) === '') {
+                return null;
+            }
+
+            // Each space-separated token is validated independently and a
+            // bad one is silently dropped rather than voiding the whole
+            // field, so one typo doesn't wipe out several good class names
+            // sitting next to it. Capped at 20 tokens — plenty for a
+            // hand-typed list, cheap insurance against a pasted essay.
+            $tokens = array_values(array_filter(
+                array_map('trim', explode(' ', trim($v))),
+                fn ($t) => $t !== '' && preg_match('/^-?[A-Za-z_][A-Za-z0-9_-]{0,63}$/', $t)
+            ));
+
+            return $tokens === [] ? null : implode(' ', array_slice($tokens, 0, 20));
+        };
 
         // Width: mode drives whether value/unit are even meaningful —
         // 'custom' needs both, 'default'/'full'/'inline' need neither (a
@@ -407,6 +437,10 @@ class PageRenderService
             'border_color' => $borderStyle && $borderStyle !== 'none' ? $hex($style['border_color'] ?? null) : null,
             'shadow' => in_array($style['shadow'] ?? null, ['sm', 'md', 'lg'], true) ? $style['shadow'] : null,
             'animation' => in_array($style['animation'] ?? null, ['fade', 'up'], true) ? $style['animation'] : null,
+            // Advanced tab "ID"/"Class" (§7ai) — universal, every block type.
+            // See BlockPresentation::wrapper(), which is the only consumer.
+            'custom_id' => $htmlId($style['custom_id'] ?? null),
+            'custom_class' => $classList($style['custom_class'] ?? null),
         ], fn ($v) => $v !== null);
     }
 

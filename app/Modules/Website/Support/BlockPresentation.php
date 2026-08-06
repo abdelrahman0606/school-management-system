@@ -37,7 +37,7 @@ class BlockPresentation
     /**
      * @param  array<string, mixed>  $style
      * @param  array<string, mixed>  $layout
-     * @return array{class: string, style: string}
+     * @return array{class: string, style: string, id: string}
      */
     public static function wrapper(array $style, array $layout): array
     {
@@ -46,8 +46,16 @@ class BlockPresentation
                 'block-wrap',
                 self::visibilityClasses($layout['hide'] ?? []),
                 self::animationClass($style['animation'] ?? null),
+                // Advanced tab "Class" field (§7ai) — an admin-supplied extra
+                // CSS class for their own custom CSS/JS hooks, appended last
+                // so it never fights the block's own structural classes.
+                $style['custom_class'] ?? '',
             ]))),
             'style' => self::inlineStyle($style),
+            // Advanced tab "ID" field (§7ai) — same purpose, kept as a
+            // separate returned key (not folded into 'class') since it's a
+            // distinct HTML attribute, not a class-list entry.
+            'id' => $style['custom_id'] ?? '',
         ];
     }
 

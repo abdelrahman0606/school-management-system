@@ -1,13 +1,14 @@
 {{-- Universal per-block "Advanced" tab (was "Layout" — renamed in
      _card.blade.php's nav-link label only, internal tab-layout-* IDs are
-     unchanged for backward JS/CSS compat). Four independently-collapsible
-     sections (Layout/Border/Background/Responsive, none exclusive — opening
-     one does not close another, matching how this control is commonly laid
-     out elsewhere), plus the always-visible grid-columns control for
-     Container/Grid blocks at the top, outside the accordion.
+     unchanged for backward JS/CSS compat). Five independently-collapsible
+     sections (Layout/Border/Background/Responsive/ID & Class, none exclusive
+     — opening one does not close another, matching how this control is
+     commonly laid out elsewhere), plus the always-visible grid-columns
+     control for Container/Grid blocks at the top, outside the accordion.
      Vars: $prefix, $layout, $style, $isGrid
-     See docs/modules/28-elementor-block-editor-plan.md §7x (padding/margin)
-     and §7aa (this restructure — width/border/background/responsive). --}}
+     See docs/modules/28-elementor-block-editor-plan.md §7x (padding/margin),
+     §7aa (this restructure — width/border/background/responsive), and §7ai
+     (ID & Class). --}}
 @php
   $s = $style ?? [];
   $cols = $layout['columns'] ?? [];
@@ -241,6 +242,35 @@
           </div>
         </div>
       @endforeach
+    </div>
+  </div>
+</div>
+
+{{-- ── ID & Class ─────────────────────────────────────────────────────── --}}
+<div class="mb-1">
+  <button type="button" class="btn btn-sm btn-link text-decoration-none px-0 fw-semibold w-100 text-start d-flex justify-content-between align-items-center js-adv-section-toggle"
+          data-bs-toggle="collapse" data-bs-target="#adv-idclass-{{ $tabId }}" aria-expanded="false" aria-controls="adv-idclass-{{ $tabId }}">
+    <span>{{ __('ID & Class') }}</span>
+    <i class="bi bi-chevron-down small" aria-hidden="true"></i>
+  </button>
+  <div class="collapse" id="adv-idclass-{{ $tabId }}">
+    <div class="pt-1 pb-2">
+      {{-- For custom CSS/JS hooks only — no field above ever sets these, and
+           nothing else in the editor reads them back out. Whitelisted to
+           safe id/class characters server-side (PageRenderService::sanitizeStyle()),
+           so an invalid value is simply dropped on save rather than shown as
+           an error here; the pattern/title below just steers a well-meaning
+           admin toward a value that will actually be kept. --}}
+      <div class="mb-2">
+        <label class="form-label small text-muted mb-1">{{ __('CSS ID') }}</label>
+        <input type="text" name="{{ $prefix }}[style][custom_id]" value="{{ $s['custom_id'] ?? '' }}" class="form-control form-control-sm" placeholder="{{ __('e.g. site-hero') }}" pattern="[A-Za-z][A-Za-z0-9_-]*" maxlength="64" title="{{ __('Letters, numbers, hyphen, underscore — must start with a letter.') }}">
+        <div class="form-text small">{{ __('Sets id="…" on this block for custom CSS or JS. Must start with a letter.') }}</div>
+      </div>
+      <div class="mb-2">
+        <label class="form-label small text-muted mb-1">{{ __('CSS Class') }}</label>
+        <input type="text" name="{{ $prefix }}[style][custom_class]" value="{{ $s['custom_class'] ?? '' }}" class="form-control form-control-sm" placeholder="{{ __('e.g. promo-banner highlight') }}" maxlength="200">
+        <div class="form-text small">{{ __('One or more class names, separated by spaces, added to this block for custom CSS.') }}</div>
+      </div>
     </div>
   </div>
 </div>

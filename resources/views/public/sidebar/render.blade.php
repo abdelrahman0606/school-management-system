@@ -4,6 +4,9 @@
   $wrap = \App\Modules\Website\Support\BlockPresentation::wrapper($style, $layout);
   $wrapClass = trim($wrap['class'].' mb-3');
   $wrapStyleAttr = $wrap['style'] !== '' ? ' style="'.$wrap['style'].'"' : '';
+  // Advanced tab "ID" field (§7ai) — see public/blocks/render.blade.php for
+  // the full reasoning; same whitelisted-not-escaped value, same attribute.
+  $wrapIdAttr = $wrap['id'] !== '' ? ' id="'.e($wrap['id']).'"' : '';
   // See public/blocks/render.blade.php — same click-to-select/drag-reorder/
   // context-menu bridge attributes (sidebar blocks never nest, so $path is
   // always a single-element array here, but the attribute name matches the
@@ -13,7 +16,7 @@
     ? ' data-block-path="'.e(implode(',', $path)).'" data-block-group="'.e($group ?? 'sidebar').'" data-block-type="'.e($type).'" draggable="true"'
     : '';
 @endphp
-<div class="{{ $wrapClass }}"{!! $wrapStyleAttr !!}{!! $editorAttrs !!}>
+<div class="{{ $wrapClass }}"{!! $wrapStyleAttr !!}{!! $wrapIdAttr !!}{!! $editorAttrs !!}>
 @switch($type)
   @case('quick_links')
     <div class="card"><div class="card-body">

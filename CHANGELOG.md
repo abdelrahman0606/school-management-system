@@ -13,6 +13,7 @@ follows [Semantic Versioning](https://semver.org/).
 - Announcement bar block: Style tab now has targeted Message Text and Link Text color fields (background color already worked via the existing Advanced tab field).
 - Every block's Advanced tab Background section now offers a third option, Gradient, alongside Image and Solid Color — pick a start color, end color, and direction.
 - Margin, Padding, Border Width, and Border Radius controls: the four side inputs now sit flush against each other with only the outer corners rounded (no more separate T/B/L/R labels breaking them up), plus a new link-values button that, when toggled on, copies whatever you type into one box into the other three.
+- Every block's Advanced tab now has an "ID & Class" section — set a custom HTML id and/or one or more CSS class names on a block for your own custom CSS or JavaScript to hook into.
 
 ### Changed
 - Background Image / Solid Color / Gradient is now one field per block, always on the Advanced tab, for every block type including Hero — previously Hero kept its own copy of this control on the Style tab (added when the toggle was first introduced), which duplicated the Advanced tab's field under the hood and could silently overwrite it depending on form submission order.

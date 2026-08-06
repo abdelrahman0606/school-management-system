@@ -1783,6 +1783,64 @@ Padding/Border Width/Border Radius boxes now show as four flush, mostly-unlabele
 corners rounded; and the new link button actually copies a typed value into the other three boxes when toggled
 on, in both directions (typing in the first box and typing in a middle box).
 
+### §7ai — Advanced tab: custom ID & Class, for the admin's own CSS/JS hooks
+
+**The ask, verbatim:** "also add option for id and class in advanced tab. so the user can add id and class
+for custom css,js or some other uses."
+
+**Where it lives.** Every block is stored as `{type, data, style, layout}` (`PageController::normalizeBlocks()`
+/ `PageRenderService::cleanBlocks()`) — there's no separate `advanced`/`meta` key, and building one just for two
+fields would mean new parallel sanitize/normalize/round-trip code for no real benefit. `custom_id`/`custom_class`
+went into `style` instead, right alongside `bg_color`/`border_style`/etc. — same array, same sanitize function,
+same admin-save and render paths already proven correct for everything else on this tab.
+
+**Sanitization is a whitelist, not an escape.** Every other free-text style field (`bg_image`) just gets
+trimmed — an escaped value is safe wherever it's later echoed with `e()`. `custom_id`/`custom_class` are
+different: they're the ONE thing on this whole block card that gets echoed as a bare, unquoted-content HTML
+attribute value the admin fully controls the content of. `PageRenderService::sanitizeStyle()` adds two new
+closures, `$htmlId` (`/^[A-Za-z][A-Za-z0-9_-]{0,63}$/`, matching HTML4's classic id-token rule — starts with a
+letter, then letters/digits/hyphen/underscore, capped at 64 chars) and `$classList` (splits on spaces, validates
+each token independently against the same character rule with an optional leading `-`, silently drops a bad
+token rather than voiding the whole field, caps at 20 tokens). A value that can't possibly break out of the
+`id="…"`/`class="…"` attribute it lands in is the actual security property here — not "this looks escaped", but
+"this literally cannot contain a `"`, `<`, `>`, or space". `e()` is still applied when echoing (matches every
+other attribute on the same tag, costs nothing, and is one more layer if the whitelist regex is ever loosened
+later) but the whitelist is what's actually load-bearing.
+
+**`BlockPresentation::wrapper()`** gained a third array key: `'id' => $style['custom_id'] ?? ''` (previously
+only `class`/`style`). `custom_class` doesn't get its own key — it's simply appended to the existing `class`
+array-filter list (last, so it never fights the block's own structural classes like `block-wrap` or the
+`reveal-*` animation class). Both `public/blocks/render.blade.php` and `public/sidebar/render.blade.php` gained
+one line each, `$wrapIdAttr = $wrap['id'] !== '' ? ' id="'.e($wrap['id']).'"' : ''`, echoed right after the
+existing style attribute and before the editor's own `data-block-*` attributes — a block that never set an id
+gets no `id=""` attribute at all (an empty id is itself invalid HTML, distinguishable from "just didn't set
+one").
+
+**Advanced tab UI.** A fifth collapsible section, "ID & Class", following the exact same
+button/`data-bs-toggle="collapse"`/chevron pattern as Layout/Border/Background/Responsive. Two plain text
+inputs, `[style][custom_id]`/`[style][custom_class]`, with a client-side `pattern` attribute on the id field
+(steers a well-meaning admin toward a value that will actually survive sanitization — the whitelist above is
+still the only thing that's actually enforced) and help text under each. No JS changes needed anywhere: the
+copy/paste-style capture (`styleFieldsIn()`, selects everything matching `[name*="[style]["]`) and the
+undo/redo capture (`cardOwnFields()`/`captureCardOwnFields()`, all form fields in the card) both already
+generalize to any plain text input with no special-casing, exactly like they did for the 3-option Background
+radio in §7ah without changes.
+
+**New tests:** valid id+class sanitize and render correctly (asserting both the raw stored value and the
+actual `id="…"` / `class="… promo-banner … highlight …"` substrings in rendered HTML); no `id=` attribute at
+all when unset; an id that starts with a digit, and a separately-tried id containing an XSS payload
+(`id"><script>…`), both get silently dropped rather than stored or rendered (confirming the whitelist, not just
+an escape, is what's actually happening); a mixed class-list input keeps its valid tokens and drops an
+XSS-payload token and a digit-leading token in the same string; and an edit-page markup test confirming both
+inputs and their stored values appear in the Advanced tab HTML.
+
+**Verification gap:** no PHP/browser in this sandbox, same as every prior entry. Please confirm: setting a
+block's ID to something like `promo-hero` and a Class to `text-center my-custom-class` actually shows up as
+`id="promo-hero"` and includes both classes in the rendered `<section>`'s `class="…"` attribute on the live
+page; a block with neither field set renders with no visible change at all (no stray empty `id=""`); and typing
+an obviously-invalid id (starting with a number, or containing a space/quote) either gets silently stripped on
+save or is visibly rejected by the browser's own `pattern` validation before it's ever submitted.
+
 ## 8. Decisions to confirm when resuming (if not already answered above)
 
 - Confirm the exact current route/controller method name for the public page `show()` action before Phase 1

@@ -55,14 +55,20 @@
   $typeClass = $slimBlock ? ' announcement-bar-section' : '';
   $wrapClass = trim($wrap['class'].' '.$defaultSpacing.$typeClass);
   $wrapStyleAttr = $wrap['style'] !== '' ? ' style="'.$wrap['style'].'"' : '';
+  // Advanced tab "ID" field (§7ai) — already whitelisted character-by-
+  // character in PageRenderService::sanitizeStyle() ($htmlId), so this is
+  // just echoed, not re-escaped (e() would double-escape nothing here since
+  // the value can never contain a quote/space/angle-bracket in the first
+  // place, but it costs nothing and matches every other attribute below).
+  $wrapIdAttr = $wrap['id'] !== '' ? ' id="'.e($wrap['id']).'"' : '';
 
   $open = $contained || $selfContained ? '' : '<div class="container">';
   $close = $contained || $selfContained ? '' : '</div>';
 @endphp
 @if ($contained)
-  <div class="{{ $wrapClass }}"{!! $wrapStyleAttr !!}{!! $editorAttrs !!}>
+  <div class="{{ $wrapClass }}"{!! $wrapStyleAttr !!}{!! $wrapIdAttr !!}{!! $editorAttrs !!}>
 @else
-  <section class="{{ $wrapClass }}"{!! $wrapStyleAttr !!}{!! $editorAttrs !!}>
+  <section class="{{ $wrapClass }}"{!! $wrapStyleAttr !!}{!! $wrapIdAttr !!}{!! $editorAttrs !!}>
 @endif
 @switch($type)
   @case('hero')

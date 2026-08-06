@@ -202,6 +202,98 @@ class PageBuilderStyleLayoutNestingTest extends TestCase
         $this->assertStringNotContainsString('bg.jpg', $html);
     }
 
+    // ── Advanced tab: custom ID & Class (§7ai) ──────────────────────────────
+
+    public function test_valid_custom_id_and_class_are_sanitized_and_rendered(): void
+    {
+        $this->actingAs($this->admin);
+        $page = $this->publish([[
+            'type' => 'heading', 'data' => ['text' => 'Hooked'],
+            'style' => ['custom_id' => 'site-hero', 'custom_class' => 'promo-banner highlight'],
+        ]]);
+
+        $style = PageLayout::where('page_id', $page->id)->where('is_published', true)
+            ->latest('id')->first()->layout_json['blocks'][0]['style'];
+
+        $this->assertSame('site-hero', $style['custom_id']);
+        $this->assertSame('promo-banner highlight', $style['custom_class']);
+
+        $html = $this->get('/'.$page->slug)->assertOk()->getContent();
+        // Attribute order on the wrapper is class, then style (absent here),
+        // then id — see render.blade.php's <section ...> line.
+        $this->assertMatchesRegularExpression('/<section[^>]*class="[^"]*"[^>]*id="site-hero"/', $html);
+        $this->assertMatchesRegularExpression('/<section[^>]*class="[^"]*\bpromo-banner\b[^"]*\bhighlight\b[^"]*"/', $html);
+    }
+
+    public function test_custom_id_and_class_are_absent_when_unset(): void
+    {
+        // No id="" attribute at all should be emitted for a block that never
+        // set one — not an empty id="" (which is itself invalid HTML).
+        $this->actingAs($this->admin);
+        $page = $this->publish([[
+            'type' => 'heading', 'data' => ['text' => 'No Hooks'],
+        ]]);
+
+        $html = $this->get('/'.$page->slug)->assertOk()->getContent();
+        $this->assertDoesNotMatchRegularExpression('/<section[^>]*\sid="/', $html);
+    }
+
+    public function test_custom_id_is_dropped_when_it_does_not_start_with_a_letter_or_contains_bad_characters(): void
+    {
+        $this->actingAs($this->admin);
+        $page = $this->publish([[
+            'type' => 'heading', 'data' => ['text' => 'Bad ID'],
+            'style' => ['custom_id' => '123-not-valid'],
+        ]]);
+        $style = PageLayout::where('page_id', $page->id)->where('is_published', true)
+            ->latest('id')->first()->layout_json['blocks'][0]['style'];
+        $this->assertArrayNotHasKey('custom_id', $style);
+
+        $page2 = $this->publish([[
+            'type' => 'heading', 'data' => ['text' => 'Bad ID 2'],
+            'style' => ['custom_id' => 'id"><script>alert(1)</script>'],
+        ]]);
+        $style2 = PageLayout::where('page_id', $page2->id)->where('is_published', true)
+            ->latest('id')->first()->layout_json['blocks'][0]['style'];
+        $this->assertArrayNotHasKey('custom_id', $style2);
+
+        $html2 = $this->get('/'.$page2->slug)->assertOk()->getContent();
+        $this->assertStringNotContainsString('<script>alert(1)</script>', $html2);
+    }
+
+    public function test_custom_class_drops_invalid_tokens_but_keeps_valid_ones(): void
+    {
+        $this->actingAs($this->admin);
+        $page = $this->publish([[
+            'type' => 'heading', 'data' => ['text' => 'Mixed Classes'],
+            'style' => ['custom_class' => 'good-one 123bad "><script>bad</script> another-good'],
+        ]]);
+
+        $style = PageLayout::where('page_id', $page->id)->where('is_published', true)
+            ->latest('id')->first()->layout_json['blocks'][0]['style'];
+
+        $this->assertSame('good-one another-good', $style['custom_class']);
+
+        $html = $this->get('/'.$page->slug)->assertOk()->getContent();
+        $this->assertStringNotContainsString('<script>bad</script>', $html);
+    }
+
+    public function test_advanced_tab_shows_id_and_class_fields_on_the_edit_page(): void
+    {
+        $this->actingAs($this->admin);
+        $page = $this->publish([[
+            'type' => 'heading', 'data' => ['text' => 'X'],
+            'style' => ['custom_id' => 'my-block', 'custom_class' => 'my-class'],
+        ]]);
+
+        $html = $this->get("/admin/pages/{$page->id}/edit")->assertOk()->getContent();
+
+        $this->assertStringContainsString('name="blocks[0][style][custom_id]"', $html);
+        $this->assertStringContainsString('name="blocks[0][style][custom_class]"', $html);
+        $this->assertStringContainsString('value="my-block"', $html);
+        $this->assertStringContainsString('value="my-class"', $html);
+    }
+
     // ── Advanced tab: width, border, radius (§7aa) ──────────────────────────
 
     public function test_width_full_mode_renders_100_percent(): void
