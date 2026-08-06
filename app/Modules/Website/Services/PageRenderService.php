@@ -332,6 +332,46 @@ class PageRenderService
             'tile_bg_color' => $hex($style['tile_bg_color'] ?? null),
             'tile_number_color' => $hex($style['tile_number_color'] ?? null),
             'tile_subtext_color' => $hex($style['tile_subtext_color'] ?? null),
+            // Notices-block-only fields — same reasoning as the stats fields
+            // above: .card/.notice title/date/body text all sit below a
+            // wrapper that a single text_color can't usefully differentiate
+            // (one color can't be both the date AND the heading AND the
+            // body), so each gets its own targeted field instead.
+            'card_bg_color' => $hex($style['card_bg_color'] ?? null),
+            'date_color' => $hex($style['date_color'] ?? null),
+            'card_title_color' => $hex($style['card_title_color'] ?? null),
+            'card_text_color' => $hex($style['card_text_color'] ?? null),
+            // Staff-block-only fields.
+            'ring_color' => $hex($style['ring_color'] ?? null),
+            'name_color' => $hex($style['name_color'] ?? null),
+            'designation_color' => $hex($style['designation_color'] ?? null),
+            // Hero-block-only fields. 'heading_color' (above) doubles as the
+            // hero's own title (<h1>) color — same key, different element,
+            // exactly like it already doubles for stats/notices/staff's own
+            // heading; 'bg_color' (above) doubles as the hero's solid
+            // background color, but ONLY takes effect when 'bg_mode' is
+            // explicitly 'color' — otherwise (default / 'image') the hero
+            // keeps using its own Content-tab background image field, so a
+            // block never tries to show both at once. See render.blade.php's
+            // 'hero' @case and docs/modules/28-elementor-block-editor-plan.md
+            // §7ae for why this needed an explicit mode rather than the
+            // silent "image always wins if both are set" it would otherwise
+            // fall back to.
+            'bg_mode' => in_array($style['bg_mode'] ?? null, ['image', 'color'], true) ? $style['bg_mode'] : null,
+            'subtitle_color' => $hex($style['subtitle_color'] ?? null),
+            'button_text_color' => $hex($style['button_text_color'] ?? null),
+            'button_bg_color' => $hex($style['button_bg_color'] ?? null),
+            'button_hover_text_color' => $hex($style['button_hover_text_color'] ?? null),
+            'button_hover_bg_color' => $hex($style['button_hover_bg_color'] ?? null),
+            // Announcement-bar-only fields. Background color is already
+            // covered by the universal 'bg_color' (Advanced tab) — the
+            // wrapper IS the visible bar for this block (see the
+            // 'announcement_bar' @case), so no dedicated key is needed for
+            // that one. Message/link need their own keys because they
+            // currently share a single inherited wrapper text_color and
+            // can't be told apart from each other any other way.
+            'message_color' => $hex($style['message_color'] ?? null),
+            'link_color' => $hex($style['link_color'] ?? null),
             // Legacy single 'radius' (pre-§7aa) — still sanitized and stored
             // so an already-saved page keeps rendering exactly as before
             // until its next edit; BlockPresentation prefers the four

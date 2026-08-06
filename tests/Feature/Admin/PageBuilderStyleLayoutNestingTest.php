@@ -3,7 +3,9 @@
 namespace Tests\Feature\Admin;
 
 use App\Models\User;
+use App\Modules\Announcement\Models\Announcement;
 use App\Modules\School\Models\School;
+use App\Modules\Staff\Models\Staff;
 use App\Modules\Website\Models\Page;
 use App\Modules\Website\Models\PageLayout;
 use App\Modules\Website\Models\SiteSetting;
@@ -407,6 +409,200 @@ class PageBuilderStyleLayoutNestingTest extends TestCase
 
         $this->get('/'.$page->slug)->assertOk()->assertSee('color:#123456', false);
         $this->get("/admin/pages/{$page->id}/edit")->assertOk()->assertSee('Text color');
+    }
+
+    // ── Per-block color overrides: notices/staff/hero/announcement_bar (§7ae) ──
+    // Same reasoning as the stats-block tests above — each of these blocks'
+    // visible elements carries its own explicit CSS color, so a single
+    // wrapper-level text_color could never reach them either.
+
+    public function test_notices_block_style_colors_render_on_the_right_elements(): void
+    {
+        Announcement::create([
+            'school_id' => $this->school->id, 'created_by' => $this->admin->id, 'title' => 'Admissions Open',
+            'body' => 'Apply now for the new academic year.', 'type' => 'general',
+            'audience' => 'all', 'priority' => 'normal', 'publish_at' => now()->subDay(),
+        ]);
+
+        $this->actingAs($this->admin);
+        $page = $this->publish([[
+            'type' => 'notices',
+            'data' => ['heading' => 'Latest News'],
+            'style' => [
+                'heading_color' => '#111111',
+                'card_bg_color' => '#222222',
+                'date_color' => '#333333',
+                'card_title_color' => '#444444',
+                'card_text_color' => '#555555',
+            ],
+        ]]);
+
+        $html = $this->get('/'.$page->slug)->assertOk()->getContent();
+
+        $this->assertStringContainsString('<h2 class="section-title h3 mb-4" style="color:#111111">Latest News</h2>', $html);
+        $this->assertStringContainsString('<div class="card h-100" style="background-color:#222222">', $html);
+        $this->assertStringContainsString('style="color:#333333"', $html);
+        $this->assertStringContainsString('<h3 class="h6 fw-semibold" style="color:#444444">Admissions Open</h3>', $html);
+        $this->assertStringContainsString('style="color:#555555"', $html);
+        // date/body normally carry Bootstrap's !important .text-muted — both
+        // are dropped from the class list once their own override is set.
+        $this->assertStringNotContainsString('text-muted mb-1', $html);
+    }
+
+    public function test_notices_block_without_overrides_keeps_the_default_text_muted_look(): void
+    {
+        Announcement::create([
+            'school_id' => $this->school->id, 'created_by' => $this->admin->id, 'title' => 'Admissions Open',
+            'body' => 'Apply now.', 'type' => 'general',
+            'audience' => 'all', 'priority' => 'normal', 'publish_at' => now()->subDay(),
+        ]);
+
+        $this->actingAs($this->admin);
+        $page = $this->publish([[
+            'type' => 'notices', 'data' => ['heading' => 'Latest News'],
+        ]]);
+
+        $this->get('/'.$page->slug)->assertOk()->assertSee('small text-muted mb-1', false);
+    }
+
+    public function test_staff_block_style_colors_render_on_the_right_elements(): void
+    {
+        Staff::create([
+            'school_id' => $this->school->id, 'name' => 'Jane Doe',
+            'gender' => 'female', 'employee_id' => 'EMP/1', 'status' => 'active',
+        ]);
+
+        $this->actingAs($this->admin);
+        $page = $this->publish([[
+            'type' => 'staff',
+            'data' => ['heading' => 'Our Team'],
+            'style' => [
+                'heading_color' => '#111111',
+                'ring_color' => '#222222',
+                'name_color' => '#333333',
+                'designation_color' => '#444444',
+            ],
+        ]]);
+
+        $html = $this->get('/'.$page->slug)->assertOk()->getContent();
+
+        $this->assertStringContainsString('<h2 class="section-title h3 mb-4 text-center" style="color:#111111">Our Team</h2>', $html);
+        $this->assertStringContainsString('box-shadow:0 0 0 3px #fff, 0 0 0 5px #222222', $html);
+        $this->assertStringContainsString('<div class="fw-semibold small" style="color:#333333">Jane Doe</div>', $html);
+        $this->assertStringContainsString('<div class="small" style="color:#444444">', $html);
+        $this->assertStringNotContainsString('text-muted">Staff</div>', $html);
+    }
+
+    public function test_hero_block_title_and_subtitle_colors_render(): void
+    {
+        $this->actingAs($this->admin);
+        $page = $this->publish([[
+            'type' => 'hero',
+            'data' => ['title' => 'Welcome', 'subtitle' => 'A great school'],
+            'style' => ['heading_color' => '#111111', 'subtitle_color' => '#222222'],
+        ]]);
+
+        $html = $this->get('/'.$page->slug)->assertOk()->getContent();
+
+        $this->assertStringContainsString('<h1 class="display-4 mb-3" style="color:#111111">Welcome</h1>', $html);
+        $this->assertStringContainsString('style="max-width:42rem;color:#222222;"', $html);
+        // Bootstrap's !important .text-white-50 is dropped once an override is set.
+        $this->assertStringNotContainsString('lead text-white-50', $html);
+    }
+
+    public function test_hero_block_solid_color_background_overrides_the_gradient_and_ignores_image(): void
+    {
+        $this->actingAs($this->admin);
+        $page = $this->publish([[
+            'type' => 'hero',
+            'data' => ['title' => 'Welcome', 'image' => 'https://example.com/bg.jpg'],
+            'style' => ['bg_mode' => 'color', 'bg_color' => '#0a0a0a'],
+        ]]);
+
+        $html = $this->get('/'.$page->slug)->assertOk()->getContent();
+
+        $this->assertStringContainsString('style="background-image:none;background-color:#0a0a0a;"', $html);
+        $this->assertStringNotContainsString('bg.jpg', $html);
+    }
+
+    public function test_hero_block_image_mode_is_the_default_and_unaffected_by_bg_color(): void
+    {
+        $this->actingAs($this->admin);
+        $page = $this->publish([[
+            'type' => 'hero',
+            'data' => ['title' => 'Welcome', 'image' => 'https://example.com/bg.jpg'],
+            // bg_mode left unset — a page saved before this feature existed
+            // must keep behaving exactly as before, even with a stray
+            // bg_color value sitting in its stored style from some other use.
+            'style' => ['bg_color' => '#0a0a0a'],
+        ]]);
+
+        $html = $this->get('/'.$page->slug)->assertOk()->getContent();
+
+        $this->assertStringContainsString("url('https://example.com/bg.jpg')", $html);
+        $this->assertStringNotContainsString('background-color:#0a0a0a', $html);
+    }
+
+    public function test_hero_block_button_colors_render_with_a_scoped_hover_style_block(): void
+    {
+        $this->actingAs($this->admin);
+        $page = $this->publish([[
+            'type' => 'hero',
+            'data' => ['title' => 'Welcome', 'button_text' => 'Apply Now', 'button_url' => '/apply'],
+            'style' => [
+                'button_text_color' => '#111111',
+                'button_bg_color' => '#222222',
+                'button_hover_text_color' => '#333333',
+                'button_hover_bg_color' => '#444444',
+            ],
+        ]]);
+
+        $html = $this->get('/'.$page->slug)->assertOk()->getContent();
+
+        $this->assertMatchesRegularExpression(
+            '/<a href="\/apply" id="hero-btn-[^"]+" class="btn btn-light btn-lg mt-2 px-4">Apply Now<\/a>/',
+            $html,
+        );
+        $this->assertStringContainsString('color: #111111', $html);
+        $this->assertStringContainsString('background-color: #222222; border-color: #222222;', $html);
+        $this->assertStringContainsString(':hover {', $html);
+        $this->assertStringContainsString('color: #333333', $html);
+        $this->assertStringContainsString('background-color: #444444; border-color: #444444;', $html);
+    }
+
+    public function test_hero_block_button_has_no_extra_style_block_without_any_override(): void
+    {
+        $this->actingAs($this->admin);
+        $page = $this->publish([[
+            'type' => 'hero',
+            'data' => ['title' => 'Welcome', 'button_text' => 'Apply Now', 'button_url' => '/apply'],
+        ]]);
+
+        $html = $this->get('/'.$page->slug)->assertOk()->getContent();
+
+        // layout.blade.php's <head> always carries its own single <style>
+        // block for site-wide theming — asserting a page-wide "no <style> at
+        // all" would be a false failure against that, the same class of
+        // mistake the stats-block bg-light test made earlier. The hero
+        // button's own id-scoped block is only ever emitted when an
+        // override is set, so with none set the count must stay at exactly
+        // that one baseline occurrence.
+        $this->assertSame(1, substr_count($html, '<style'));
+    }
+
+    public function test_announcement_bar_block_message_and_link_colors_render(): void
+    {
+        $this->actingAs($this->admin);
+        $page = $this->publish([[
+            'type' => 'announcement_bar',
+            'data' => ['text' => 'Admissions open', 'link_url' => '/apply', 'link_text' => 'Apply'],
+            'style' => ['message_color' => '#111111', 'link_color' => '#222222'],
+        ]]);
+
+        $html = $this->get('/'.$page->slug)->assertOk()->getContent();
+
+        $this->assertStringContainsString('<span class="small fw-semibold" style="color:#111111">Admissions open</span>', $html);
+        $this->assertStringContainsString('class="announcement-bar-link small" style="color:#222222"', $html);
     }
 
     // ── Layout tab ───────────────────────────────────────────────────────

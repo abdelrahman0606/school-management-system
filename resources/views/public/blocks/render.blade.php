@@ -66,11 +66,60 @@
 @endif
 @switch($type)
   @case('hero')
-    <header class="hero py-5 py-lg-6" @if(!empty($d['image'])) style="background-image:linear-gradient(rgba(0,0,0,.45),rgba(0,0,0,.45)),url('{{ $d['image'] }}');background-size:cover;background-position:center;" @endif>
+    @php
+      // Background is an explicit either/or (Style tab radio, 'bg_mode'):
+      // 'color' uses the Style tab's own bg_color solid fill; anything else
+      // (unset / 'image', the pre-existing behavior) uses the Content tab's
+      // image field exactly as before. Never both at once — before this,
+      // a wrapper-level bg_color was silently invisible here anyway (the
+      // .hero class below paints an opaque gradient/image straight over
+      // whatever the outer wrapper's own background was), so this is also
+      // the fix for that dormant version of the same bug, not just new UI.
+      $heroBgMode = ($style['bg_mode'] ?? 'image') === 'color' ? 'color' : 'image';
+      // Bootstrap's .text-white-50 is !important — can't be beaten by a
+      // plain inline style, so it's dropped entirely (not fought) only once
+      // a real subtitle_color override is set; same trick as stats'
+      // tile-subtext and staff's designation color above.
+      $heroSubtitleOverride = ! empty($style['subtitle_color']);
+    @endphp
+    <header class="hero py-5 py-lg-6"
+      @if($heroBgMode === 'color' && !empty($style['bg_color']))
+        style="background-image:none;background-color:{{ $style['bg_color'] }};"
+      @elseif(!empty($d['image']))
+        style="background-image:linear-gradient(rgba(0,0,0,.45),rgba(0,0,0,.45)),url('{{ $d['image'] }}');background-size:cover;background-position:center;"
+      @endif
+    >
       <div class="container py-4 py-lg-5 text-center">
-        <h1 class="display-4 mb-3">{{ $d['title'] ?? '' }}</h1>
-        @if(!empty($d['subtitle']))<p class="lead text-white-50 mx-auto" style="max-width:42rem;">{{ $d['subtitle'] }}</p>@endif
-        @if(!empty($d['button_text']))<a href="{{ $d['button_url'] ?? '#' }}" class="btn btn-light btn-lg mt-2 px-4">{{ $d['button_text'] }}</a>@endif
+        <h1 class="display-4 mb-3"@if(!empty($style['heading_color'])) style="color:{{ $style['heading_color'] }}"@endif>{{ $d['title'] ?? '' }}</h1>
+        @if(!empty($d['subtitle']))
+          <p class="lead{{ $heroSubtitleOverride ? '' : ' text-white-50' }} mx-auto" style="max-width:42rem;{{ $heroSubtitleOverride ? 'color:'.$style['subtitle_color'].';' : '' }}">{{ $d['subtitle'] }}</p>
+        @endif
+        @if(!empty($d['button_text']))
+          @php
+            $heroBtnId = 'hero-btn-'.uniqid();
+            $heroBtnOverride = ! empty($style['button_text_color']) || ! empty($style['button_bg_color'])
+              || ! empty($style['button_hover_text_color']) || ! empty($style['button_hover_bg_color']);
+          @endphp
+          <a href="{{ $d['button_url'] ?? '#' }}" id="{{ $heroBtnId }}" class="btn btn-light btn-lg mt-2 px-4">{{ $d['button_text'] }}</a>
+          @if($heroBtnOverride)
+            {{-- Hover states can't be expressed via an inline style attribute
+                 — a tiny id-scoped <style> block is the least invasive way to
+                 add one without a shared/global CSS class per color
+                 combination. uniqid() is per-render (not persisted), so this
+                 is safe even with multiple Hero blocks or the same block
+                 re-rendered by the live-preview's per-block AJAX path. --}}
+            <style>
+              #{{ $heroBtnId }} {
+                @if(!empty($style['button_text_color']))color: {{ $style['button_text_color'] }};@endif
+                @if(!empty($style['button_bg_color']))background-color: {{ $style['button_bg_color'] }}; border-color: {{ $style['button_bg_color'] }};@endif
+              }
+              #{{ $heroBtnId }}:hover {
+                @if(!empty($style['button_hover_text_color']))color: {{ $style['button_hover_text_color'] }};@endif
+                @if(!empty($style['button_hover_bg_color']))background-color: {{ $style['button_hover_bg_color'] }}; border-color: {{ $style['button_hover_bg_color'] }};@endif
+              }
+            </style>
+          @endif
+        @endif
       </div>
     </header>
     @break
@@ -248,16 +297,27 @@
 
   @case('staff')
     {!! $open !!}
-      @if(!empty($d['heading']))<h2 class="section-title h3 mb-4 text-center">{{ $d['heading'] }}</h2>@endif
+      @php
+        // Per-element color overrides (Style tab's staff-only fields) — same
+        // reasoning as stats: .section-title/.text-muted each carry their own
+        // explicit color, so a single wrapper-level text_color can't reach
+        // any of these. .text-muted is Bootstrap's !important utility (see
+        // layout.blade.php's own override of it), so designation_color drops
+        // that class entirely rather than fighting it — but only once a real
+        // override is set; with no override the class (and its default
+        // look) stays exactly as before.
+        $staffRingStyle = ! empty($style['ring_color']) ? ';box-shadow:0 0 0 3px #fff, 0 0 0 5px '.e($style['ring_color']) : '';
+      @endphp
+      @if(!empty($d['heading']))<h2 class="section-title h3 mb-4 text-center"@if(!empty($style['heading_color'])) style="color:{{ $style['heading_color'] }}"@endif>{{ $d['heading'] }}</h2>@endif
       <div class="row {{ $bp::columnClasses($layout, ['mobile' => 2, 'tablet' => 3, 'laptop' => 4, 'desktop' => 4]) }} g-4 text-center">
         @forelse($d['members'] ?? [] as $m)
           <div>
-            <div class="rounded-circle bg-white avatar-ring d-inline-flex align-items-center justify-content-center mb-3" style="width:88px;height:88px;">
+            <div class="rounded-circle bg-white avatar-ring d-inline-flex align-items-center justify-content-center mb-3" style="width:88px;height:88px;{{ $staffRingStyle }}">
               @if($m->photo)<img src="{{ $m->photo }}" class="rounded-circle" style="width:88px;height:88px;object-fit:cover;" alt="">
               @else<span class="text-brand fw-bold fs-3">{{ strtoupper(mb_substr($m->name, 0, 1)) }}</span>@endif
             </div>
-            <div class="fw-semibold small">{{ $m->name }}</div>
-            <div class="text-muted small">{{ $m->designation?->name ?? __('Staff') }}</div>
+            <div class="fw-semibold small"@if(!empty($style['name_color'])) style="color:{{ $style['name_color'] }}"@endif>{{ $m->name }}</div>
+            <div class="small{{ empty($style['designation_color']) ? ' text-muted' : '' }}"@if(!empty($style['designation_color'])) style="color:{{ $style['designation_color'] }}"@endif>{{ $m->designation?->name ?? __('Staff') }}</div>
           </div>
         @empty
           <p class="text-muted mb-0">{{ __('No Staff To Show.') }}</p>
@@ -268,14 +328,20 @@
 
   @case('notices')
     {!! $open !!}
-      <h2 class="section-title h3 mb-4">{{ $d['heading'] ?? __('Notices') }}</h2>
+      {{-- Per-element color overrides (Style tab's notices-only fields) —
+           same reasoning as staff/stats above: .section-title/.text-muted
+           each carry their own explicit color, so a single wrapper-level
+           text_color can never reach them. .card's own background-color
+           rule (layout.blade.php) isn't !important, so card_bg_color is a
+           plain inline override with no class-swap needed. --}}
+      <h2 class="section-title h3 mb-4"@if(!empty($style['heading_color'])) style="color:{{ $style['heading_color'] }}"@endif>{{ $d['heading'] ?? __('Notices') }}</h2>
       <div class="row {{ $bp::columnClasses($layout, ['mobile' => 1, 'tablet' => 2, 'laptop' => 3, 'desktop' => 3]) }} g-4">
         @forelse(($d['notices'] ?? collect())->take($d['limit'] ?? 6) as $n)
-          <div><div class="card h-100"><div class="card-body p-4">
+          <div><div class="card h-100"@if(!empty($style['card_bg_color'])) style="background-color:{{ $style['card_bg_color'] }}"@endif><div class="card-body p-4">
             <div class="d-flex align-items-center justify-content-center notice-icon mb-3"><i class="bi bi-megaphone-fill"></i></div>
-            <div class="small text-muted mb-1">{{ \App\Support\LocalizedDate::format($n->publish_at ?? $n->created_at, 'd M Y') }}</div>
-            <h3 class="h6 fw-semibold">{{ $n->title }}</h3>
-            <p class="text-muted small mb-0">{{ \Illuminate\Support\Str::limit(strip_tags($n->body), 110) }}</p>
+            <div class="small{{ empty($style['date_color']) ? ' text-muted' : '' }} mb-1"@if(!empty($style['date_color'])) style="color:{{ $style['date_color'] }}"@endif>{{ \App\Support\LocalizedDate::format($n->publish_at ?? $n->created_at, 'd M Y') }}</div>
+            <h3 class="h6 fw-semibold"@if(!empty($style['card_title_color'])) style="color:{{ $style['card_title_color'] }}"@endif>{{ $n->title }}</h3>
+            <p class="{{ empty($style['card_text_color']) ? 'text-muted ' : '' }}small mb-0"@if(!empty($style['card_text_color'])) style="color:{{ $style['card_text_color'] }}"@endif>{{ \Illuminate\Support\Str::limit(strip_tags($n->body), 110) }}</p>
           </div></div></div>
         @empty
           <p class="text-muted mb-0">{{ __('No Notices Published.') }}</p>
@@ -469,9 +535,16 @@
       @if ($abText !== '')
         <div class="announcement-bar d-flex align-items-center justify-content-center flex-wrap gap-2 text-center py-2 px-3"
              @if($abDismissible) data-announcement-bar="{{ $abKey }}" @endif>
-          <span class="small fw-semibold">{{ $abText }}</span>
+          {{-- .announcement-bar-link/the message span both use color:inherit
+               from the section wrapper (see layout.blade.php), which the
+               universal Background color (Advanced tab) already reaches —
+               but that means message and link can't be given DIFFERENT
+               colors from each other via that one shared value. These two
+               targeted fields are a direct inline override on each element
+               instead, same pattern as every other block above. --}}
+          <span class="small fw-semibold"@if(!empty($style['message_color'])) style="color:{{ $style['message_color'] }}"@endif>{{ $abText }}</span>
           @if ($abLinkUrl !== '' && $abLinkText !== '')
-            <a href="{{ $abLinkUrl }}" class="announcement-bar-link small">{{ $abLinkText }} <i class="bi bi-arrow-right"></i></a>
+            <a href="{{ $abLinkUrl }}" class="announcement-bar-link small"@if(!empty($style['link_color'])) style="color:{{ $style['link_color'] }}"@endif>{{ $abLinkText }} <i class="bi bi-arrow-right"></i></a>
           @endif
           @if ($abDismissible)
             <button type="button" class="announcement-bar-dismiss js-announcement-dismiss ms-1" aria-label="{{ __('Dismiss') }}"><i class="bi bi-x-lg"></i></button>

@@ -1530,6 +1530,78 @@ public page and a full preview reload both still animate normally.
 (e.g. Statistics with "Fade Up"), edit an unrelated Style field (a color), and verify the block's content stays
 visible in the preview instead of disappearing.
 
+### §7ae — Per-element Style tab colors for Notices, Staff, Hero, and Announcement Bar
+
+**The ask:** extend §7ab's per-element color pattern (previously stats-only) to four more blocks, each with its
+own list of targeted fields: Notices (Heading, Card Background, Card Date, Card Title, Card Text), Staff
+(Heading, Avatar Ring, Name, Designation), Hero (Title, Subtitle, Button Text/Background, Button Hover
+Text/Background, plus an explicit Background Image/Solid Color choice), Announcement Bar (Message Text, Link
+Text).
+
+**Same root cause as §7ab, block by block:**
+- Notices/Staff: `.section-title`, Bootstrap's `.text-muted` (this app's own `!important` override of it, see
+  §7ab), and `.card`'s background-color all carry their own explicit rule in `layout.blade.php`, so a single
+  wrapper-level `text_color` never reached any of them.
+- Hero: the outer wrapper's own `bg_color` (Advanced tab) was **already silently broken** for this block
+  specifically, discovered while implementing this — `.hero`'s own opaque gradient/image sits directly on top
+  of the wrapper and paints over whatever background it had, so setting a wrapper background color on a Hero
+  block has never done anything visible. Fixed as part of this change by applying `bg_color` directly to the
+  `<header class="hero">` element instead, gated behind the new `bg_mode` toggle (see below).
+- Announcement Bar: unlike the others, `bg_color`/generic `text_color` (Advanced/Style tabs) *were* already
+  reaching this block correctly — the section wrapper IS the visible bar, and `.announcement-bar-section`'s
+  CSS isn't `!important`. But message and link both use `color: inherit` from that same wrapper, so one shared
+  `text_color` can't give them different colors from each other. Only Message/Link needed dedicated fields;
+  Background color reuses the existing Advanced tab field as-is (a short note was added in the Style tab
+  pointing there instead of duplicating the control).
+
+**Naming convention:** `heading_color` and `bg_color` are reused across blocks for their own heading/background
+element (stats' h2, notices' h2, staff's h2, hero's h1/header) rather than one dedicated key per block — same
+"harmless dead weight on a block that doesn't render it" convention `width_mode`/`border_style` already
+established. Every other field is block-specific (`card_bg_color`, `ring_color`, `button_hover_bg_color`, …).
+
+**Class-swap fix, made simpler this round:** §7ab always swapped `.text-muted`/`.bg-light` for a plain
+equivalent and needed a matching *default* CSS rule to keep the un-overridden look identical. This round uses a
+**conditional** swap instead — the `!important` class (`text-muted`, `text-white-50`) is only dropped when a
+real override is actually set; with no override, the original class stays exactly as before. This needed zero
+new default CSS rules in `layout.blade.php`, unlike §7ab.
+
+**Hero background: explicit Image/Solid Color toggle, not silent priority.** Before this, an image (Content
+tab) and a would-be color both being set had no real conflict to resolve because the color path was dead
+code (see above) — but making it live meant deciding what happens if both are ever set. Rather than reintroduce
+a silent "whichever one wins" rule, a new `bg_mode` field (`'image'` | `'color'`, default `'image'` for
+backward compatibility) makes the choice explicit, rendered as a real `<input type="radio">` pair styled as a
+Bootstrap `.btn-check`/`.btn-group` segmented toggle (Elementor's own background-type selector uses the same
+pattern) rather than a `<select>`. The existing generic field-dependency JS (`data-depends-on`/
+`data-depends-values`, added for §7aa's Width Type dropdown) only ever read `.value` off a single resolved
+element — correct for a `<select>`, but a radio **group** shares one `name` across several inputs, so that
+lookup would always resolve to the first radio in DOM order regardless of which is actually checked.
+`applyFieldDependencies()` now special-cases `type === 'radio'` and re-resolves against the `:checked` one
+instead; unaffected for every existing `<select>`-based caller. Copy/Paste Style (`styleFieldsIn()`/
+`pasteStyleToCard()`) had the same latent gap — capturing a radio group would pick up whichever one
+`querySelectorAll()` happened to visit last rather than the checked one, and pasting set `.value` without
+checking anything — both fixed the same way. Undo/redo (`captureCardOwnFields()`/`applyCardOwnFields()`)
+already special-cased `type === 'radio'`/`checkbox` correctly and needed no change.
+
+**Hero button hover colors:** a hover state can't be expressed through an inline `style="…"` attribute, so the
+`'hero'` `@case` emits a tiny `id`-scoped `<style>` block (only when at least one button color is actually set)
+targeting a `uniqid()`-generated id on the button — safe to regenerate on every render, including the
+live-preview's per-block AJAX path (§7ac/§7ad), since it never needs to persist across requests.
+
+**New tests** in `PageBuilderStyleLayoutNestingTest.php`: one render-correctness test per block confirming each
+color lands on its actual target element (never the wrapper), a default-look-preserved test for Notices, and
+three Hero-specific tests for the background mode (solid color overrides and suppresses the image, image mode
+is unaffected by a stray `bg_color`, and the button hover `<style>` block is only emitted when an override is
+actually set — asserted via `substr_count($html, '<style') === 1`, i.e. only `layout.blade.php`'s own baseline
+`<style>` tag, rather than a page-wide "no `<style>` at all" check that would be a false failure against it).
+
+**Verification gap:** no PHP/browser in this sandbox. Verified via `grep`/balance-script sweeps identical to
+every prior entry (no stray `@case`/`@switch`-shaped text in any touched `.blade.php` comment) and a
+`python3 -c "import json; ..."` duplicate-key check on `bn.json` after inserting the 20 new strings. Please
+confirm in browser: open a Notices/Staff/Hero/Announcement Bar block's Style tab, set each new color field, and
+verify it lands on the right element in the live preview; toggle Hero's Background Image/Solid Color radio and
+confirm only one ever renders; set a Hero button's hover colors and confirm the button actually changes color
+on mouseover.
+
 ## 8. Decisions to confirm when resuming (if not already answered above)
 
 - Confirm the exact current route/controller method name for the public page `show()` action before Phase 1

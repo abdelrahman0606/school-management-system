@@ -1069,6 +1069,18 @@
           var depKey = dot !== -1 ? depPath.slice(dot + 1) : depPath;
           var control = card.querySelector('[name$="[' + group + '][' + depKey + ']"]');
           var current = control ? control.value : '';
+          // A radio GROUP (e.g. hero's Background Image/Solid color toggle,
+          // §7ae) shares one `name` across several inputs — querySelector()
+          // above only ever finds the FIRST one in DOM order, so .value on
+          // it would always read that first radio's own static value
+          // attribute regardless of which is actually checked. Re-resolve
+          // against whichever one in the group is :checked instead. Unaffected
+          // for every existing depends_on caller (a <select>, whose own
+          // .value already reflects the current selection).
+          if (control && control.type === 'radio') {
+            var checkedRadio = card.querySelector('[name="' + control.name + '"]:checked');
+            current = checkedRadio ? checkedRadio.value : '';
+          }
           wrap.style.display = allowed.indexOf(current) !== -1 ? '' : 'none';
         });
       }
@@ -1133,6 +1145,12 @@
       function styleFieldsIn(card) {
         var out = {};
         card.querySelectorAll('[name*="[style]["]').forEach(function (el) {
+          // A radio GROUP (hero's Background Image/Solid color toggle, §7ae)
+          // puts several inputs under the same [style][key] name — only the
+          // checked one holds the real value; an unchecked sibling would
+          // otherwise just overwrite it with whatever DOM order happens to
+          // visit last.
+          if (el.type === 'radio' && !el.checked) return;
           var m = el.name.match(/\[style\]\[([a-zA-Z0-9_]+)\]$/);
           if (m) out[m[1]] = el.value;
         });
@@ -1150,6 +1168,18 @@
         Object.keys(copiedStyle).forEach(function (key) {
           var input = card.querySelector('[name$="[style][' + key + ']"]');
           if (!input) return;
+          if (input.type === 'radio') {
+            // Select the specific radio in the group whose value matches the
+            // copied one, rather than setting .value on whichever radio
+            // querySelector() happened to find first (that wouldn't check
+            // it, or could silently check the wrong option).
+            var match = card.querySelector('[name="' + input.name + '"][value="' + CSS.escape(copiedStyle[key]) + '"]');
+            if (!match) return;
+            match.checked = true;
+            match.dispatchEvent(new Event('input', { bubbles: true }));
+            match.dispatchEvent(new Event('change', { bubbles: true }));
+            return;
+          }
           input.value = copiedStyle[key];
           // Dispatched (not assigned) so the delegated swatch-sync and
           // live-preview/history listeners already on these fields pick the
@@ -1686,7 +1716,7 @@
           var localeInput = form.querySelector('[name="locale"]');
           if (localeInput) fd.append('locale', localeInput.value);
           // A nested child (path.length > 1) is ALWAYS rendered inside its
-          // parent's own wrapper (see the container/grid @case in
+          // parent's own wrapper (see the container/grid case in
           // public/blocks/render.blade.php, which always passes
           // contained=>true to its children) regardless of the page
           // template; only a top-level block's containment depends on the
