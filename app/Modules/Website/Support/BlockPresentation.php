@@ -37,7 +37,7 @@ class BlockPresentation
     /**
      * @param  array<string, mixed>  $style
      * @param  array<string, mixed>  $layout
-     * @return array{class: string, style: string}
+     * @return array{class: string, style: string, id: string}
      */
     public static function wrapper(array $style, array $layout): array
     {
@@ -46,8 +46,16 @@ class BlockPresentation
                 'block-wrap',
                 self::visibilityClasses($layout['hide'] ?? []),
                 self::animationClass($style['animation'] ?? null),
+                // Advanced tab "Class" field (§7ai) — an admin-supplied extra
+                // CSS class for their own custom CSS/JS hooks, appended last
+                // so it never fights the block's own structural classes.
+                $style['custom_class'] ?? '',
             ]))),
             'style' => self::inlineStyle($style),
+            // Advanced tab "ID" field (§7ai) — same purpose, kept as a
+            // separate returned key (not folded into 'class') since it's a
+            // distinct HTML attribute, not a class-list entry.
+            'id' => $style['custom_id'] ?? '',
         ];
     }
 
@@ -130,13 +138,26 @@ class BlockPresentation
             $rules[] = 'width:'.self::trimNumber((float) $style['width_value']).$unit;
         }
 
-        if (! empty($style['bg_image'])) {
+        // Background: an explicit three-way either/or once 'bg_mode' is
+        // set (Advanced tab radio: Image / Solid Color / Gradient — never
+        // more than one applied together). A page saved before 'bg_mode'
+        // existed has it unset, so it falls through to the original
+        // implicit priority below (image wins if set, else color) —
+        // unchanged rendering for anything published before this control
+        // was added.
+        $bgMode = $style['bg_mode'] ?? null;
+        if ($bgMode === 'gradient' && ! empty($style['bg_gradient_start']) && ! empty($style['bg_gradient_end'])) {
+            $angle = isset($style['bg_gradient_angle']) ? (int) $style['bg_gradient_angle'] : 135;
+            $rules[] = "background-image:linear-gradient({$angle}deg,{$style['bg_gradient_start']},{$style['bg_gradient_end']})";
+        } elseif ($bgMode === 'color' && ! empty($style['bg_color'])) {
+            $rules[] = 'background-color:'.$style['bg_color'];
+        } elseif (($bgMode === 'image' || $bgMode === null) && ! empty($style['bg_image'])) {
             $overlay = max(0, min(100, (int) ($style['bg_overlay'] ?? 0))) / 100;
             $image = str_replace("'", "\\'", $style['bg_image']);
             $rules[] = "background-image:linear-gradient(rgba(0,0,0,{$overlay}),rgba(0,0,0,{$overlay})),url('{$image}')";
             $rules[] = 'background-size:cover';
             $rules[] = 'background-position:center';
-        } elseif (! empty($style['bg_color'])) {
+        } elseif ($bgMode === null && ! empty($style['bg_color'])) {
             $rules[] = 'background-color:'.$style['bg_color'];
         }
 

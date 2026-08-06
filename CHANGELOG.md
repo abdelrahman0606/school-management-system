@@ -4,6 +4,30 @@ All notable changes to this project are documented here. Format loosely
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning
 follows [Semantic Versioning](https://semver.org/).
 
+## [1.4.2] — 2026-08-06
+
+### Added
+- Notices block: Style tab now has targeted Heading, Card Background, Card Date, Card Title, Card Text, and Card Icon color fields.
+- Staff block: Style tab now has targeted Heading, Avatar Ring, Avatar Text, Name, and Designation color fields.
+- Hero banner block: Style tab now has Title, Subtitle, Button Text/Background, and Button Hover Text/Background color fields, plus an explicit Background Image / Solid Color toggle — only one is ever applied, instead of an image silently overriding an unused color field.
+- Announcement bar block: Style tab now has targeted Message Text and Link Text color fields (background color already worked via the existing Advanced tab field).
+- Every block's Advanced tab Background section now offers a third option, Gradient, alongside Image and Solid Color — pick a start color, end color, and direction.
+- Margin, Padding, Border Width, and Border Radius controls: the four side inputs now sit flush against each other with only the outer corners rounded (no more separate T/B/L/R labels breaking them up), plus a new link-values button that, when toggled on, copies whatever you type into one box into the other three.
+- Every block's Advanced tab now has an "ID & Class" section — set a custom HTML id and/or one or more CSS class names on a block for your own custom CSS or JavaScript to hook into.
+
+### Changed
+- Background Image / Solid Color / Gradient is now one field per block, always on the Advanced tab, for every block type including Hero — previously Hero kept its own copy of this control on the Style tab (added when the toggle was first introduced), which duplicated the Advanced tab's field under the hood and could silently overwrite it depending on form submission order.
+
+### Fixed
+- Statistics block: Style tab colors and the entrance animation now actually apply. A single wrapper-level color/animation could never reach the heading or tile text (they each carry their own explicit CSS), so those settings visibly did nothing. Replaced with four targeted fields (Heading, Tile Background, Tile Number, Tile Subtext color) for this block only, and the entrance animation now plays on the heading and each tile individually instead of the whole section at once.
+- Page builder: editing a block's Style tab could make its live preview go blank (content still in the DOM, just invisible) whenever that block had an entrance animation set — the preview's fast per-block update path never told the page's scroll-reveal animation about newly-inserted elements, so they stayed permanently hidden instead of fading in.
+- Hero banner block: Background Color now applies to the block's own section (consistent with every other block) instead of the inner header element, which used to paint over it and hide it completely.
+- Notices block: added a Card Icon color field for the notice icon badge.
+- Staff block: added an Avatar Text color field for the initial-letter avatar shown when a member has no photo.
+- Hero banner block: fixed the Style tab's Background Color field silently doing nothing — it shared its underlying field name with the unrelated, always-present generic Background color field on the Advanced tab, so submitting the form could overwrite whichever one the admin had actually set.
+- Hero banner block: a Background Color set on the block would previously be applied to the (invisible) wrapper element and never actually show, because the hero's own gradient/image sits on top of it. Now applies directly to the visible hero element, gated behind the new Image/Solid Color toggle.
+- Public page rendering cache: strengthened the cache key for a published page so it can never serve a stale render for the wrong page — only ever observed under the automated test suite's in-memory database, not in normal operation.
+
 ## [1.4.1] — 2026-08-01
 
 ### Added

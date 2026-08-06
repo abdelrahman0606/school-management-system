@@ -1400,6 +1400,587 @@ other three are collapsed, open each independently (confirm they don't close eac
 and a Solid/Dashed border and confirm both the live preview and the saved public page match, and toggle a
 Responsive hide-switch to confirm it still behaves like the old checkbox did.
 
+### §7ab — Statistics block: per-element Style tab colors + animation (bug fix, reported after §7aa shipped)
+
+**The bug, exactly as reported:** on the Statistics block, the Style tab's Text Color and Entrance Animation
+visibly did nothing. "Only text color is wrong" — the requester wanted Heading Color to hit `h2.section-title`,
+Tile Background Color to hit `.stat-tile`, Tile Number Color to hit `.stat-tile > .stat-num`, Tile Subtext
+Color to hit `.stat-tile > .small`, and the animation to play on `.section-title` and each `.stat-tile`
+independently rather than the section as a whole.
+
+**Root cause, confirmed by reading `layout.blade.php`'s stylesheet, not guessed:** `BlockPresentation`'s
+universal Style tab fields (§7aa and earlier) only ever apply to the block's single outer wrapper element
+(`text_color` → `color:` on that wrapper, `animation` → a `reveal reveal-{preset}` class on that same
+wrapper). That works for every other block because their content has no `color` of its own to fight — CSS
+inheritance just fills it in. The Statistics block is the one block where every piece of text already has its
+own explicit, non-inherited `color`: `.section-title { color: var(--brand-heading); }`, `.stat-num { color:
+var(--brand); ... }`, and the tile subtext was Bootstrap's `.text-muted` (`color: var(--ink-muted) !important;`
+— this app's own rule, not Bootstrap's, but `!important` all the same). An inherited value from a wrapper
+**never** wins over an element's own explicit declaration, `!important` or not — so the wrapper-level
+`text_color` was reaching those elements' `color` property, just always losing immediately. Same story from
+the other side for a would-be Tile Background Color: `.bg-light` is an `!important` Bootstrap utility, and
+`background-color` isn't even an inherited property in the first place, so a wrapper-level `bg_color` had two
+independent reasons it could never have worked.
+
+**Fix — per-element, stats-only, not a change to the universal mechanism:**
+
+- `PageRenderService::sanitizeStyle()` gained four new hex-validated keys: `heading_color`, `tile_bg_color`,
+  `tile_number_color`, `tile_subtext_color`. Universal/type-agnostic like every other style key (sanitized
+  for any block, only ever read by one) — same convention as `width_mode`/`border_style` already being dead
+  weight on a block that doesn't use them.
+- `_style_fields.blade.php` now takes `$type` (threaded through from `_card.blade.php`'s include) and shows
+  these four fields **instead of** the generic Text Color field when `$type === 'stats'` — showing a control
+  that provably does nothing for this one block type was actively misleading, not just incomplete.
+- `public/blocks/render.blade.php`'s `'stats'` `@case` applies each color directly to its own element:
+  `heading_color` → inline `style="color:…"` on the `<h2 class="section-title">`; `tile_number_color` →
+  inline `style="color:…"` on `.stat-num` (a plain inline style beats `.stat-num`'s non-`!important` class
+  rule, no trick needed); `tile_subtext_color` → same, but the markup dropped `.text-muted` in favor of a
+  plain `.small`, since `.text-muted`'s `!important` can't be beaten by *any* inline style — `layout.blade.php`
+  gained a new **non**-`!important` `.stat-tile .small { color: var(--ink-muted); }` rule so the default look
+  is pixel-identical, and a real override now actually wins; `tile_bg_color` → the `.bg-light` class is
+  dropped entirely (not fought) whenever a custom tile color is set, replaced with inline
+  `background-color:…`, so the block keeps its old `bg-light` look with zero config and a real color once set.
+- **Animation moved off the wrapper.** `render.blade.php`'s top `@php` block now strips any `reveal`/
+  `reveal-{preset}` class back out of `$wrap['class']` specifically when `$type === 'stats'` (added right
+  after `$wrap = $bp::wrapper(...)`), and the `'stats'` `@case` instead appends `reveal reveal-{preset}` to
+  the heading and to each tile `<div>` individually. No JS changes needed — `layout.blade.php`'s
+  `IntersectionObserver` already drives *any* `.reveal` element independently; it was only ever the Blade
+  markup applying the class to one element (the wrapper) instead of several that limited it to a single
+  whole-section fade.
+
+**New tests** in `PageBuilderStyleLayoutNestingTest.php`: the four keys sanitize/clamp correctly (including an
+invalid-hex-is-dropped case); the rendered HTML has each color on its actual target element and never on the
+wrapper; a no-overrides stats block still renders the old `bg-light` look unchanged; the wrapper's `class`
+attribute never contains `reveal` for a stats block with an animation set while the heading and tiles do; and
+a non-stats block (`heading`) still gets the generic Text Color field and wrapper-level color — a regression
+guard on the `$type === 'stats'` branch not swallowing every other block type.
+
+**Verification gap, same as every prior §7x-series entry**: no PHP/browser in this sandbox. Verified via the
+brace/paren/bracket balance script on every touched file (`PageRenderService.php`, `_style_fields.blade.php`,
+`_card.blade.php`, `render.blade.php`, `layout.blade.php`, the test file) and `python3 -c "import json; ..."`
+on `bn.json` with an `object_pairs_hook` duplicate-key counter after inserting the five new strings (Applies
+to the heading…/Heading color/Tile background color/Tile number color/Tile subtext color). Please confirm in
+browser: set all four colors and an animation on a real Statistics block, verify the heading/tile-number/
+tile-subtext/tile-background each pick up their own color, and watch the heading and each tile fade in
+separately (staggered by scroll position) rather than the section fading in as one block.
+
+### §7ac — Self-inflicted regression from §7ab: literal directive words in Blade comments broke every public page (bug fix)
+
+**The bug:** immediately after §7ab landed, the full test suite came back 17 failed / 6 passed, all 17 failures
+a 500 with `ParseError: syntax error, unexpected token "case", expecting end of file (View:
+.../resources/views/public/layout.blade.php)`. The failures weren't stats-specific — plain nesting/layout tests
+with no stats block involved failed too, because `layout.blade.php` is the shared master layout every public
+page compiles through.
+
+**Root cause:** Blade's compiler finds directives with a global regex scan over the raw template text; it has
+no awareness of HTML/CSS/comment syntax, so a literal `@case`/`@switch` typed as prose inside a `/* */` CSS
+comment or a `//` PHP comment reads to the compiler exactly like a real directive invocation. §7ab's own new
+CSS comment in `layout.blade.php`'s `<style>` block — explaining that the tile-subtext rule mirrors what
+`render.blade.php`'s `'stats' @case now uses plain .small instead` — contained a literal `@case` with no
+enclosing `@switch`, which is exactly this trap. Confirmed via `grep -n "@switch\|@case\|@endswitch"
+layout.blade.php`: that comment was the only switch/case-shaped token anywhere in the file.
+
+**Fix:** removed the literal `@` — reworded to "the `'stats'` case now uses plain `.small` instead." Also
+pre-emptively fixed two structurally-identical phrasings already sitting in `render.blade.php` ("see the
+`'stats' @case` below" and "strip above this `@switch`") even though those happened to be safe in practice —
+both live inside `@php...@endphp` blocks, and `layout.blade.php` already had a **pre-existing**, long-standing
+`// ... three identical @yield calls` comment inside its own top `@php` block that has never caused a parse
+error, which is empirical evidence (not just theory) that Blade extracts `@php...@endphp` bodies as raw PHP
+before the directive-regex scan runs, the same way `@verbatim` protects its contents. The actual danger zone is
+plain template text outside `@php` — `<style>` blocks, HTML comments, and ordinary Blade markup — which is
+exactly where the confirmed break was. Fixed both anyway since "provably safe" wasn't confirmed at the time and
+the cost of rewording was zero.
+
+**Standing rule for every future `.blade.php` comment, not just this file:** never write a literal `@word` that
+matches a real Blade directive name (`@if`, `@case`, `@switch`, `@foreach`, `@php`, …) as prose in a `/* */` or
+`//` comment outside a `@php` block. Rephrase to drop the `@` ("the case", "the switch") or use Blade's `@@`
+escape if the literal `@` must stay.
+
+**Verification gap:** no PHP/browser in this sandbox — same limitation as every prior entry. Re-ran
+`grep -n "@[a-zA-Z]+"` filtered to comment lines (`^\s*(//|\*|/\*)`) across every file touched in §7ab plus this
+fix, confirming no other stray directive-shaped words remain outside `@php`, and re-ran the brace/paren balance
+script on both files. Please re-run
+`docker compose exec app php artisan test tests/Feature/Admin/PageBuilderStyleLayoutNestingTest.php --no-coverage`
+(and ideally the full suite, since the break was site-wide, not stats-specific) to confirm the ParseError is
+gone before merging `dev` into `main`.
+
+### §7ad — Live preview goes blank on style edit when a block has an entrance animation (bug fix)
+
+**The bug, as reported:** "when styles are updated the preview of that block get white. the html is still
+there in preview. no updated text is shown" — not stats-specific; any block with a Style-tab entrance
+animation set, edited via the fast single-block preview path.
+
+**Root cause:** `layout.blade.php`'s `.reveal { opacity: 0; }` / `.reveal.is-visible { opacity: 1; }` pair
+relies on a single `IntersectionObserver`, set up once in a plain `<script>` IIFE that runs when the iframe's
+document loads (`querySelectorAll('.reveal')` + `io.observe()` over whatever exists at that moment). A full
+preview reload (`runPreview()`, `frame.srcdoc = html`) re-navigates the iframe, so every script — including
+that IIFE — reruns and picks up the current elements. `runBlockPreview()` (`edit.blade.php`,
+`scheduleBlockPreview`'s target of a plain Style/Content field edit) does not reload the srcdoc — it patches
+just one block's markup in place via `target.replaceWith(next)` for speed. Any `.reveal` element inside `next`
+is a brand-new DOM node the original observer never learned about, so it sits at `opacity: 0` forever: exactly
+"still in the DOM, nothing visible."
+
+**Fix:** in `runBlockPreview()`'s success handler, right before `target.replaceWith(next)`, mark every
+`.reveal` element in the replacement (including `next` itself) `is-visible` directly, rather than trying to
+reach into the iframe's closed-over `io` instance (not exposed on `window`). A block being live-edited is
+already on-screen, so there's no UX loss in skipping the scroll-triggered fade for it specifically — the real
+public page and a full preview reload both still animate normally.
+
+**Verification gap:** no browser in this sandbox. Please confirm: open a block with any entrance animation set
+(e.g. Statistics with "Fade Up"), edit an unrelated Style field (a color), and verify the block's content stays
+visible in the preview instead of disappearing.
+
+### §7ae — Per-element Style tab colors for Notices, Staff, Hero, and Announcement Bar
+
+**The ask:** extend §7ab's per-element color pattern (previously stats-only) to four more blocks, each with its
+own list of targeted fields: Notices (Heading, Card Background, Card Date, Card Title, Card Text), Staff
+(Heading, Avatar Ring, Name, Designation), Hero (Title, Subtitle, Button Text/Background, Button Hover
+Text/Background, plus an explicit Background Image/Solid Color choice), Announcement Bar (Message Text, Link
+Text).
+
+**Same root cause as §7ab, block by block:**
+- Notices/Staff: `.section-title`, Bootstrap's `.text-muted` (this app's own `!important` override of it, see
+  §7ab), and `.card`'s background-color all carry their own explicit rule in `layout.blade.php`, so a single
+  wrapper-level `text_color` never reached any of them.
+- Hero: the outer wrapper's own `bg_color` (Advanced tab) was **already silently broken** for this block
+  specifically, discovered while implementing this — `.hero`'s own opaque gradient/image sits directly on top
+  of the wrapper and paints over whatever background it had, so setting a wrapper background color on a Hero
+  block has never done anything visible. Fixed as part of this change by applying `bg_color` directly to the
+  `<header class="hero">` element instead, gated behind the new `bg_mode` toggle (see below).
+- Announcement Bar: unlike the others, `bg_color`/generic `text_color` (Advanced/Style tabs) *were* already
+  reaching this block correctly — the section wrapper IS the visible bar, and `.announcement-bar-section`'s
+  CSS isn't `!important`. But message and link both use `color: inherit` from that same wrapper, so one shared
+  `text_color` can't give them different colors from each other. Only Message/Link needed dedicated fields;
+  Background color reuses the existing Advanced tab field as-is (a short note was added in the Style tab
+  pointing there instead of duplicating the control).
+
+**Naming convention:** `heading_color` and `bg_color` are reused across blocks for their own heading/background
+element (stats' h2, notices' h2, staff's h2, hero's h1/header) rather than one dedicated key per block — same
+"harmless dead weight on a block that doesn't render it" convention `width_mode`/`border_style` already
+established. Every other field is block-specific (`card_bg_color`, `ring_color`, `button_hover_bg_color`, …).
+
+**Class-swap fix, made simpler this round:** §7ab always swapped `.text-muted`/`.bg-light` for a plain
+equivalent and needed a matching *default* CSS rule to keep the un-overridden look identical. This round uses a
+**conditional** swap instead — the `!important` class (`text-muted`, `text-white-50`) is only dropped when a
+real override is actually set; with no override, the original class stays exactly as before. This needed zero
+new default CSS rules in `layout.blade.php`, unlike §7ab.
+
+**Hero background: explicit Image/Solid Color toggle, not silent priority.** Before this, an image (Content
+tab) and a would-be color both being set had no real conflict to resolve because the color path was dead
+code (see above) — but making it live meant deciding what happens if both are ever set. Rather than reintroduce
+a silent "whichever one wins" rule, a new `bg_mode` field (`'image'` | `'color'`, default `'image'` for
+backward compatibility) makes the choice explicit, rendered as a real `<input type="radio">` pair styled as a
+Bootstrap `.btn-check`/`.btn-group` segmented toggle (Elementor's own background-type selector uses the same
+pattern) rather than a `<select>`. The existing generic field-dependency JS (`data-depends-on`/
+`data-depends-values`, added for §7aa's Width Type dropdown) only ever read `.value` off a single resolved
+element — correct for a `<select>`, but a radio **group** shares one `name` across several inputs, so that
+lookup would always resolve to the first radio in DOM order regardless of which is actually checked.
+`applyFieldDependencies()` now special-cases `type === 'radio'` and re-resolves against the `:checked` one
+instead; unaffected for every existing `<select>`-based caller. Copy/Paste Style (`styleFieldsIn()`/
+`pasteStyleToCard()`) had the same latent gap — capturing a radio group would pick up whichever one
+`querySelectorAll()` happened to visit last rather than the checked one, and pasting set `.value` without
+checking anything — both fixed the same way. Undo/redo (`captureCardOwnFields()`/`applyCardOwnFields()`)
+already special-cased `type === 'radio'`/`checkbox` correctly and needed no change.
+
+**Hero button hover colors:** a hover state can't be expressed through an inline `style="…"` attribute, so the
+`'hero'` `@case` emits a tiny `id`-scoped `<style>` block (only when at least one button color is actually set)
+targeting a `uniqid()`-generated id on the button — safe to regenerate on every render, including the
+live-preview's per-block AJAX path (§7ac/§7ad), since it never needs to persist across requests.
+
+**New tests** in `PageBuilderStyleLayoutNestingTest.php`: one render-correctness test per block confirming each
+color lands on its actual target element (never the wrapper), a default-look-preserved test for Notices, and
+three Hero-specific tests for the background mode (solid color overrides and suppresses the image, image mode
+is unaffected by a stray `bg_color`, and the button hover `<style>` block is only emitted when an override is
+actually set — asserted via `substr_count($html, '<style') === 1`, i.e. only `layout.blade.php`'s own baseline
+`<style>` tag, rather than a page-wide "no `<style>` at all" check that would be a false failure against it).
+
+**Verification gap:** no PHP/browser in this sandbox. Verified via `grep`/balance-script sweeps identical to
+every prior entry (no stray `@case`/`@switch`-shaped text in any touched `.blade.php` comment) and a
+`python3 -c "import json; ..."` duplicate-key check on `bn.json` after inserting the 20 new strings. Please
+confirm in browser: open a Notices/Staff/Hero/Announcement Bar block's Style tab, set each new color field, and
+verify it lands on the right element in the live preview; toggle Hero's Background Image/Solid Color radio and
+confirm only one ever renders; set a Hero button's hover colors and confirm the button actually changes color
+on mouseover.
+
+### §7af — Notices icon color, Staff avatar text color, and a Hero background-color correction
+
+**Three follow-up requests after §7ae shipped:**
+1. Notices: an icon color field for `.notice-icon` (the round badge behind the megaphone icon).
+2. Staff: a text color field for `.text-brand` (the initial-letter avatar shown for a member with no photo).
+3. Hero: "background color should apply to section, not to header" — a correction to §7ae's own design.
+
+**Notices/Staff (straightforward additions):** `icon_color` and `avatar_text_color`, same pattern as every
+other field in §7ae/§7ab — both target elements (`.notice-icon`, `.text-brand`) carry a non-`!important` class
+rule, so a plain inline `style="color:…"` directly on the element wins with no class-swap needed.
+
+**Hero background — reworked, not just relabeled:** §7ae applied `bg_color` directly to the inner
+`<header class="hero">` when `bg_mode === 'color'`. That worked visually, but put hero's background application
+on a different footing than every other block (where `bg_color` always applies to the outer wrapper `<section>`
+via the universal `BlockPresentation::wrapper()` — no per-block special-casing). Reworked so `bg_color` needs
+**zero** special handling in the `'hero'` case now — it already reaches the section wrapper for free, same as
+any other block. What the `'hero'` case still has to do is neutralize the *inner* `<header>`'s own `.hero`
+gradient/image (`background:none`) once a real `bg_color` is set in `'color'` mode, since that inner element
+would otherwise keep painting over the section's color and hide it completely — this is the actual, narrower
+reason a hero background color was invisible before §7ae/§7af (not a missing feature, a genuine bug: the
+wrapper-level color was always being computed correctly, just never visible). `bg_mode`/the Style tab UI are
+unchanged from §7ae; only which element `bg_color` targets changed.
+
+**Updated tests:** the two Hero background-mode tests now assert the section wrapper's own `style` attribute
+carries `background-color:…` (via a regex over the `<section …>` tag, since its exact class list isn't worth
+hardcoding) and that the `<header>` gets `style="background:none;"` only when color mode has an actual color
+set — never when image mode is active, even with a stray `bg_color` value sitting in storage. Notices/Staff's
+existing render-correctness tests gained one more assertion each for the two new fields rather than new test
+methods, since they already cover "starts from a page with several colors set, checks each lands on its own
+element."
+
+**Verification gap:** no PHP/browser in this sandbox, same as every prior entry. Please confirm: a Hero block
+with **no** background color set still shows its default gradient/image exactly as before; setting a solid
+background color makes the whole hero section (not just text sitting on top of the old gradient) show the new
+color; Notices' icon badge and Staff's initial-letter avatar both pick up their new color fields.
+
+### §7ag — Hero background color still did nothing: duplicate form field name (bug fix)
+
+**The report, verbatim, with the actual rendered HTML attached:** the admin set Hero's new Background Color
+(Style tab) and republished, but the live block still showed no `style` attribute at all on either the
+`<section>` wrapper or the `<header>` — not even the `background:none` §7af was supposed to add once a color
+mode was picked.
+
+**Root cause:** §7ae reused the existing universal `bg_color` field name (`[style][bg_color]`) for hero's new
+Style-tab color picker, on the reasoning that it's "the same key, different element" — true for `heading_color`
+reused across several blocks' own heading, but **not** true here, because unlike `heading_color`, `bg_color`
+*already had its own dedicated input* elsewhere on the same block card: the Advanced tab's generic "Background"
+section (`_layout_fields.blade.php`, added in §7aa, present for every block type). Bootstrap's tabs only
+toggle which tab-pane is *visible* (`display:none` via the `.tab-pane`/`.show` classes) — every tab's fields
+stay in the DOM and stay part of the `<form>` regardless of which tab is currently open. That meant a hero
+block card had **two** `<input name="blocks[0][style][bg_color]">` elements at once: one in the Style tab
+(what the admin actually used) and one in the Advanced tab (always present, defaulting to an empty string
+since nobody had ever needed to touch it for a hero block before). `new FormData(form)` (the full-page live
+preview and the real Save/Publish submit) and `blockFormData()` (the single-block AJAX preview) both collect
+*every* matching field in DOM/source order; PHP's own request parsing takes the **last** value for a
+non-array-suffixed duplicate key. The Advanced tab's pane renders after the Style tab's in `_card.blade.php`'s
+markup, so its empty value always arrived last and silently overwrote whatever the admin had actually picked
+in the Style tab — indistinguishable, from the outside, from the color simply "not applying."
+
+**Why this wasn't caught by §7ae's/§7af's own tests:** every existing test posts the `style` array directly as
+structured PHP data to `PUT /admin/pages/{id}` (see `publish()`'s helper), which has no concept of "two HTML
+inputs sharing one name" — that collision only exists in the actual rendered admin-editor HTML, which none of
+the prior tests rendered and inspected for hero specifically.
+
+**Fix:** `_layout_fields.blade.php`'s Background section now takes `$type` (threaded through from
+`_card.blade.php`'s include, alongside `_style_fields.blade.php` already receiving it) and skips rendering its
+generic Background color/Background image URL/Overlay darkness fields entirely for `$type === 'hero'`,
+replacing them with a one-line pointer to the Style tab instead — same pattern as the Style tab's own
+Announcement Bar note pointing the other direction (§7ae). No JS changes needed: removing the duplicate field
+from the DOM removes the collision at its source for both submission paths at once.
+
+**New tests:** one confirming a hero block's edit-page HTML contains exactly one `[style][bg_color]`-named
+input (not two) plus the new pointer text, and a companion test confirming a non-hero block (`richtext`) still
+shows the generic field completely normally — a regression guard on the `$type === 'hero'` branch not
+accidentally swallowing every other block type, same shape as §7ae's own `test_non_stats_block_still_uses_…`
+guard.
+
+**Standing lesson, generalized from §7ae's mistake:** reusing an existing field *name* across two different UI
+locations on the same block card is only safe when at most ONE of those locations can ever actually render for
+a given block type — `heading_color`/`bg_color`-for-announcement_bar were safe reuses because each block type
+only ever shows one Style-tab branch. Hero's case was different: the Style tab's *new* branch and the Advanced
+tab's *pre-existing, unconditional* field both rendered for the exact same block type at the exact same time.
+Before reusing a `[style][…]` key name anywhere, check whether _layout_fields.blade.php (or any other partial
+included unconditionally into the same card) already renders a field under that exact name.
+
+**Verification gap:** no PHP/browser in this sandbox. Please confirm: open a Hero block, switch Background to
+Solid Color, pick a color, save, and verify the color now actually shows (previously confirmed only via
+server-side rendering tests, never through the actual admin form submission path that originally broke it).
+
+### §7ah — Consolidate Background onto the Advanced tab, add Gradient, redesign the margin/padding boxes
+
+**The ask, verbatim:** "move all background color and background image to advanced tab under Background, with
+image or solid color option. and also add gradient background color. remove, t, b, l, r from margin and
+padding, just 4 input boxes side by side without an gap. and just curve the left and right boxes. add link
+icon to right of the margin and padding input box. which makes so any value put in one box, copies them it to
+other boxes."
+
+Two independent changes, both to the same shared `_layout_fields.blade.php`/`_style_fields.blade.php` pair.
+
+**Background consolidation.** §7ae/§7af/§7ag had, between them, given Hero its own Style-tab-only copy of
+Background (Image/Solid Color toggle), separate from the Advanced tab's generic Background section every other
+block type uses — and §7ag's postmortem already named the standing risk of that split explicitly: "reusing an
+existing field name across two different UI locations on the same block card is only safe when at most ONE of
+those locations can ever actually render for a given block type." Rather than keep patching around that risk,
+this round removes the split entirely. Hero's Style-tab Background block is gone outright (replaced with a
+one-line comment pointing at the Advanced tab); `_layout_fields.blade.php`'s Background section is universal
+again, unconditional on `$type`, and now offers three mutually exclusive modes via a `btn-check` radio group —
+Image, Solid Color, Gradient — instead of the old plain `if ($bg_image) … elseif ($bg_color)` implicit
+priority. The mode is a new `bg_mode` key (`'image'|'color'|'gradient'|null`), sanitized in
+`PageRenderService::sanitizeStyle()` and consumed in `BlockPresentation::inlineStyle()`, which now branches on
+it explicitly instead of guessing from which fields happen to be non-empty.
+
+**Backward compatibility for already-published pages.** Every page saved before `bg_mode` existed has it
+`null` in storage. `inlineStyle()`'s fallback branches reproduce the *exact* old implicit priority when
+`bg_mode` is null (image wins if set, else color) — a previously-published page's rendered output is
+byte-for-byte unchanged. The Advanced tab's radio itself also needs a sane default when opening such a page for
+editing (it can't just always default to "Image" — that would visually contradict a block that's actually
+showing a solid color): `$bgMode = $s['bg_mode'] ?? ((!empty($s['bg_color']) && empty($s['bg_image'])) ? 'color' : 'image')`,
+i.e. infer the mode from whichever field the page actually has a value in.
+
+**Gradient.** New fields `bg_gradient_start`, `bg_gradient_end` (hex, sanitized like every other color field),
+`bg_gradient_angle` (int, clamped 0–360, defaults to 135 — matching Hero's own pre-existing default gradient
+direction so an old Hero block with no explicit gradient set "looks the same" if an admin ever switches it into
+gradient mode). Renders as `background-image:linear-gradient({angle}deg,{start},{end})`.
+
+**Hero's inner-header problem, extended to gradient.** §7ag established that Hero's outer `<section>` wrapper
+and inner `<header class="hero">` are two different elements, and the header's own opaque background always
+painted over a wrapper-level background — fixed for solid color by neutralizing the header (`background:none`)
+whenever a real color was in effect. §7ah extends that exact same neutralization to gradient mode: `$heroBgMode`
+and `$heroBgNeutralize` in `render.blade.php`'s `hero` case now check for either `color`-with-`bg_color`-set or
+`gradient`-with-both-gradient-colors-set, neutralizing the header in either case so the section's own
+background (now handled entirely by the universal `BlockPresentation::wrapper()` mechanism, no Hero-specific
+code needed there at all anymore) actually shows through.
+
+**Margin/Padding/Border box redesign.** The shared `$boxGroup` closure in `_layout_fields.blade.php` (used by
+Margin, Padding, Border Width, and Border Radius — extended to all four for visual consistency within the same
+section, not just the two the request named) dropped its `<span class="input-group-text">T/B/L/R</span>`
+separators between the four number inputs. That turned out to be the entire "no gap, only the outer corners
+curved" requirement for free: Bootstrap's own `.input-group` CSS only rounds the first/last child's outer
+corners and only removes the gap between elements that are directly adjacent with nothing between them — both
+already true once the separating `<span>`s were gone, no new CSS needed. The T/B/L/R words themselves move to
+`title`/`aria-label` attributes on each input instead, so the accessible name is preserved without a visible
+label. A new "link values" toggle button (`<button class="btn btn-outline-secondary js-spacing-link">`, a chain
+icon) sits just outside the `.input-group` — deliberately outside it, not as a fifth grouped element, since
+folding it in would make the button itself the rightmost rounded element instead of the fourth input box,
+contradicting "just curve the left and right boxes."
+
+**Link-values JS.** A `data-spacing-link-group` wrapper around each strip + button lets a small delegated
+handler in `edit.blade.php` do the copying: on `input` on any `.js-spacing-input`, if the group's
+`.js-spacing-link` button has `aria-pressed="true"`, copy the typed value directly into the other three inputs'
+`.value` (not by dispatching synthetic `input` events on them, which would re-enter the same delegated listener
+for each sibling in turn — direct assignment is simpler and sufficient, since both the debounced live-preview
+serializer and the undo/redo capture already read each input's live `.value` at the moment they fire, not from
+per-keystroke event payloads). A second delegated `click` listener toggles the button's own `aria-pressed`/
+`.active` state — `.btn-outline-secondary.active` is a stock Bootstrap look, no bespoke CSS needed for the
+pressed state either.
+
+**Untouched by this round:** the existing `data-depends-on`/`data-depends-values` radio-aware field-dependency
+JS (built generically in §7ae, extended for radio groups there), the copy/paste-style JS's radio handling, and
+the undo/redo capture's radio/checkbox special-casing all needed zero changes to support the new 3-option
+Background Type radio — none of them hardcode an option count, they all resolve generically off `name`/
+`:checked`.
+
+**New tests:** two field-collision regression tests replacing §7ag's two (one confirming both a hero and a
+non-hero block each show *exactly one* `[style][bg_color]`-named input now that the Style-tab copy is gone
+entirely, one confirming the Advanced tab's radio pre-selects whichever mode a pre-existing page's stored
+values actually imply); a gradient sanitize+render test; a test confirming the angle defaults to 135 when
+omitted; a Hero-specific gradient test confirming both the section shows the gradient and the header is
+neutralized; and a markup test confirming the T/B/L/R `<span>` labels are gone from a block's edit-page HTML
+and the link-toggle button is present.
+
+**Verification gap:** no PHP/browser in this sandbox, same as every prior entry — only static syntax/balance
+checks were possible. Please confirm on your machine: every block type's Advanced tab shows the new
+Image/Solid Color/Gradient radio (not just Hero); picking Gradient and setting two colors actually renders a
+gradient background on a live page; a Hero block with a gradient background shows the gradient on the section
+and no longer shows its own default header gradient underneath/instead; a page published before this change
+(any block with a plain `bg_color` or `bg_image` already set) still renders identically to before; the Margin/
+Padding/Border Width/Border Radius boxes now show as four flush, mostly-unlabeled inputs with only the outer
+corners rounded; and the new link button actually copies a typed value into the other three boxes when toggled
+on, in both directions (typing in the first box and typing in a middle box).
+
+### §7ai — Advanced tab: custom ID & Class, for the admin's own CSS/JS hooks
+
+**The ask, verbatim:** "also add option for id and class in advanced tab. so the user can add id and class
+for custom css,js or some other uses."
+
+**Where it lives.** Every block is stored as `{type, data, style, layout}` (`PageController::normalizeBlocks()`
+/ `PageRenderService::cleanBlocks()`) — there's no separate `advanced`/`meta` key, and building one just for two
+fields would mean new parallel sanitize/normalize/round-trip code for no real benefit. `custom_id`/`custom_class`
+went into `style` instead, right alongside `bg_color`/`border_style`/etc. — same array, same sanitize function,
+same admin-save and render paths already proven correct for everything else on this tab.
+
+**Sanitization is a whitelist, not an escape.** Every other free-text style field (`bg_image`) just gets
+trimmed — an escaped value is safe wherever it's later echoed with `e()`. `custom_id`/`custom_class` are
+different: they're the ONE thing on this whole block card that gets echoed as a bare, unquoted-content HTML
+attribute value the admin fully controls the content of. `PageRenderService::sanitizeStyle()` adds two new
+closures, `$htmlId` (`/^[A-Za-z][A-Za-z0-9_-]{0,63}$/`, matching HTML4's classic id-token rule — starts with a
+letter, then letters/digits/hyphen/underscore, capped at 64 chars) and `$classList` (splits on spaces, validates
+each token independently against the same character rule with an optional leading `-`, silently drops a bad
+token rather than voiding the whole field, caps at 20 tokens). A value that can't possibly break out of the
+`id="…"`/`class="…"` attribute it lands in is the actual security property here — not "this looks escaped", but
+"this literally cannot contain a `"`, `<`, `>`, or space". `e()` is still applied when echoing (matches every
+other attribute on the same tag, costs nothing, and is one more layer if the whitelist regex is ever loosened
+later) but the whitelist is what's actually load-bearing.
+
+**`BlockPresentation::wrapper()`** gained a third array key: `'id' => $style['custom_id'] ?? ''` (previously
+only `class`/`style`). `custom_class` doesn't get its own key — it's simply appended to the existing `class`
+array-filter list (last, so it never fights the block's own structural classes like `block-wrap` or the
+`reveal-*` animation class). Both `public/blocks/render.blade.php` and `public/sidebar/render.blade.php` gained
+one line each, `$wrapIdAttr = $wrap['id'] !== '' ? ' id="'.e($wrap['id']).'"' : ''`, echoed right after the
+existing style attribute and before the editor's own `data-block-*` attributes — a block that never set an id
+gets no `id=""` attribute at all (an empty id is itself invalid HTML, distinguishable from "just didn't set
+one").
+
+**Advanced tab UI.** A fifth collapsible section, "ID & Class", following the exact same
+button/`data-bs-toggle="collapse"`/chevron pattern as Layout/Border/Background/Responsive. Two plain text
+inputs, `[style][custom_id]`/`[style][custom_class]`, with a client-side `pattern` attribute on the id field
+(steers a well-meaning admin toward a value that will actually survive sanitization — the whitelist above is
+still the only thing that's actually enforced) and help text under each. No JS changes needed anywhere: the
+copy/paste-style capture (`styleFieldsIn()`, selects everything matching `[name*="[style]["]`) and the
+undo/redo capture (`cardOwnFields()`/`captureCardOwnFields()`, all form fields in the card) both already
+generalize to any plain text input with no special-casing, exactly like they did for the 3-option Background
+radio in §7ah without changes.
+
+**New tests:** valid id+class sanitize and render correctly (asserting both the raw stored value and the
+actual `id="…"` / `class="… promo-banner … highlight …"` substrings in rendered HTML); no `id=` attribute at
+all when unset; an id that starts with a digit, and a separately-tried id containing an XSS payload
+(`id"><script>…`), both get silently dropped rather than stored or rendered (confirming the whitelist, not just
+an escape, is what's actually happening); a mixed class-list input keeps its valid tokens and drops an
+XSS-payload token and a digit-leading token in the same string; and an edit-page markup test confirming both
+inputs and their stored values appear in the Advanced tab HTML.
+
+**Verification gap:** no PHP/browser in this sandbox, same as every prior entry. Please confirm: setting a
+block's ID to something like `promo-hero` and a Class to `text-center my-custom-class` actually shows up as
+`id="promo-hero"` and includes both classes in the rendered `<section>`'s `class="…"` attribute on the live
+page; a block with neither field set renders with no visible change at all (no stray empty `id=""`); and typing
+an obviously-invalid id (starting with a number, or containing a space/quote) either gets silently stripped on
+save or is visibly rejected by the browser's own `pattern` validation before it's ever submitted.
+
+### §7aj — Test failure investigation: `renderPage()`'s cache key could serve a stale render for a reused PageLayout id
+
+**The report, verbatim:** running the full suite, `test_hero_block_button_has_no_extra_style_block_without_any_override`
+(zero style overrides on its hero block) failed with `Failed asserting that 2 is identical to 1` on
+`$this->assertSame(1, substr_count($html, '<style'))` — its rendered page somehow carried the hero button's
+id-scoped hover `<style>` block despite never setting a single button color.
+
+**First response — and the mistake in it.** The initial failure report's pasted stack trace showed the
+assertion at a line number (`:602`, inside a *different* test's declaration) that didn't match this file's then-
+current line numbers by roughly 170 lines — almost exactly the size of the tests added in §7ah/§7ai. That
+looked exactly like a stale checkout or an un-rebuilt container, so the first response asked the user to
+confirm they were testing against the latest commit before digging further. They re-ran and got the identical
+failure, this time at the correct current line (`:812`) — ruling staleness out and confirming a real bug.
+Worth naming as its own lesson: a plausible-looking "you're on the wrong commit" explanation is still a
+hypothesis, not a diagnosis, until re-confirmed against a clean run — don't let it substitute for actually
+finding the mechanism once it's been checked.
+
+**Ruling out the feature code.** Traced `sanitizeStyle()` and the hero `render.blade.php` case by hand for
+this exact test's input (a hero block with a `data` array and *no* `style` key at all): `$heroBtnOverride`
+requires one of `button_text_color`/`button_bg_color`/`button_hover_text_color`/`button_hover_bg_color` to be
+non-empty, none of which can exist when `sanitizeStyle([])` runs — every relevant closure returns `null` for a
+missing key and `array_filter` drops it. §7ai's own `custom_id`/`custom_class` additions don't touch any of
+those keys either. The rendering logic itself is correct; something else was feeding it the WRONG block's data
+entirely.
+
+**Root cause: `renderPage()`'s cache key was id-only, and ids aren't always unique.** `PageRenderService::renderPage()`
+wraps its result in `CacheTags::remember(['pageview'], "pageview:layout:{$layout->id}", ...)`, on the documented
+(and, in production, correct) assumption that "every publish() mints a brand-new PageLayout row … so a fresh
+publish is automatically a fresh cache key." That's true wherever ids are permanently unique — but
+`phpunit.xml` runs this suite against `DB_CONNECTION=sqlite`/`DB_DATABASE=:memory:` with `CACHE_STORE=array`,
+and `RefreshDatabase` wraps each test in a transaction it rolls back afterward. Sqlite's plain
+`INTEGER PRIMARY KEY` rowid allocation (no `AUTOINCREMENT` keyword — Eloquent's default migration doesn't add
+one) computes the next id from `MAX(rowid)+1`; once a transaction rolls back, that max drops back down, and a
+LATER test's insert can land on the exact id an EARLIER, now-rolled-back test used. The `array` cache store,
+meanwhile, is an in-process singleton that `RefreshDatabase` never touches — it lives for the whole test run,
+not per test. Put together: `test_hero_block_button_colors_render_with_a_scoped_hover_style_block` (the test
+immediately before the failing one, publishing a hero WITH button overrides) populated
+`pageview:layout:{N}` for whatever id its `PageLayout` row got; when the next test's own page happened to
+reuse that exact id `N`, `renderPage()` handed back the previous test's cached array UNCHANGED — hero block,
+button overrides, hover `<style>` and all — even though this test's own page had none of that. §7ah/§7ai's test
+additions didn't cause this on their own; they shifted the exact sequence of `PageLayout` inserts/rollbacks
+just enough to land two particular tests on a colliding id for the first time.
+
+**Why this is sqlite/test-only, not a production risk.** MySQL/Postgres `AUTO_INCREMENT`/`SERIAL` counters are
+monotonic for the lifetime of the table — a rolled-back or even a committed-then-deleted row's id is never
+reissued. Every real `publish()` really does mint a fresh id forever. This bug needed the specific combination
+of sqlite's rowid-reuse-after-rollback behavior AND a cache store that outlives the DB transaction — an
+artifact of how this suite is configured, not something a real deployment can hit.
+
+**The fix.** `renderPage()` now folds a short content hash into the cache key —
+`substr(md5(json_encode([$layout->layout_json, $layout->title, $layout->meta_title, $layout->meta_desc, $layout->og_image])), 0, 12)`
+appended after the id — covering every field the cached closure actually returns (not just `layout_json`
+alone: two colliding rows could plausibly share identical blocks while differing only in title/meta, and in
+fact every test in this file's own `publish()` helper hardcodes the same page title, so hashing `layout_json`
+alone wouldn't have been airtight). This makes the "a fresh publish is a fresh cache key" guarantee structural
+— tied to what the row actually contains — rather than merely assumed from id uniqueness. Negligible cost
+next to everything else this method already does.
+
+**New test:** `test_pageview_cache_does_not_serve_stale_content_when_a_layout_id_is_reused` — rather than trying
+to reproduce sqlite's exact rowid-reuse timing (environment-specific, not a portable thing to assert on), it
+proves the actual fix directly: publish a hero block WITH button overrides, render it (confirms 2 `<style>`
+tags, warming the cache), then mutate that SAME `PageLayout` row's `layout_json` in place to the no-override
+version (no new `publish()`, no new id — simulating exactly what an id collision would hand the cache: the same
+key, different real content) and render again, asserting the second render correctly shows 1 `<style>` tag, not
+a stale 2.
+
+**Verification gap:** no PHP/browser in this sandbox, same as every prior entry — the fix and its test are
+verified only via static reasoning and syntax/balance checks. Please re-run the full suite; the originally
+failing test should now pass, and the new regression test should pass as well. If it doesn't, this diagnosis
+was wrong somewhere and needs a fresh look with the actual failure output in hand.
+
+### §7ak — Correction to §7aj: the real cause was a flawed test assertion, not the cache
+
+**The report, verbatim:** after §7aj's cache-key fix was committed, the user re-ran the suite. The SAME test
+failed with the SAME message — `Failed asserting that 2 is identical to 1` — at the SAME line. The fix changed
+nothing. Worse, the NEW regression test §7aj added for the cache fix (which publishes a hero block WITH button
+colors and expects exactly 2 `<style>` tags) ALSO failed, with `Failed asserting that 3 is identical to 2` —
+one MORE than expected, on its very first, never-before-cached render.
+
+**Why that second failure is the whole story.** §7aj's regression test's first assertion runs before any cache
+manipulation happens at all — it's a brand-new page, brand-new `PageLayout` id, cold cache. There is no id to
+reuse yet. A cache-key collision cannot explain a wrong count on a page's FIRST ever render. Both failures also
+share the exact same signature: the actual count is always exactly ONE MORE than the code's real `<style>`
+tags would produce, regardless of whether the hero button override was set (0 vs 1 real override-only style
+blocks; 1 vs 2 real total). A constant, override-independent +1 pointed at a THIRD, always-present source of
+the literal text `<style` somewhere on every page — not a caching problem at all.
+
+**The actual source.** `resources/views/public/layout.blade.php` line 962, inside its bottom `<script>` block:
+
+```js
+// page has scrolled — a passive scroll listener toggling one class,
+// not a per-frame layout read; the actual size change is pure CSS
+// (.pub-mainbar.is-scrolled, see this file's <style> block).
+```
+
+A `//` JavaScript comment is still literal text inside the rendered `<script>` tag — it reaches the final HTML
+verbatim, uncompiled, exactly like any other JS source line. This one happens to reference "this file's
+`<style>` block" in plain English, and `<style>` (open angle bracket, the word, closing angle bracket) is an
+exact match for the substring `substr_count($html, '<style')` was searching the WHOLE PAGE for. Every single
+page render carries this comment, so every `substr_count($html, '<style')` on any page is permanently one
+higher than the number of REAL `<style>` tags.
+
+**This was never caused by §7ah, §7ai, or the "cache fix."** `git log -L` on that exact line shows it was
+added in `25bbfdd7` ("merge header into one sticky bar, add fluid type scale" — the Frontend Modernization
+work, Milestone/Phase 2, entirely unrelated to this Elementor session) — and `25bbfdd7` is a genuine ancestor
+of `507766e`, the commit (§7ae) that FIRST wrote
+`test_hero_block_button_has_no_extra_style_block_without_any_override`'s `assertSame(1, substr_count(...))`
+assertion. In other words: the JS comment already existed, unnoticed, the moment this test was written — the
+assertion was wrong from its very first commit, months before this round's work touched anything nearby. It
+simply never actually ran (the recurring theme of this whole multi-round session: nobody executed the full
+suite until very recently) until now.
+
+**§7aj's own diagnosis was wrong, but not baseless — worth naming why it was a reasonable wrong turn.** The
+symptom (a hero-block style-count assertion failing) and the actual code path involved (`renderPage()`,
+`PageLayout`, hero button overrides) were real and correctly identified; what was wrong was concluding that a
+cache-key collision was the MECHANISM, without first checking whether the "expected" baseline the test asserted
+was even correct to begin with. The tell that should have been caught sooner: the fresh, first-render
+regression test §7aj itself wrote ALSO failed, off by exactly one, before any cache logic had a chance to run
+at all — that data point alone rules out caching as the cause and points straight at the assertion.
+
+**The fix.** Both `substr_count($html, '<style')`-based assertions (the original test, and §7aj's own new
+regression test) are replaced with a precise, unambiguous check for the ACTUAL thing being tested — whether the
+hero button's own id-scoped `<style>#hero-btn-…{…}</style>` construct is present — via
+`assertMatchesRegularExpression('/<style>\s*#hero-btn-/', $html)` / its `assertDoesNotMatchRegularExpression`
+counterpart, instead of counting an ambiguous substring across the entire page. This is correct regardless of
+how many unrelated `<style` (or `<style>`-shaped English sentences) exist anywhere else on the page, now or in
+the future — closing off this whole class of false failure permanently, not just patching today's specific
+count.
+
+**Is §7aj's cache-key change still worth keeping?** Yes, on its own, narrower merits — it's real, if only
+demonstrated to matter under this suite's specific sqlite-`:memory:`-plus-rolled-back-transactions
+configuration, and it's a correct, low-cost hardening of an assumption (`renderPage()`'s comment literally
+says "a fresh publish is automatically a fresh cache key," which is only load-bearing where ids are actually
+permanently unique). But it is NOT what fixed the originally-reported failure, and this doc's §7aj should be
+read with that correction in mind: the mechanism it describes is real; the claim that it explained the
+observed symptom was not.
+
+**Verification gap:** no PHP/browser in this sandbox, same as ever. Please re-run the full suite — both the
+originally-failing test and §7aj's own regression test should now pass, and this time for the right reason.
+
 ## 8. Decisions to confirm when resuming (if not already answered above)
 
 - Confirm the exact current route/controller method name for the public page `show()` action before Phase 1

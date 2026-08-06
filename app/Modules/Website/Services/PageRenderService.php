@@ -285,6 +285,36 @@ class PageRenderService
         $borderPx = fn ($v) => $v === null || $v === '' ? null : max(0, min(50, (int) $v));
         $hex = fn ($v) => is_string($v) && preg_match('/^#[0-9a-fA-F]{3,8}$/', trim($v)) ? trim($v) : null;
         $url = fn ($v) => is_string($v) && trim($v) !== '' ? trim($v) : null;
+        // Advanced tab "ID"/"Class" fields (§7ai) — an admin-supplied hook
+        // for their own custom CSS/JS, echoed RAW as an id="..."/class="..."
+        // attribute in public/blocks/render.blade.php and sidebar/render.blade.php,
+        // so these are whitelisted character-by-character rather than merely
+        // escaped: nothing that isn't a syntactically valid HTML id/CSS
+        // class token can ever reach the template, full stop.
+        $htmlId = function ($v) {
+            if (! is_string($v) || trim($v) === '') {
+                return null;
+            }
+
+            return preg_match('/^[A-Za-z][A-Za-z0-9_-]{0,63}$/', trim($v)) ? trim($v) : null;
+        };
+        $classList = function ($v) {
+            if (! is_string($v) || trim($v) === '') {
+                return null;
+            }
+
+            // Each space-separated token is validated independently and a
+            // bad one is silently dropped rather than voiding the whole
+            // field, so one typo doesn't wipe out several good class names
+            // sitting next to it. Capped at 20 tokens — plenty for a
+            // hand-typed list, cheap insurance against a pasted essay.
+            $tokens = array_values(array_filter(
+                array_map('trim', explode(' ', trim($v))),
+                fn ($t) => $t !== '' && preg_match('/^-?[A-Za-z_][A-Za-z0-9_-]{0,63}$/', $t)
+            ));
+
+            return $tokens === [] ? null : implode(' ', array_slice($tokens, 0, 20));
+        };
 
         // Width: mode drives whether value/unit are even meaningful —
         // 'custom' needs both, 'default'/'full'/'inline' need neither (a
@@ -312,10 +342,84 @@ class PageRenderService
             'width_mode' => $widthMode,
             'width_value' => $widthMode === 'custom' ? $widthValue : null,
             'width_unit' => $widthMode === 'custom' ? $widthUnit : null,
+            // Background is a three-way, explicit either/or (Advanced tab
+            // radio, 'bg_mode': 'image' | 'color' | 'gradient') — never more
+            // than one applied at once. Unset (a page saved before 'bg_mode'
+            // existed) falls back to the original implicit priority in
+            // BlockPresentation::inlineStyle() (image wins if set, else
+            // color), so an already-published page keeps rendering exactly
+            // as it did before this control existed.
             'bg_color' => $hex($style['bg_color'] ?? null),
             'bg_image' => $url($style['bg_image'] ?? null),
             'bg_overlay' => max(0, min(100, (int) ($style['bg_overlay'] ?? 0))),
+            'bg_mode' => in_array($style['bg_mode'] ?? null, ['image', 'color', 'gradient'], true) ? $style['bg_mode'] : null,
+            'bg_gradient_start' => $hex($style['bg_gradient_start'] ?? null),
+            'bg_gradient_end' => $hex($style['bg_gradient_end'] ?? null),
+            'bg_gradient_angle' => isset($style['bg_gradient_angle']) && $style['bg_gradient_angle'] !== ''
+                ? max(0, min(360, (int) $style['bg_gradient_angle'])) : null,
             'text_color' => $hex($style['text_color'] ?? null),
+            // Statistics-block-only fields (public/blocks/render.blade.php's
+            // 'stats' @case) — a single wrapper-level text_color can never
+            // reach these elements: .section-title, .stat-num, and the tile
+            // subtext all carry their own explicit `color` in
+            // layout.blade.php's stylesheet, and CSS inheritance only ever
+            // fills in a value when the element has NO explicit one of its
+            // own — an inherited wrapper color always loses to that, wrapper
+            // override or not. Kept generic/universal here (sanitized for
+            // every block type, same as every other style key) even though
+            // only 'stats' actually renders them; harmless dead weight on
+            // any other block's stored style, exactly like width_mode/
+            // border_style already are for blocks that don't use them.
+            'heading_color' => $hex($style['heading_color'] ?? null),
+            'tile_bg_color' => $hex($style['tile_bg_color'] ?? null),
+            'tile_number_color' => $hex($style['tile_number_color'] ?? null),
+            'tile_subtext_color' => $hex($style['tile_subtext_color'] ?? null),
+            // Notices-block-only fields — same reasoning as the stats fields
+            // above: .card/.notice title/date/body text all sit below a
+            // wrapper that a single text_color can't usefully differentiate
+            // (one color can't be both the date AND the heading AND the
+            // body), so each gets its own targeted field instead.
+            'card_bg_color' => $hex($style['card_bg_color'] ?? null),
+            'date_color' => $hex($style['date_color'] ?? null),
+            'card_title_color' => $hex($style['card_title_color'] ?? null),
+            'card_text_color' => $hex($style['card_text_color'] ?? null),
+            // Icon color for the round .notice-icon badge — the <i> icon
+            // glyph takes its color from that div's own `color` (Bootstrap
+            // Icons are currentColor), so this is applied directly there.
+            'icon_color' => $hex($style['icon_color'] ?? null),
+            // Staff-block-only fields.
+            'ring_color' => $hex($style['ring_color'] ?? null),
+            'name_color' => $hex($style['name_color'] ?? null),
+            'designation_color' => $hex($style['designation_color'] ?? null),
+            // The fallback initial-letter avatar (.text-brand) shown when a
+            // staff member has no photo.
+            'avatar_text_color' => $hex($style['avatar_text_color'] ?? null),
+            // Hero-block-only fields. 'heading_color' (above) doubles as the
+            // hero's own title (<h1>) color — same key, different element,
+            // exactly like it already doubles for stats/notices/staff's own
+            // heading. Background ('bg_mode'/'bg_color'/'bg_gradient_*',
+            // above) needs no hero-specific handling here at all anymore —
+            // it's a fully universal, Advanced-tab-only control now (§7ah).
+            // render.blade.php's 'hero' case still has its own job to do
+            // with it: the INNER <header class="hero">'s own gradient/image
+            // would otherwise sit on top of and hide the wrapper's
+            // background entirely, so it's neutralized whenever 'bg_mode'
+            // is 'color' or 'gradient'. See docs/modules/28-elementor-block-editor-plan.md
+            // §7ae/§7af/§7ag/§7ah for the full history of that one problem.
+            'subtitle_color' => $hex($style['subtitle_color'] ?? null),
+            'button_text_color' => $hex($style['button_text_color'] ?? null),
+            'button_bg_color' => $hex($style['button_bg_color'] ?? null),
+            'button_hover_text_color' => $hex($style['button_hover_text_color'] ?? null),
+            'button_hover_bg_color' => $hex($style['button_hover_bg_color'] ?? null),
+            // Announcement-bar-only fields. Background color is already
+            // covered by the universal 'bg_color' (Advanced tab) — the
+            // wrapper IS the visible bar for this block (see the
+            // 'announcement_bar' @case), so no dedicated key is needed for
+            // that one. Message/link need their own keys because they
+            // currently share a single inherited wrapper text_color and
+            // can't be told apart from each other any other way.
+            'message_color' => $hex($style['message_color'] ?? null),
+            'link_color' => $hex($style['link_color'] ?? null),
             // Legacy single 'radius' (pre-§7aa) — still sanitized and stored
             // so an already-saved page keeps rendering exactly as before
             // until its next edit; BlockPresentation prefers the four
@@ -333,6 +437,10 @@ class PageRenderService
             'border_color' => $borderStyle && $borderStyle !== 'none' ? $hex($style['border_color'] ?? null) : null,
             'shadow' => in_array($style['shadow'] ?? null, ['sm', 'md', 'lg'], true) ? $style['shadow'] : null,
             'animation' => in_array($style['animation'] ?? null, ['fade', 'up'], true) ? $style['animation'] : null,
+            // Advanced tab "ID"/"Class" (§7ai) — universal, every block type.
+            // See BlockPresentation::wrapper(), which is the only consumer.
+            'custom_id' => $htmlId($style['custom_id'] ?? null),
+            'custom_class' => $classList($style['custom_class'] ?? null),
         ], fn ($v) => $v !== null);
     }
 
@@ -533,6 +641,24 @@ class PageRenderService
      * without a new publish — bounded by CACHE_TTL rather than making
      * Announcement/Staff/etc. aware this cache exists.
      *
+     * A short content hash rides along in the key (see below) so this
+     * "id alone is always fresh" guarantee is structural, not just assumed —
+     * it only actually holds in production, where auto-increment ids are
+     * permanently unique. A rolled-back-transaction test suite is a real
+     * counter-example: PageBuilderStyleLayoutNestingTest's sqlite `:memory:`
+     * DB + RefreshDatabase's per-test rollback + the process-lifetime
+     * `array` cache store (phpunit.xml) combine to let sqlite reuse a
+     * PageLayout id a previous, unrelated test already rolled back — id
+     * alone would then serve that earlier test's cached render verbatim
+     * (confirmed: test_hero_block_button_has_no_extra_style_block_without_any_override
+     * started intermittently failing with 2 `<style` tags instead of 1 —
+     * exactly test_hero_block_button_colors_render_with_a_scoped_hover_style_block's
+     * cached output — the moment an unrelated test-file edit shifted the
+     * exact sequence of PageLayout inserts/rollbacks enough to land two
+     * tests on the same reused id). The hash costs nothing that matters next
+     * to everything else this method already does, and closes the gap for
+     * good rather than chasing test ordering.
+     *
      * $locale: docs/modules/30-multilingual-content-plan.md Phase 2 —
      * resolved via publishedLayoutFor()'s default-locale fallback, so a
      * locale with no translation yet still renders (in the default
@@ -562,17 +688,44 @@ class PageRenderService
         // itself changes on every publish and a stale render is never
         // served; the tag exists only as a namespace, not an invalidation
         // hook, so this swap changes nothing about invalidation behavior.
+        // The trailing hash is content-derived (see the doc comment above),
+        // not just the id, so a reused id can never serve someone else's
+        // cached render — covers every field the cached closure below
+        // actually returns (layoutJson AND the meta fields), not just
+        // layoutJson alone, since two colliding rows could plausibly share
+        // identical blocks while differing only in title/meta (every test
+        // in this file's own publish() helper uses the same hardcoded
+        // title, for instance).
+        //
+        // Each PageLayout property below is read into a local exactly once,
+        // then reused for both the hash and the cached closure — not
+        // re-accessed via $layout-> a second time — because phpstan.neon
+        // ignores these specific "undefined property" warnings (PageLayout
+        // has no real declared properties for its magic __get accessors)
+        // with an EXACT expected occurrence count per pattern; a second
+        // $layout->title-style access anywhere else in this file trips
+        // ignore.count and fails `phpstan analyse` outright, independent of
+        // whether the property access itself is actually a problem.
+        $layoutJson = $layout->layout_json;
+        $layoutTitle = $layout->title;
+        $layoutMetaTitle = $layout->meta_title;
+        $layoutMetaDesc = $layout->meta_desc;
+        $layoutOgImage = $layout->og_image;
+        $contentHash = substr(md5(json_encode([
+            $layoutJson, $layoutTitle, $layoutMetaTitle, $layoutMetaDesc, $layoutOgImage,
+        ])), 0, 12);
+
         return CacheTags::remember(
             ['pageview'],
-            "pageview:layout:{$layout->id}",
+            "pageview:layout:{$layout->id}:{$contentHash}",
             self::CACHE_TTL,
-            function () use ($page, $layout, $locale): array {
-                $view = $this->buildView($page->school_id, $layout->layout_json, $locale);
+            function () use ($page, $layoutJson, $layoutTitle, $layoutMetaTitle, $layoutMetaDesc, $layoutOgImage, $locale): array {
+                $view = $this->buildView($page->school_id, $layoutJson, $locale);
                 $view['meta'] = [
-                    'title' => $layout->title,
-                    'meta_title' => $layout->meta_title,
-                    'meta_desc' => $layout->meta_desc,
-                    'og_image' => $layout->og_image,
+                    'title' => $layoutTitle,
+                    'meta_title' => $layoutMetaTitle,
+                    'meta_desc' => $layoutMetaDesc,
+                    'og_image' => $layoutOgImage,
                 ];
 
                 return $view;
