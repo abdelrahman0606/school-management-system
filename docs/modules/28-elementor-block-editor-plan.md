@@ -1400,6 +1400,70 @@ other three are collapsed, open each independently (confirm they don't close eac
 and a Solid/Dashed border and confirm both the live preview and the saved public page match, and toggle a
 Responsive hide-switch to confirm it still behaves like the old checkbox did.
 
+### §7ab — Statistics block: per-element Style tab colors + animation (bug fix, reported after §7aa shipped)
+
+**The bug, exactly as reported:** on the Statistics block, the Style tab's Text Color and Entrance Animation
+visibly did nothing. "Only text color is wrong" — the requester wanted Heading Color to hit `h2.section-title`,
+Tile Background Color to hit `.stat-tile`, Tile Number Color to hit `.stat-tile > .stat-num`, Tile Subtext
+Color to hit `.stat-tile > .small`, and the animation to play on `.section-title` and each `.stat-tile`
+independently rather than the section as a whole.
+
+**Root cause, confirmed by reading `layout.blade.php`'s stylesheet, not guessed:** `BlockPresentation`'s
+universal Style tab fields (§7aa and earlier) only ever apply to the block's single outer wrapper element
+(`text_color` → `color:` on that wrapper, `animation` → a `reveal reveal-{preset}` class on that same
+wrapper). That works for every other block because their content has no `color` of its own to fight — CSS
+inheritance just fills it in. The Statistics block is the one block where every piece of text already has its
+own explicit, non-inherited `color`: `.section-title { color: var(--brand-heading); }`, `.stat-num { color:
+var(--brand); ... }`, and the tile subtext was Bootstrap's `.text-muted` (`color: var(--ink-muted) !important;`
+— this app's own rule, not Bootstrap's, but `!important` all the same). An inherited value from a wrapper
+**never** wins over an element's own explicit declaration, `!important` or not — so the wrapper-level
+`text_color` was reaching those elements' `color` property, just always losing immediately. Same story from
+the other side for a would-be Tile Background Color: `.bg-light` is an `!important` Bootstrap utility, and
+`background-color` isn't even an inherited property in the first place, so a wrapper-level `bg_color` had two
+independent reasons it could never have worked.
+
+**Fix — per-element, stats-only, not a change to the universal mechanism:**
+
+- `PageRenderService::sanitizeStyle()` gained four new hex-validated keys: `heading_color`, `tile_bg_color`,
+  `tile_number_color`, `tile_subtext_color`. Universal/type-agnostic like every other style key (sanitized
+  for any block, only ever read by one) — same convention as `width_mode`/`border_style` already being dead
+  weight on a block that doesn't use them.
+- `_style_fields.blade.php` now takes `$type` (threaded through from `_card.blade.php`'s include) and shows
+  these four fields **instead of** the generic Text Color field when `$type === 'stats'` — showing a control
+  that provably does nothing for this one block type was actively misleading, not just incomplete.
+- `public/blocks/render.blade.php`'s `'stats'` `@case` applies each color directly to its own element:
+  `heading_color` → inline `style="color:…"` on the `<h2 class="section-title">`; `tile_number_color` →
+  inline `style="color:…"` on `.stat-num` (a plain inline style beats `.stat-num`'s non-`!important` class
+  rule, no trick needed); `tile_subtext_color` → same, but the markup dropped `.text-muted` in favor of a
+  plain `.small`, since `.text-muted`'s `!important` can't be beaten by *any* inline style — `layout.blade.php`
+  gained a new **non**-`!important` `.stat-tile .small { color: var(--ink-muted); }` rule so the default look
+  is pixel-identical, and a real override now actually wins; `tile_bg_color` → the `.bg-light` class is
+  dropped entirely (not fought) whenever a custom tile color is set, replaced with inline
+  `background-color:…`, so the block keeps its old `bg-light` look with zero config and a real color once set.
+- **Animation moved off the wrapper.** `render.blade.php`'s top `@php` block now strips any `reveal`/
+  `reveal-{preset}` class back out of `$wrap['class']` specifically when `$type === 'stats'` (added right
+  after `$wrap = $bp::wrapper(...)`), and the `'stats'` `@case` instead appends `reveal reveal-{preset}` to
+  the heading and to each tile `<div>` individually. No JS changes needed — `layout.blade.php`'s
+  `IntersectionObserver` already drives *any* `.reveal` element independently; it was only ever the Blade
+  markup applying the class to one element (the wrapper) instead of several that limited it to a single
+  whole-section fade.
+
+**New tests** in `PageBuilderStyleLayoutNestingTest.php`: the four keys sanitize/clamp correctly (including an
+invalid-hex-is-dropped case); the rendered HTML has each color on its actual target element and never on the
+wrapper; a no-overrides stats block still renders the old `bg-light` look unchanged; the wrapper's `class`
+attribute never contains `reveal` for a stats block with an animation set while the heading and tiles do; and
+a non-stats block (`heading`) still gets the generic Text Color field and wrapper-level color — a regression
+guard on the `$type === 'stats'` branch not swallowing every other block type.
+
+**Verification gap, same as every prior §7x-series entry**: no PHP/browser in this sandbox. Verified via the
+brace/paren/bracket balance script on every touched file (`PageRenderService.php`, `_style_fields.blade.php`,
+`_card.blade.php`, `render.blade.php`, `layout.blade.php`, the test file) and `python3 -c "import json; ..."`
+on `bn.json` with an `object_pairs_hook` duplicate-key counter after inserting the five new strings (Applies
+to the heading…/Heading color/Tile background color/Tile number color/Tile subtext color). Please confirm in
+browser: set all four colors and an animation on a real Statistics block, verify the heading/tile-number/
+tile-subtext/tile-background each pick up their own color, and watch the heading and each tile fade in
+separately (staggered by scroll position) rather than the section fading in as one block.
+
 ## 8. Decisions to confirm when resuming (if not already answered above)
 
 - Confirm the exact current route/controller method name for the public page `show()` action before Phase 1

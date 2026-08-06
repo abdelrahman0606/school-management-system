@@ -41,6 +41,16 @@
   // already relies on.
   $slimBlock = $type === 'announcement_bar';
   $wrap = $bp::wrapper($style, $layout);
+  // The Statistics block applies its entrance animation per-element (the
+  // heading and each tile individually, see the 'stats' @case below)
+  // instead of once on this whole section wrapper — a single wrapper-level
+  // reveal here would fade the ENTIRE block in as one unit, then its
+  // children would (redundantly, and visually broken-looking) fade in
+  // again on top of that. Stripped only for this type; every other block
+  // keeps the normal single wrapper-level reveal from BlockPresentation.
+  if ($type === 'stats' && $wrap['class'] !== '') {
+    $wrap['class'] = trim(preg_replace('/\s*\breveal(?:-\w+)?\b/', '', $wrap['class']));
+  }
   $defaultSpacing = $selfContained || $slimBlock ? '' : ($contained ? 'mb-3' : 'py-4 py-lg-5');
   $typeClass = $slimBlock ? ' announcement-bar-section' : '';
   $wrapClass = trim($wrap['class'].' '.$defaultSpacing.$typeClass);
@@ -276,7 +286,27 @@
 
   @case('stats')
     {!! $open !!}
-      @if(!empty($d['heading']))<h2 class="section-title h3 mb-4">{{ $d['heading'] }}</h2>@endif
+      @php
+        // Per-element color overrides (Style tab's stats-only fields — see
+        // _style_fields.blade.php and PageRenderService::sanitizeStyle()).
+        // A single wrapper-level text_color can't reach any of these: the
+        // heading and tile text all carry their own explicit `color` in
+        // layout.blade.php's stylesheet, and inheritance never wins over an
+        // element's own explicit value. Tile background is the same
+        // problem from the other direction — .bg-light is an !important
+        // Bootstrap utility, so a wrapper-level bg_color could never beat
+        // it either; the class is swapped out below instead of fought.
+        $statHeadingStyle = ! empty($style['heading_color']) ? ' style="color:'.e($style['heading_color']).'"' : '';
+        $statTileBgClass = ! empty($style['tile_bg_color']) ? '' : ' bg-light';
+        $statTileBgStyle = ! empty($style['tile_bg_color']) ? ' style="background-color:'.e($style['tile_bg_color']).'"' : '';
+        $statNumStyle = ! empty($style['tile_number_color']) ? ' style="color:'.e($style['tile_number_color']).'"' : '';
+        $statSubStyle = ! empty($style['tile_subtext_color']) ? ' style="color:'.e($style['tile_subtext_color']).'"' : '';
+        // Same 'reveal'/'reveal-{preset}' the wrapper would otherwise carry
+        // (BlockPresentation::animationClass()) — applied per-element here
+        // instead; see the $wrap['class'] strip above this @switch.
+        $statRevealClass = ! empty($style['animation']) ? ' reveal reveal-'.$style['animation'] : '';
+      @endphp
+      @if(!empty($d['heading']))<h2 class="section-title h3 mb-4{{ $statRevealClass }}"{!! $statHeadingStyle !!}>{{ $d['heading'] }}</h2>@endif
       <div class="row {{ $bp::columnClasses($layout, ['mobile' => 2, 'tablet' => 4, 'laptop' => 4, 'desktop' => 4]) }} g-3 text-center">
         {{-- App\Support\LocalizedDate::digits() -- number_format() only ever
              produces ASCII 0-9, so under bn these tiles rendered "1,234" even
@@ -284,10 +314,10 @@
              already native-digit. digits() is a no-op strtr() for any locale
              with no NATIVE_DIGITS entry (i.e. still ASCII under en), so this
              is safe to apply unconditionally. --}}
-        <div><div class="p-3 bg-light stat-tile"><div class="stat-num">{{ \App\Support\LocalizedDate::digits(number_format($d['stats']['active_students'] ?? 0)) }}</div><div class="text-muted small mt-1">{{ __('Students') }}</div></div></div>
-        <div><div class="p-3 bg-light stat-tile"><div class="stat-num">{{ \App\Support\LocalizedDate::digits(number_format($d['stats']['active_staff'] ?? 0)) }}</div><div class="text-muted small mt-1">{{ __('Teachers & Staff') }}</div></div></div>
+        <div><div class="p-3{{ $statTileBgClass }} stat-tile{{ $statRevealClass }}"{!! $statTileBgStyle !!}><div class="stat-num"{!! $statNumStyle !!}>{{ \App\Support\LocalizedDate::digits(number_format($d['stats']['active_students'] ?? 0)) }}</div><div class="small mt-1"{!! $statSubStyle !!}>{{ __('Students') }}</div></div></div>
+        <div><div class="p-3{{ $statTileBgClass }} stat-tile{{ $statRevealClass }}"{!! $statTileBgStyle !!}><div class="stat-num"{!! $statNumStyle !!}>{{ \App\Support\LocalizedDate::digits(number_format($d['stats']['active_staff'] ?? 0)) }}</div><div class="small mt-1"{!! $statSubStyle !!}>{{ __('Teachers & Staff') }}</div></div></div>
         @foreach($d['items'] ?? [] as $it)
-          <div><div class="p-3 bg-light stat-tile"><div class="stat-num">{{ \App\Support\LocalizedDate::digits($it['value'] ?? '') }}</div><div class="text-muted small mt-1">{{ $it['label'] ?? '' }}</div></div></div>
+          <div><div class="p-3{{ $statTileBgClass }} stat-tile{{ $statRevealClass }}"{!! $statTileBgStyle !!}><div class="stat-num"{!! $statNumStyle !!}>{{ \App\Support\LocalizedDate::digits($it['value'] ?? '') }}</div><div class="small mt-1"{!! $statSubStyle !!}>{{ $it['label'] ?? '' }}</div></div></div>
         @endforeach
       </div>
     {!! $close !!}

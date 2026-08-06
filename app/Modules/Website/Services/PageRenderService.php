@@ -316,6 +316,22 @@ class PageRenderService
             'bg_image' => $url($style['bg_image'] ?? null),
             'bg_overlay' => max(0, min(100, (int) ($style['bg_overlay'] ?? 0))),
             'text_color' => $hex($style['text_color'] ?? null),
+            // Statistics-block-only fields (public/blocks/render.blade.php's
+            // 'stats' @case) — a single wrapper-level text_color can never
+            // reach these elements: .section-title, .stat-num, and the tile
+            // subtext all carry their own explicit `color` in
+            // layout.blade.php's stylesheet, and CSS inheritance only ever
+            // fills in a value when the element has NO explicit one of its
+            // own — an inherited wrapper color always loses to that, wrapper
+            // override or not. Kept generic/universal here (sanitized for
+            // every block type, same as every other style key) even though
+            // only 'stats' actually renders them; harmless dead weight on
+            // any other block's stored style, exactly like width_mode/
+            // border_style already are for blocks that don't use them.
+            'heading_color' => $hex($style['heading_color'] ?? null),
+            'tile_bg_color' => $hex($style['tile_bg_color'] ?? null),
+            'tile_number_color' => $hex($style['tile_number_color'] ?? null),
+            'tile_subtext_color' => $hex($style['tile_subtext_color'] ?? null),
             // Legacy single 'radius' (pre-§7aa) — still sanitized and stored
             // so an already-saved page keeps rendering exactly as before
             // until its next edit; BlockPresentation prefers the four

@@ -58,7 +58,7 @@
           @endif
         </div>
         <div class="tab-pane fade" id="tab-style-{{ $tabId }}">
-          @include('admin.website.pages._style_fields', ['prefix' => $prefix, 'style' => $style])
+          @include('admin.website.pages._style_fields', ['prefix' => $prefix, 'style' => $style, 'type' => $type])
         </div>
         <div class="tab-pane fade" id="tab-layout-{{ $tabId }}">
           @include('admin.website.pages._layout_fields', ['prefix' => $prefix, 'layout' => $layout, 'isGrid' => $isGrid, 'style' => $style])

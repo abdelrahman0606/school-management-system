@@ -4,6 +4,11 @@ All notable changes to this project are documented here. Format loosely
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning
 follows [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+- Statistics block: Style tab colors and the entrance animation now actually apply. A single wrapper-level color/animation could never reach the heading or tile text (they each carry their own explicit CSS), so those settings visibly did nothing. Replaced with four targeted fields (Heading, Tile Background, Tile Number, Tile Subtext color) for this block only, and the entrance animation now plays on the heading and each tile individually instead of the whole section at once.
+
 ## [1.4.1] — 2026-08-01
 
 ### Added

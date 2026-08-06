@@ -738,6 +738,19 @@
             font-variant-numeric: tabular-nums;
         }
 
+        /* Stats block tile subtext ("Students", "Teachers & Staff", …) used
+           to be Bootstrap's .text-muted, but that utility is !important
+           (same reason .bg-light had to be swapped rather than overridden
+           below) — no inline style="color:…" from a Style-tab override
+           could ever win against it. public/blocks/render.blade.php's
+           'stats' @case now uses plain .small instead, and this rule
+           reproduces the exact same look (var(--ink-muted), same as
+           .text-muted elsewhere) as the DEFAULT only, so a real override
+           still applies normally. */
+        .stat-tile .small {
+            color: var(--ink-muted);
+        }
+
         .card {
             border: 0;
             border-radius: var(--radius-md);

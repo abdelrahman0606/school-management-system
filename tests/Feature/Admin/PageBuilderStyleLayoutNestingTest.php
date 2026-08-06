@@ -302,6 +302,109 @@ class PageBuilderStyleLayoutNestingTest extends TestCase
         $this->assertArrayNotHasKey('animation', $style);
     }
 
+    // ── Statistics block: per-element style (not the shared wrapper) ──────
+    // The Statistics block's heading/tile-number/tile-subtext text, and the
+    // tile background, all carry their own explicit CSS in
+    // resources/views/public/layout.blade.php, so a single wrapper-level
+    // Style-tab color could never actually reach them — see
+    // _style_fields.blade.php's $type === 'stats' branch and
+    // public/blocks/render.blade.php's 'stats' @case, which apply each of
+    // these four fields directly to its own element instead of the wrapper.
+
+    public function test_stats_block_style_colors_are_sanitized(): void
+    {
+        $this->actingAs($this->admin);
+        $page = $this->publish([[
+            'type' => 'stats',
+            'data' => ['heading' => 'Our Numbers'],
+            'style' => [
+                'heading_color' => '#111111',
+                'tile_bg_color' => '#222222',
+                'tile_number_color' => '#333333',
+                'tile_subtext_color' => 'not-a-hex', // invalid — dropped
+            ],
+        ]]);
+
+        $style = PageLayout::where('page_id', $page->id)->where('is_published', true)
+            ->latest('id')->first()->layout_json['blocks'][0]['style'];
+
+        $this->assertSame('#111111', $style['heading_color']);
+        $this->assertSame('#222222', $style['tile_bg_color']);
+        $this->assertSame('#333333', $style['tile_number_color']);
+        $this->assertArrayNotHasKey('tile_subtext_color', $style);
+    }
+
+    public function test_stats_block_renders_colors_on_the_right_elements_not_the_wrapper(): void
+    {
+        $this->actingAs($this->admin);
+        $page = $this->publish([[
+            'type' => 'stats',
+            'data' => ['heading' => 'Our Numbers'],
+            'style' => [
+                'heading_color' => '#111111',
+                'tile_bg_color' => '#222222',
+                'tile_number_color' => '#333333',
+                'tile_subtext_color' => '#444444',
+            ],
+        ]]);
+
+        $html = $this->get('/'.$page->slug)->assertOk()->getContent();
+
+        $this->assertStringContainsString('<h2 class="section-title h3 mb-4" style="color:#111111">Our Numbers</h2>', $html);
+        $this->assertStringContainsString('style="background-color:#222222"', $html);
+        $this->assertStringContainsString('<div class="stat-num" style="color:#333333">', $html);
+        $this->assertStringContainsString('<div class="small mt-1" style="color:#444444">', $html);
+        // .bg-light is an !important Bootstrap utility — a real background
+        // override can't coexist with it, so it's swapped out entirely once
+        // tile_bg_color is set (see the 'stats' @case's $statTileBgClass).
+        $this->assertStringNotContainsString('bg-light', $html);
+    }
+
+    public function test_stats_block_without_overrides_keeps_the_old_bg_light_look(): void
+    {
+        $this->actingAs($this->admin);
+        $page = $this->publish([[
+            'type' => 'stats',
+            'data' => ['heading' => 'Our Numbers'],
+        ]]);
+
+        $this->get('/'.$page->slug)->assertOk()->assertSee('p-3 bg-light stat-tile', false);
+    }
+
+    public function test_stats_block_animation_applies_per_element_not_to_the_wrapper(): void
+    {
+        $this->actingAs($this->admin);
+        $page = $this->publish([[
+            'type' => 'stats',
+            'data' => ['heading' => 'Our Numbers'],
+            'style' => ['animation' => 'up'],
+        ]]);
+
+        $html = $this->get('/'.$page->slug)->assertOk()->getContent();
+
+        // The heading and every tile carry the reveal class independently...
+        $this->assertStringContainsString('<h2 class="section-title h3 mb-4 reveal reveal-up"', $html);
+        $this->assertStringContainsString('stat-tile reveal reveal-up', $html);
+        // ...but the section wrapper itself does not (no double fade-in: the
+        // whole section once, then its own children again on top of that).
+        $this->assertDoesNotMatchRegularExpression('/class="block-wrap[^"]*reveal/', $html);
+    }
+
+    public function test_non_stats_block_still_uses_the_generic_text_color_field(): void
+    {
+        // Regression guard: the $type === 'stats' branch in
+        // _style_fields.blade.php must not accidentally hide the universal
+        // Text Color field for every other block type.
+        $this->actingAs($this->admin);
+        $page = $this->publish([[
+            'type' => 'heading', 'data' => ['text' => 'X'],
+            'style' => ['text_color' => '#123456'],
+        ]]);
+
+        $this->get('/'.$page->slug)->assertOk()->assertSee('color:#123456', false);
+        $this->get("/admin/pages/{$page->id}/edit")->assertOk()->assertSee('Text color');
+    }
+
     // ── Layout tab ───────────────────────────────────────────────────────
 
     public function test_layout_hide_and_columns_render_bootstrap_utility_classes(): void
