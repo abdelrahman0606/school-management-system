@@ -691,26 +691,41 @@ class PageRenderService
         // The trailing hash is content-derived (see the doc comment above),
         // not just the id, so a reused id can never serve someone else's
         // cached render — covers every field the cached closure below
-        // actually returns (layout_json AND the meta fields), not just
-        // layout_json alone, since two colliding rows could plausibly share
+        // actually returns (layoutJson AND the meta fields), not just
+        // layoutJson alone, since two colliding rows could plausibly share
         // identical blocks while differing only in title/meta (every test
         // in this file's own publish() helper uses the same hardcoded
         // title, for instance).
+        //
+        // Each PageLayout property below is read into a local exactly once,
+        // then reused for both the hash and the cached closure — not
+        // re-accessed via $layout-> a second time — because phpstan.neon
+        // ignores these specific "undefined property" warnings (PageLayout
+        // has no real declared properties for its magic __get accessors)
+        // with an EXACT expected occurrence count per pattern; a second
+        // $layout->title-style access anywhere else in this file trips
+        // ignore.count and fails `phpstan analyse` outright, independent of
+        // whether the property access itself is actually a problem.
+        $layoutJson = $layout->layout_json;
+        $layoutTitle = $layout->title;
+        $layoutMetaTitle = $layout->meta_title;
+        $layoutMetaDesc = $layout->meta_desc;
+        $layoutOgImage = $layout->og_image;
         $contentHash = substr(md5(json_encode([
-            $layout->layout_json, $layout->title, $layout->meta_title, $layout->meta_desc, $layout->og_image,
+            $layoutJson, $layoutTitle, $layoutMetaTitle, $layoutMetaDesc, $layoutOgImage,
         ])), 0, 12);
 
         return CacheTags::remember(
             ['pageview'],
             "pageview:layout:{$layout->id}:{$contentHash}",
             self::CACHE_TTL,
-            function () use ($page, $layout, $locale): array {
-                $view = $this->buildView($page->school_id, $layout->layout_json, $locale);
+            function () use ($page, $layoutJson, $layoutTitle, $layoutMetaTitle, $layoutMetaDesc, $layoutOgImage, $locale): array {
+                $view = $this->buildView($page->school_id, $layoutJson, $locale);
                 $view['meta'] = [
-                    'title' => $layout->title,
-                    'meta_title' => $layout->meta_title,
-                    'meta_desc' => $layout->meta_desc,
-                    'og_image' => $layout->og_image,
+                    'title' => $layoutTitle,
+                    'meta_title' => $layoutMetaTitle,
+                    'meta_desc' => $layoutMetaDesc,
+                    'og_image' => $layoutOgImage,
                 ];
 
                 return $view;
