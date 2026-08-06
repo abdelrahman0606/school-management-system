@@ -743,7 +743,7 @@
            (same reason .bg-light had to be swapped rather than overridden
            below) — no inline style="color:…" from a Style-tab override
            could ever win against it. public/blocks/render.blade.php's
-           'stats' @case now uses plain .small instead, and this rule
+           'stats' case now uses plain .small instead, and this rule
            reproduces the exact same look (var(--ink-muted), same as
            .text-muted elsewhere) as the DEFAULT only, so a real override
            still applies normally. */

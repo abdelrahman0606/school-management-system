@@ -1464,6 +1464,46 @@ browser: set all four colors and an animation on a real Statistics block, verify
 tile-subtext/tile-background each pick up their own color, and watch the heading and each tile fade in
 separately (staggered by scroll position) rather than the section fading in as one block.
 
+### §7ac — Self-inflicted regression from §7ab: literal directive words in Blade comments broke every public page (bug fix)
+
+**The bug:** immediately after §7ab landed, the full test suite came back 17 failed / 6 passed, all 17 failures
+a 500 with `ParseError: syntax error, unexpected token "case", expecting end of file (View:
+.../resources/views/public/layout.blade.php)`. The failures weren't stats-specific — plain nesting/layout tests
+with no stats block involved failed too, because `layout.blade.php` is the shared master layout every public
+page compiles through.
+
+**Root cause:** Blade's compiler finds directives with a global regex scan over the raw template text; it has
+no awareness of HTML/CSS/comment syntax, so a literal `@case`/`@switch` typed as prose inside a `/* */` CSS
+comment or a `//` PHP comment reads to the compiler exactly like a real directive invocation. §7ab's own new
+CSS comment in `layout.blade.php`'s `<style>` block — explaining that the tile-subtext rule mirrors what
+`render.blade.php`'s `'stats' @case now uses plain .small instead` — contained a literal `@case` with no
+enclosing `@switch`, which is exactly this trap. Confirmed via `grep -n "@switch\|@case\|@endswitch"
+layout.blade.php`: that comment was the only switch/case-shaped token anywhere in the file.
+
+**Fix:** removed the literal `@` — reworded to "the `'stats'` case now uses plain `.small` instead." Also
+pre-emptively fixed two structurally-identical phrasings already sitting in `render.blade.php` ("see the
+`'stats' @case` below" and "strip above this `@switch`") even though those happened to be safe in practice —
+both live inside `@php...@endphp` blocks, and `layout.blade.php` already had a **pre-existing**, long-standing
+`// ... three identical @yield calls` comment inside its own top `@php` block that has never caused a parse
+error, which is empirical evidence (not just theory) that Blade extracts `@php...@endphp` bodies as raw PHP
+before the directive-regex scan runs, the same way `@verbatim` protects its contents. The actual danger zone is
+plain template text outside `@php` — `<style>` blocks, HTML comments, and ordinary Blade markup — which is
+exactly where the confirmed break was. Fixed both anyway since "provably safe" wasn't confirmed at the time and
+the cost of rewording was zero.
+
+**Standing rule for every future `.blade.php` comment, not just this file:** never write a literal `@word` that
+matches a real Blade directive name (`@if`, `@case`, `@switch`, `@foreach`, `@php`, …) as prose in a `/* */` or
+`//` comment outside a `@php` block. Rephrase to drop the `@` ("the case", "the switch") or use Blade's `@@`
+escape if the literal `@` must stay.
+
+**Verification gap:** no PHP/browser in this sandbox — same limitation as every prior entry. Re-ran
+`grep -n "@[a-zA-Z]+"` filtered to comment lines (`^\s*(//|\*|/\*)`) across every file touched in §7ab plus this
+fix, confirming no other stray directive-shaped words remain outside `@php`, and re-ran the brace/paren balance
+script on both files. Please re-run
+`docker compose exec app php artisan test tests/Feature/Admin/PageBuilderStyleLayoutNestingTest.php --no-coverage`
+(and ideally the full suite, since the break was site-wide, not stats-specific) to confirm the ParseError is
+gone before merging `dev` into `main`.
+
 ## 8. Decisions to confirm when resuming (if not already answered above)
 
 - Confirm the exact current route/controller method name for the public page `show()` action before Phase 1

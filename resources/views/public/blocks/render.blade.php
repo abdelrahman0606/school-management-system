@@ -42,7 +42,7 @@
   $slimBlock = $type === 'announcement_bar';
   $wrap = $bp::wrapper($style, $layout);
   // The Statistics block applies its entrance animation per-element (the
-  // heading and each tile individually, see the 'stats' @case below)
+  // heading and each tile individually, see the 'stats' case below)
   // instead of once on this whole section wrapper — a single wrapper-level
   // reveal here would fade the ENTIRE block in as one unit, then its
   // children would (redundantly, and visually broken-looking) fade in
@@ -303,7 +303,7 @@
         $statSubStyle = ! empty($style['tile_subtext_color']) ? ' style="color:'.e($style['tile_subtext_color']).'"' : '';
         // Same 'reveal'/'reveal-{preset}' the wrapper would otherwise carry
         // (BlockPresentation::animationClass()) — applied per-element here
-        // instead; see the $wrap['class'] strip above this @switch.
+        // instead; see the $wrap['class'] strip above this switch statement.
         $statRevealClass = ! empty($style['animation']) ? ' reveal reveal-'.$style['animation'] : '';
       @endphp
       @if(!empty($d['heading']))<h2 class="section-title h3 mb-4{{ $statRevealClass }}"{!! $statHeadingStyle !!}>{{ $d['heading'] }}</h2>@endif
