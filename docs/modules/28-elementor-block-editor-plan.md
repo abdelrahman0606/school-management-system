@@ -1912,6 +1912,75 @@ verified only via static reasoning and syntax/balance checks. Please re-run the 
 failing test should now pass, and the new regression test should pass as well. If it doesn't, this diagnosis
 was wrong somewhere and needs a fresh look with the actual failure output in hand.
 
+### §7ak — Correction to §7aj: the real cause was a flawed test assertion, not the cache
+
+**The report, verbatim:** after §7aj's cache-key fix was committed, the user re-ran the suite. The SAME test
+failed with the SAME message — `Failed asserting that 2 is identical to 1` — at the SAME line. The fix changed
+nothing. Worse, the NEW regression test §7aj added for the cache fix (which publishes a hero block WITH button
+colors and expects exactly 2 `<style>` tags) ALSO failed, with `Failed asserting that 3 is identical to 2` —
+one MORE than expected, on its very first, never-before-cached render.
+
+**Why that second failure is the whole story.** §7aj's regression test's first assertion runs before any cache
+manipulation happens at all — it's a brand-new page, brand-new `PageLayout` id, cold cache. There is no id to
+reuse yet. A cache-key collision cannot explain a wrong count on a page's FIRST ever render. Both failures also
+share the exact same signature: the actual count is always exactly ONE MORE than the code's real `<style>`
+tags would produce, regardless of whether the hero button override was set (0 vs 1 real override-only style
+blocks; 1 vs 2 real total). A constant, override-independent +1 pointed at a THIRD, always-present source of
+the literal text `<style` somewhere on every page — not a caching problem at all.
+
+**The actual source.** `resources/views/public/layout.blade.php` line 962, inside its bottom `<script>` block:
+
+```js
+// page has scrolled — a passive scroll listener toggling one class,
+// not a per-frame layout read; the actual size change is pure CSS
+// (.pub-mainbar.is-scrolled, see this file's <style> block).
+```
+
+A `//` JavaScript comment is still literal text inside the rendered `<script>` tag — it reaches the final HTML
+verbatim, uncompiled, exactly like any other JS source line. This one happens to reference "this file's
+`<style>` block" in plain English, and `<style>` (open angle bracket, the word, closing angle bracket) is an
+exact match for the substring `substr_count($html, '<style')` was searching the WHOLE PAGE for. Every single
+page render carries this comment, so every `substr_count($html, '<style')` on any page is permanently one
+higher than the number of REAL `<style>` tags.
+
+**This was never caused by §7ah, §7ai, or the "cache fix."** `git log -L` on that exact line shows it was
+added in `25bbfdd7` ("merge header into one sticky bar, add fluid type scale" — the Frontend Modernization
+work, Milestone/Phase 2, entirely unrelated to this Elementor session) — and `25bbfdd7` is a genuine ancestor
+of `507766e`, the commit (§7ae) that FIRST wrote
+`test_hero_block_button_has_no_extra_style_block_without_any_override`'s `assertSame(1, substr_count(...))`
+assertion. In other words: the JS comment already existed, unnoticed, the moment this test was written — the
+assertion was wrong from its very first commit, months before this round's work touched anything nearby. It
+simply never actually ran (the recurring theme of this whole multi-round session: nobody executed the full
+suite until very recently) until now.
+
+**§7aj's own diagnosis was wrong, but not baseless — worth naming why it was a reasonable wrong turn.** The
+symptom (a hero-block style-count assertion failing) and the actual code path involved (`renderPage()`,
+`PageLayout`, hero button overrides) were real and correctly identified; what was wrong was concluding that a
+cache-key collision was the MECHANISM, without first checking whether the "expected" baseline the test asserted
+was even correct to begin with. The tell that should have been caught sooner: the fresh, first-render
+regression test §7aj itself wrote ALSO failed, off by exactly one, before any cache logic had a chance to run
+at all — that data point alone rules out caching as the cause and points straight at the assertion.
+
+**The fix.** Both `substr_count($html, '<style')`-based assertions (the original test, and §7aj's own new
+regression test) are replaced with a precise, unambiguous check for the ACTUAL thing being tested — whether the
+hero button's own id-scoped `<style>#hero-btn-…{…}</style>` construct is present — via
+`assertMatchesRegularExpression('/<style>\s*#hero-btn-/', $html)` / its `assertDoesNotMatchRegularExpression`
+counterpart, instead of counting an ambiguous substring across the entire page. This is correct regardless of
+how many unrelated `<style` (or `<style>`-shaped English sentences) exist anywhere else on the page, now or in
+the future — closing off this whole class of false failure permanently, not just patching today's specific
+count.
+
+**Is §7aj's cache-key change still worth keeping?** Yes, on its own, narrower merits — it's real, if only
+demonstrated to matter under this suite's specific sqlite-`:memory:`-plus-rolled-back-transactions
+configuration, and it's a correct, low-cost hardening of an assumption (`renderPage()`'s comment literally
+says "a fresh publish is automatically a fresh cache key," which is only load-bearing where ids are actually
+permanently unique). But it is NOT what fixed the originally-reported failure, and this doc's §7aj should be
+read with that correction in mind: the mechanism it describes is real; the claim that it explained the
+observed symptom was not.
+
+**Verification gap:** no PHP/browser in this sandbox, same as ever. Please re-run the full suite — both the
+originally-failing test and §7aj's own regression test should now pass, and this time for the right reason.
+
 ## 8. Decisions to confirm when resuming (if not already answered above)
 
 - Confirm the exact current route/controller method name for the public page `show()` action before Phase 1

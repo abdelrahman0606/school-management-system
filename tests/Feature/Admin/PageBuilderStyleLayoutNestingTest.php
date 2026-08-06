@@ -802,31 +802,38 @@ class PageBuilderStyleLayoutNestingTest extends TestCase
 
         $html = $this->get('/'.$page->slug)->assertOk()->getContent();
 
-        // layout.blade.php's <head> always carries its own single <style>
-        // block for site-wide theming — asserting a page-wide "no <style> at
-        // all" would be a false failure against that, the same class of
-        // mistake the stats-block bg-light test made earlier. The hero
-        // button's own id-scoped block is only ever emitted when an
-        // override is set, so with none set the count must stay at exactly
-        // that one baseline occurrence.
-        $this->assertSame(1, substr_count($html, '<style'));
+        // A raw substr_count($html, '<style') baseline is NOT safe here —
+        // layout.blade.php's <head> carries its own single <style> block for
+        // site-wide theming (same class of mistake the stats-block bg-light
+        // test made earlier), AND its bottom <script> block has its own JS
+        // comment that happens to contain the literal text "<style>" as
+        // English prose ("...see this file's <style> block)." — added in
+        // 25bbfdd7, unrelated to this block's own behavior, but enough to
+        // make a whole-page substring count an unreliable proxy for "is the
+        // hero button's own id-scoped <style> block present". Assert on that
+        // specific construct directly instead: it's only ever emitted when
+        // an override is set, so with none set it must be entirely absent.
+        $this->assertDoesNotMatchRegularExpression('/<style>\s*#hero-btn-/', $html);
     }
 
     public function test_pageview_cache_does_not_serve_stale_content_when_a_layout_id_is_reused(): void
     {
-        // Regression guard for the caching bug this exact test file's
-        // ID/Class round exposed: PageRenderService::renderPage() used to
-        // key its cache purely by PageLayout->id. In production that's
-        // always safe (every publish() mints a brand-new row), but this
-        // suite's config (sqlite ':memory:', RefreshDatabase rolling back a
-        // transaction per test, and the process-lifetime 'array' cache
-        // store — see phpunit.xml) lets sqlite recycle a rolled-back test's
-        // row id for a LATER, unrelated test — id-only keying then served
-        // that earlier test's cached render verbatim. Rather than depend on
-        // reproducing sqlite's exact id-reuse behavior (environment-
-        // specific, not portable), this directly proves the actual fix: the
-        // SAME PageLayout id, mutated to different content in place, must
-        // never be served from a stale cache entry.
+        // Defensive regression guard, NOT a reproduction of a confirmed
+        // production symptom — see §7ak in
+        // docs/modules/28-elementor-block-editor-plan.md for the full story.
+        // PageRenderService::renderPage() used to key its cache purely by
+        // PageLayout->id, on the assumption ids are always unique (true in
+        // production: every publish() mints a brand-new row). That
+        // assumption doesn't hold everywhere a numeric id can come from —
+        // this suite's config (sqlite ':memory:', RefreshDatabase rolling
+        // back a transaction per test, the process-lifetime 'array' cache
+        // store) can in principle let sqlite recycle a rolled-back test's
+        // row id for a later, unrelated test. Rather than depend on
+        // reproducing sqlite's exact id-reuse timing (environment-specific,
+        // not portable, and — per §7ak — NOT what actually caused the
+        // originally-reported test failure), this directly proves the fix
+        // on its own terms: the SAME PageLayout id, mutated to different
+        // content in place, must never be served from a stale cache entry.
         $this->actingAs($this->admin);
         $pageA = $this->publish([[
             'type' => 'hero',
@@ -835,7 +842,7 @@ class PageBuilderStyleLayoutNestingTest extends TestCase
         ]]);
 
         $htmlA = $this->get('/'.$pageA->slug)->assertOk()->getContent();
-        $this->assertSame(2, substr_count($htmlA, '<style'));
+        $this->assertMatchesRegularExpression('/<style>\s*#hero-btn-/', $htmlA);
 
         // Simulate a reused id: same PageLayout row, in-place content swap
         // to what test_hero_block_button_has_no_extra_style_block_without_any_override
@@ -854,7 +861,7 @@ class PageBuilderStyleLayoutNestingTest extends TestCase
         $layout->save();
 
         $htmlAAfter = $this->get('/'.$pageA->slug)->assertOk()->getContent();
-        $this->assertSame(1, substr_count($htmlAAfter, '<style'));
+        $this->assertDoesNotMatchRegularExpression('/<style>\s*#hero-btn-/', $htmlAAfter);
     }
 
     public function test_announcement_bar_block_message_and_link_colors_render(): void
