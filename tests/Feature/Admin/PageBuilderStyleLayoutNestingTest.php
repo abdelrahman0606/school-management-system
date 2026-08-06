@@ -812,6 +812,51 @@ class PageBuilderStyleLayoutNestingTest extends TestCase
         $this->assertSame(1, substr_count($html, '<style'));
     }
 
+    public function test_pageview_cache_does_not_serve_stale_content_when_a_layout_id_is_reused(): void
+    {
+        // Regression guard for the caching bug this exact test file's
+        // ID/Class round exposed: PageRenderService::renderPage() used to
+        // key its cache purely by PageLayout->id. In production that's
+        // always safe (every publish() mints a brand-new row), but this
+        // suite's config (sqlite ':memory:', RefreshDatabase rolling back a
+        // transaction per test, and the process-lifetime 'array' cache
+        // store — see phpunit.xml) lets sqlite recycle a rolled-back test's
+        // row id for a LATER, unrelated test — id-only keying then served
+        // that earlier test's cached render verbatim. Rather than depend on
+        // reproducing sqlite's exact id-reuse behavior (environment-
+        // specific, not portable), this directly proves the actual fix: the
+        // SAME PageLayout id, mutated to different content in place, must
+        // never be served from a stale cache entry.
+        $this->actingAs($this->admin);
+        $pageA = $this->publish([[
+            'type' => 'hero',
+            'data' => ['title' => 'Welcome', 'button_text' => 'Apply Now', 'button_url' => '/apply'],
+            'style' => ['button_text_color' => '#111111', 'button_bg_color' => '#222222'],
+        ]]);
+
+        $htmlA = $this->get('/'.$pageA->slug)->assertOk()->getContent();
+        $this->assertSame(2, substr_count($htmlA, '<style'));
+
+        // Simulate a reused id: same PageLayout row, in-place content swap
+        // to what test_hero_block_button_has_no_extra_style_block_without_any_override
+        // publishes (no override at all) — no new publish(), no new id.
+        $layout = PageLayout::where('page_id', $pageA->id)->where('is_published', true)->latest('id')->first();
+        $layout->layout_json = [
+            'template' => 'full',
+            'blocks' => [[
+                'type' => 'hero',
+                'data' => ['title' => 'Welcome', 'button_text' => 'Apply Now', 'button_url' => '/apply'],
+                'style' => [],
+                'layout' => [],
+            ]],
+            'sidebar' => [],
+        ];
+        $layout->save();
+
+        $htmlAAfter = $this->get('/'.$pageA->slug)->assertOk()->getContent();
+        $this->assertSame(1, substr_count($htmlAAfter, '<style'));
+    }
+
     public function test_announcement_bar_block_message_and_link_colors_render(): void
     {
         $this->actingAs($this->admin);

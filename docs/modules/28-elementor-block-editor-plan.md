@@ -1841,6 +1841,77 @@ page; a block with neither field set renders with no visible change at all (no s
 an obviously-invalid id (starting with a number, or containing a space/quote) either gets silently stripped on
 save or is visibly rejected by the browser's own `pattern` validation before it's ever submitted.
 
+### §7aj — Test failure investigation: `renderPage()`'s cache key could serve a stale render for a reused PageLayout id
+
+**The report, verbatim:** running the full suite, `test_hero_block_button_has_no_extra_style_block_without_any_override`
+(zero style overrides on its hero block) failed with `Failed asserting that 2 is identical to 1` on
+`$this->assertSame(1, substr_count($html, '<style'))` — its rendered page somehow carried the hero button's
+id-scoped hover `<style>` block despite never setting a single button color.
+
+**First response — and the mistake in it.** The initial failure report's pasted stack trace showed the
+assertion at a line number (`:602`, inside a *different* test's declaration) that didn't match this file's then-
+current line numbers by roughly 170 lines — almost exactly the size of the tests added in §7ah/§7ai. That
+looked exactly like a stale checkout or an un-rebuilt container, so the first response asked the user to
+confirm they were testing against the latest commit before digging further. They re-ran and got the identical
+failure, this time at the correct current line (`:812`) — ruling staleness out and confirming a real bug.
+Worth naming as its own lesson: a plausible-looking "you're on the wrong commit" explanation is still a
+hypothesis, not a diagnosis, until re-confirmed against a clean run — don't let it substitute for actually
+finding the mechanism once it's been checked.
+
+**Ruling out the feature code.** Traced `sanitizeStyle()` and the hero `render.blade.php` case by hand for
+this exact test's input (a hero block with a `data` array and *no* `style` key at all): `$heroBtnOverride`
+requires one of `button_text_color`/`button_bg_color`/`button_hover_text_color`/`button_hover_bg_color` to be
+non-empty, none of which can exist when `sanitizeStyle([])` runs — every relevant closure returns `null` for a
+missing key and `array_filter` drops it. §7ai's own `custom_id`/`custom_class` additions don't touch any of
+those keys either. The rendering logic itself is correct; something else was feeding it the WRONG block's data
+entirely.
+
+**Root cause: `renderPage()`'s cache key was id-only, and ids aren't always unique.** `PageRenderService::renderPage()`
+wraps its result in `CacheTags::remember(['pageview'], "pageview:layout:{$layout->id}", ...)`, on the documented
+(and, in production, correct) assumption that "every publish() mints a brand-new PageLayout row … so a fresh
+publish is automatically a fresh cache key." That's true wherever ids are permanently unique — but
+`phpunit.xml` runs this suite against `DB_CONNECTION=sqlite`/`DB_DATABASE=:memory:` with `CACHE_STORE=array`,
+and `RefreshDatabase` wraps each test in a transaction it rolls back afterward. Sqlite's plain
+`INTEGER PRIMARY KEY` rowid allocation (no `AUTOINCREMENT` keyword — Eloquent's default migration doesn't add
+one) computes the next id from `MAX(rowid)+1`; once a transaction rolls back, that max drops back down, and a
+LATER test's insert can land on the exact id an EARLIER, now-rolled-back test used. The `array` cache store,
+meanwhile, is an in-process singleton that `RefreshDatabase` never touches — it lives for the whole test run,
+not per test. Put together: `test_hero_block_button_colors_render_with_a_scoped_hover_style_block` (the test
+immediately before the failing one, publishing a hero WITH button overrides) populated
+`pageview:layout:{N}` for whatever id its `PageLayout` row got; when the next test's own page happened to
+reuse that exact id `N`, `renderPage()` handed back the previous test's cached array UNCHANGED — hero block,
+button overrides, hover `<style>` and all — even though this test's own page had none of that. §7ah/§7ai's test
+additions didn't cause this on their own; they shifted the exact sequence of `PageLayout` inserts/rollbacks
+just enough to land two particular tests on a colliding id for the first time.
+
+**Why this is sqlite/test-only, not a production risk.** MySQL/Postgres `AUTO_INCREMENT`/`SERIAL` counters are
+monotonic for the lifetime of the table — a rolled-back or even a committed-then-deleted row's id is never
+reissued. Every real `publish()` really does mint a fresh id forever. This bug needed the specific combination
+of sqlite's rowid-reuse-after-rollback behavior AND a cache store that outlives the DB transaction — an
+artifact of how this suite is configured, not something a real deployment can hit.
+
+**The fix.** `renderPage()` now folds a short content hash into the cache key —
+`substr(md5(json_encode([$layout->layout_json, $layout->title, $layout->meta_title, $layout->meta_desc, $layout->og_image])), 0, 12)`
+appended after the id — covering every field the cached closure actually returns (not just `layout_json`
+alone: two colliding rows could plausibly share identical blocks while differing only in title/meta, and in
+fact every test in this file's own `publish()` helper hardcodes the same page title, so hashing `layout_json`
+alone wouldn't have been airtight). This makes the "a fresh publish is a fresh cache key" guarantee structural
+— tied to what the row actually contains — rather than merely assumed from id uniqueness. Negligible cost
+next to everything else this method already does.
+
+**New test:** `test_pageview_cache_does_not_serve_stale_content_when_a_layout_id_is_reused` — rather than trying
+to reproduce sqlite's exact rowid-reuse timing (environment-specific, not a portable thing to assert on), it
+proves the actual fix directly: publish a hero block WITH button overrides, render it (confirms 2 `<style>`
+tags, warming the cache), then mutate that SAME `PageLayout` row's `layout_json` in place to the no-override
+version (no new `publish()`, no new id — simulating exactly what an id collision would hand the cache: the same
+key, different real content) and render again, asserting the second render correctly shows 1 `<style>` tag, not
+a stale 2.
+
+**Verification gap:** no PHP/browser in this sandbox, same as every prior entry — the fix and its test are
+verified only via static reasoning and syntax/balance checks. Please re-run the full suite; the originally
+failing test should now pass, and the new regression test should pass as well. If it doesn't, this diagnosis
+was wrong somewhere and needs a fresh look with the actual failure output in hand.
+
 ## 8. Decisions to confirm when resuming (if not already answered above)
 
 - Confirm the exact current route/controller method name for the public page `show()` action before Phase 1

@@ -26,6 +26,7 @@ follows [Semantic Versioning](https://semver.org/).
 - Staff block: added an Avatar Text color field for the initial-letter avatar shown when a member has no photo.
 - Hero banner block: fixed the Style tab's Background Color field silently doing nothing — it shared its underlying field name with the unrelated, always-present generic Background color field on the Advanced tab, so submitting the form could overwrite whichever one the admin had actually set.
 - Hero banner block: a Background Color set on the block would previously be applied to the (invisible) wrapper element and never actually show, because the hero's own gradient/image sits on top of it. Now applies directly to the visible hero element, gated behind the new Image/Solid Color toggle.
+- Public page rendering cache: strengthened the cache key for a published page so it can never serve a stale render for the wrong page — only ever observed under the automated test suite's in-memory database, not in normal operation.
 
 ## [1.4.1] — 2026-08-01
 

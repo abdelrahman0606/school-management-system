@@ -641,6 +641,24 @@ class PageRenderService
      * without a new publish — bounded by CACHE_TTL rather than making
      * Announcement/Staff/etc. aware this cache exists.
      *
+     * A short content hash rides along in the key (see below) so this
+     * "id alone is always fresh" guarantee is structural, not just assumed —
+     * it only actually holds in production, where auto-increment ids are
+     * permanently unique. A rolled-back-transaction test suite is a real
+     * counter-example: PageBuilderStyleLayoutNestingTest's sqlite `:memory:`
+     * DB + RefreshDatabase's per-test rollback + the process-lifetime
+     * `array` cache store (phpunit.xml) combine to let sqlite reuse a
+     * PageLayout id a previous, unrelated test already rolled back — id
+     * alone would then serve that earlier test's cached render verbatim
+     * (confirmed: test_hero_block_button_has_no_extra_style_block_without_any_override
+     * started intermittently failing with 2 `<style` tags instead of 1 —
+     * exactly test_hero_block_button_colors_render_with_a_scoped_hover_style_block's
+     * cached output — the moment an unrelated test-file edit shifted the
+     * exact sequence of PageLayout inserts/rollbacks enough to land two
+     * tests on the same reused id). The hash costs nothing that matters next
+     * to everything else this method already does, and closes the gap for
+     * good rather than chasing test ordering.
+     *
      * $locale: docs/modules/30-multilingual-content-plan.md Phase 2 —
      * resolved via publishedLayoutFor()'s default-locale fallback, so a
      * locale with no translation yet still renders (in the default
@@ -670,9 +688,21 @@ class PageRenderService
         // itself changes on every publish and a stale render is never
         // served; the tag exists only as a namespace, not an invalidation
         // hook, so this swap changes nothing about invalidation behavior.
+        // The trailing hash is content-derived (see the doc comment above),
+        // not just the id, so a reused id can never serve someone else's
+        // cached render — covers every field the cached closure below
+        // actually returns (layout_json AND the meta fields), not just
+        // layout_json alone, since two colliding rows could plausibly share
+        // identical blocks while differing only in title/meta (every test
+        // in this file's own publish() helper uses the same hardcoded
+        // title, for instance).
+        $contentHash = substr(md5(json_encode([
+            $layout->layout_json, $layout->title, $layout->meta_title, $layout->meta_desc, $layout->og_image,
+        ])), 0, 12);
+
         return CacheTags::remember(
             ['pageview'],
-            "pageview:layout:{$layout->id}",
+            "pageview:layout:{$layout->id}:{$contentHash}",
             self::CACHE_TTL,
             function () use ($page, $layout, $locale): array {
                 $view = $this->buildView($page->school_id, $layout->layout_json, $locale);
