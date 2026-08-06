@@ -351,13 +351,17 @@ class PageBuilderStyleLayoutNestingTest extends TestCase
         $html = $this->get('/'.$page->slug)->assertOk()->getContent();
 
         $this->assertStringContainsString('<h2 class="section-title h3 mb-4" style="color:#111111">Our Numbers</h2>', $html);
-        $this->assertStringContainsString('style="background-color:#222222"', $html);
         $this->assertStringContainsString('<div class="stat-num" style="color:#333333">', $html);
         $this->assertStringContainsString('<div class="small mt-1" style="color:#444444">', $html);
         // .bg-light is an !important Bootstrap utility — a real background
         // override can't coexist with it, so it's swapped out entirely once
-        // tile_bg_color is set (see the 'stats' @case's $statTileBgClass).
-        $this->assertStringNotContainsString('bg-light', $html);
+        // tile_bg_color is set (see the 'stats' case's $statTileBgClass).
+        // Asserted as the exact tile markup rather than a page-wide
+        // "doesn't contain bg-light" check — the header's notice ticker
+        // partial (public/partials/ticker.blade.php) legitimately has its
+        // own unrelated .bg-light class on every page, which made the
+        // page-wide version of this assertion a false failure.
+        $this->assertStringContainsString('<div class="p-3 stat-tile" style="background-color:#222222">', $html);
     }
 
     public function test_stats_block_without_overrides_keeps_the_old_bg_light_look(): void
