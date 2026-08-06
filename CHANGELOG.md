@@ -4,7 +4,7 @@ All notable changes to this project are documented here. Format loosely
 follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versioning
 follows [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.4.2] — 2026-08-06
 
 ### Added
 - Notices block: Style tab now has targeted Heading, Card Background, Card Date, Card Title, Card Text, and Card Icon color fields.
