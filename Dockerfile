@@ -5,7 +5,7 @@ RUN apt-get update && apt-get install -y \
     libzip-dev libicu-dev libjpeg-dev libfreetype6-dev
 
 RUN docker-php-ext-configure gd --with-jpeg --with-freetype && \
-    docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip intl opcache
+    docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip intl
 
 COPY docker/php/opcache.ini /usr/local/etc/php/conf.d/zz-opcache.ini
 

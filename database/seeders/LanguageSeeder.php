@@ -18,8 +18,8 @@ class LanguageSeeder extends Seeder
             ['name' => 'English', 'native_name' => 'English', 'flag' => '🇬🇧', 'is_rtl' => false, 'is_active' => true, 'is_default' => true, 'sort_order' => 1],
         );
         Language::firstOrCreate(
-            ['code' => 'bn'],
-            ['name' => 'Bangla', 'native_name' => 'বাংলা', 'flag' => '🇧🇩', 'is_rtl' => false, 'is_active' => true, 'is_default' => false, 'sort_order' => 2],
+            ['code' => 'ar'],
+            ['name' => 'Arabic', 'native_name' => 'العربية', 'flag' => '🇸🇦', 'is_rtl' => true, 'is_active' => true, 'is_default' => false, 'sort_order' => 2],
         );
         Language::flushCache();
     }

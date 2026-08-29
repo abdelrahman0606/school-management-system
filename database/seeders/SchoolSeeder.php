@@ -91,22 +91,25 @@ class SchoolSeeder extends Seeder
         }
 
         $this->seedBengaliTranslations($school);
+        $this->seedArabicTranslations($school);
     }
 
-    /**
-     * Bangla (bn) translations for every HasTranslations field the public
-     * site + admin editor actually surface for School/SiteSetting — see
-     * docs/modules/30-multilingual-content-plan.md Phase 4. Hand-written,
-     * not run through the AI-suggest gateway: seed/demo data should be
-     * correct and stable, not a live network call at seed time.
-     *
-     * institution_code/school_code/technical_branch_code ARE translated
-     * (native Bengali digits ০-৯, mirroring App\Support\LocalizedDate's
-     * NATIVE_DIGITS) — an earlier revision of this comment argued
-     * translating a digit string is meaningless and left them untranslated,
-     * but official BD documents commonly render codes in Bengali numerals,
-     * so a school does want this field populated.
-     */
+    private function seedArabicTranslations(School $school): void
+    {
+        $school->setTranslation('name', 'ar', 'مدرسة وادي الأخضر النموذجية');
+        $school->setTranslation('institution_code_label', 'ar', 'رمز المؤسسة');
+        $school->setTranslation('institution_code', 'ar', '١١٥٣٩٤');
+        $school->setTranslation('school_code_label', 'ar', 'رمز المدرسة');
+        $school->setTranslation('school_code', 'ar', '٠٠٠٠');
+        $school->setTranslation('technical_branch_code_label', 'ar', 'رمز الفرع الفني');
+        $school->setTranslation('technical_branch_code', 'ar', '٥٥٥٦');
+        $school->setTranslation('address', 'ar', 'مصر، القاهرة');
+
+        $settings = SiteSetting::forSchool($school->id);
+        $settings->setTranslation('meta_title', 'ar', 'مدرسة وادي الأخضر النموذجية');
+        $settings->setTranslation('meta_description', 'ar', 'مؤسسة تعليمية عريقة تعمل على تنمية العقول الشغوفة منذ عام ١٩٨٥.');
+    }
+
     private function seedBengaliTranslations(School $school): void
     {
         $school->setTranslation('name', 'bn', 'গ্রিন ভ্যালি মডেল স্কুল');
