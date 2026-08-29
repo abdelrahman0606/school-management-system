@@ -107,7 +107,7 @@ services:
         container_name: school_ai_detector
         restart: unless-stopped
         environment:
-            AI_DETECTOR_SHARED_SECRET: ${LMS_AI_SELF_HOSTED_SECRET:-}
+            AI_DETECTOR_SHARED_SECRET: "${LMS_AI_SELF_HOSTED_SECRET}"
 
     minio:
         image: minio/minio
